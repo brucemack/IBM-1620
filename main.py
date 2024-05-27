@@ -16,6 +16,54 @@ image_origin = (0, 0)
 need_resize = True
 anchor_point = None
 press_1_state = False
+canvas_size = (2000, 1200)
+
+mark_top_left = (100, 100)
+mark_top_right = (500, 100)
+mark_bottom_left = (500, 100)
+mark_bottom_right = (500, 500)
+
+mark_lines = []
+last_point = (0, 0)
+cycle = 0
+
+def adj(point):
+    # Determine scale 
+    scale = resized_image.size[0] / original_image.size[0]
+    return (int(point[0] * scale + image_origin[0]), int(point[1] * scale + image_origin[1]))
+
+def rev_adj(point):
+    # Determine scale 
+    scale = resized_image.size[0] / original_image.size[0]
+    return (int((point[0] - image_origin[0]) / scale), int(point[1] - image_origin[1]) / scale)
+
+def redraw_marks():
+    for mark_line in mark_lines:
+        canvas.delete(mark_line)
+    color = "blue"
+
+    tl = adj(mark_top_left)
+    tr = adj(mark_top_right)
+    bl = adj(mark_bottom_left)
+    br = adj(mark_bottom_right)
+
+    # Outer box
+    mark_lines.append(canvas.create_line(tl, tr, fill=color, width=2)) 
+    mark_lines.append(canvas.create_line(tr, br, fill=color, width=2)) 
+    mark_lines.append(canvas.create_line(br, bl, fill=color, width=2)) 
+    mark_lines.append(canvas.create_line(bl, tl, fill=color, width=2)) 
+
+    # Intermediate lines
+    steps = 8
+    delta_l = ((bl[0] - tl[0]) / steps, (bl[1] - tl[1]) / steps)
+    delta_r = ((br[0] - tr[0]) / steps, (br[1] - tr[1]) / steps)
+    point_l = tl
+    point_r = tr
+    for i in range(0, steps):
+        point_l = (point_l[0] + delta_l[0], point_l[1] + delta_l[1])
+        point_r = (point_r[0] + delta_r[0], point_r[1] + delta_r[1])
+        mark_lines.append(canvas.create_line(point_l, point_r, fill=color, width=1, dash=(2, 4))) 
+
 
 def redraw_image():
     global tk_image, scale, original_image, resized_image, tk_photo_image, canvas
@@ -32,28 +80,23 @@ def redraw_image():
         tk_photo_image = ImageTk.PhotoImage(resized_image)
         need_resize = False
     tk_image = canvas.create_image(image_origin[0], image_origin[1], anchor=tk.NW, image=tk_photo_image)
-    print(canvas.winfo_reqheight(), canvas.winfo_reqwidth())
 
 def redraw_hair(point):
-    global tk_hair_line_h, tk_hair_line_v, canvas
+    global tk_hair_line_h, tk_hair_line_v, canvas, canvas_size
     # Undraw
     if tk_hair_line_v is not None:
         canvas.delete(tk_hair_line_v)
     if tk_hair_line_h is not None:
         canvas.delete(tk_hair_line_h)
     # Redraw
-    tk_hair_line_v = canvas.create_line((point[0], 0), (point[0], 1000), fill="red")
-    tk_hair_line_h = canvas.create_line((0, point[1]), (1000, point[1]), fill="red")
+    tk_hair_line_v = canvas.create_line((point[0], 0), (point[0], canvas_size[1]), fill="black")
+    tk_hair_line_h = canvas.create_line((0, point[1]), (canvas_size[0], point[1]), fill="black")
 
 def on_up(event):
     global image_y
-    image_y = image_y + 20
-    redraw_image()
 
 def on_down(event):
     global image_y
-    image_y = image_y - 20
-    redraw_image()
 
 def on_mousewheel(event):
     global scale, need_resize
@@ -65,30 +108,59 @@ def on_mousewheel(event):
             scale = scale - scale_step
             need_resize = True
     redraw_image()
+    redraw_marks()
 
 def on_motion(event):
-    global image_origin, anchor_point
-    point = event.x, event.y
+    global last_point, image_origin, anchor_point, moved_while_pressed
+    last_point = (event.x, event.y)
     if press_1_state and anchor_point is not None:
+        moved_while_pressed = True
         delta_x = event.x - anchor_point[0]
         delta_y = event.y - anchor_point[1]
         image_origin = (image_origin[0] + delta_x, image_origin[1] + delta_y)
+        # Reset anchor
         anchor_point = (event.x, event.y)
         redraw_image()
-
-    redraw_hair(point)
-
+        redraw_marks()
+    redraw_hair(last_point)
 
 def on_button_press_1(event):
-    global anchor_point, press_1_state
+    global anchor_point, press_1_state, moved_while_pressed
     print("Press1", event)
     anchor_point = (event.x, event.y)
     press_1_state = True
+    moved_while_pressed = False
 
 def on_button_release_1(event):
-    global press_1_state
+    global press_1_state, mark_top_left
     print("Release1", event)
     press_1_state = False
+
+def on_escape(event):
+    global cycle, mark_top_left, mark_top_right, mark_bottom_left, mark_bottom_right
+    print("Escape")
+    cycle = 0
+
+def on_f1(event):
+
+    global cycle, mark_top_left, mark_top_right, mark_bottom_left, mark_bottom_right
+
+    if cycle == 0:
+        mark_top_left = rev_adj((event.x, event.y))
+        cycle = 1
+    elif cycle == 1:
+        mark_top_right = rev_adj((event.x, event.y))
+        cycle = 2
+    elif cycle == 2:
+        mark_bottom_right = rev_adj((event.x, event.y))
+        cycle = 3
+    elif cycle == 3:
+        mark_bottom_left = rev_adj((event.x, event.y))
+        cycle = 0
+
+    redraw_marks()
+    redraw_hair((event.x, event.y))
+
 
 def on_shift_button_press_1(event):
     print("ShiftPress1", event)
@@ -113,14 +185,15 @@ canvas.bind("<Shift-ButtonPress-1>", on_shift_button_press_1)
 root.bind("<BackSpace>", on_backspace)
 root.bind("<Up>", on_up)
 root.bind("<Down>", on_down)
+root.bind("<F1>", on_f1)
+root.bind("<Escape>", on_escape)
 
 imgfn = "c:/users/bruce/Downloads/temp/f_ald/ilovepdf_split/1620_F_ALD_SN11093-82.png"
 original_image = Image.open(imgfn)
 
 redraw_image()
+redraw_marks()
 redraw_hair((100, 100))
-
-#canvas.pack()
 
 root.mainloop()
 
