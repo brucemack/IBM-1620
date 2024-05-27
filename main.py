@@ -10,13 +10,13 @@ canvas = None
 original_image = None
 resized_image = None
 tk_photo_image = None
-scale = 0.2
+scale = 0.5
 scale_step = 0.025
 image_origin = (0, 0)
 need_resize = True
 anchor_point = None
 press_1_state = False
-canvas_size = (2000, 1200)
+canvas_size = (1800, 1200)
 
 mark_top_left = (100, 100)
 mark_top_right = (500, 100)
@@ -48,12 +48,12 @@ def redraw_marks():
     br = adj(mark_bottom_right)
 
     # Outer box
-    mark_lines.append(canvas.create_line(tl, tr, fill=color, width=1)) 
-    mark_lines.append(canvas.create_line(tr, br, fill=color, width=1)) 
-    mark_lines.append(canvas.create_line(br, bl, fill=color, width=1)) 
-    mark_lines.append(canvas.create_line(bl, tl, fill=color, width=1)) 
+    mark_lines.append(canvas.create_line(tl, tr, fill=color, width=1.5)) 
+    mark_lines.append(canvas.create_line(tr, br, fill=color, width=1.5)) 
+    mark_lines.append(canvas.create_line(br, bl, fill=color, width=1.5)) 
+    mark_lines.append(canvas.create_line(bl, tl, fill=color, width=1.5)) 
 
-    # Intermediate lines
+    # Intermediate lines (horizontal)
     steps = 8
     delta_l = ((bl[0] - tl[0]) / steps, (bl[1] - tl[1]) / steps)
     delta_r = ((br[0] - tr[0]) / steps, (br[1] - tr[1]) / steps)
@@ -63,6 +63,21 @@ def redraw_marks():
         point_l = (point_l[0] + delta_l[0], point_l[1] + delta_l[1])
         point_r = (point_r[0] + delta_r[0], point_r[1] + delta_r[1])
         mark_lines.append(canvas.create_line(point_l, point_r, fill=color, width=1, dash=(2, 4))) 
+    # Vertical
+    steps = 7
+    delta_t = ((tr[0] - tl[0]) / steps, (tr[1] - tl[1]) / steps)
+    delta_b = ((br[0] - bl[0]) / steps, (br[1] - bl[1]) / steps)
+    point_t = tl
+    point_b = bl
+    for i in range(0, steps):
+        point_t = (point_t[0] + delta_t[0], point_t[1] + delta_t[1])
+        point_b = (point_b[0] + delta_b[0], point_b[1] + delta_b[1])
+        mark_lines.append(canvas.create_line(point_t, point_b, fill=color, width=1, dash=(2, 4))) 
+
+    # Page mark
+    p0 = adj((mark_top_left[0] + 2196, mark_top_left[1] - 342))
+    p1 = adj((mark_top_left[0] + 2196 + 220, mark_top_left[1] - 342 + 50))
+    mark_lines.append(canvas.create_rectangle(p0[0], p0[1], p1[0], p1[1], outline='blue'))
 
 
 def redraw_image():
@@ -91,6 +106,7 @@ def redraw_hair(point):
     # Redraw
     tk_hair_line_v = canvas.create_line((point[0], 0), (point[0], canvas_size[1]), fill="black")
     tk_hair_line_h = canvas.create_line((0, point[1]), (canvas_size[0], point[1]), fill="black")
+    print(rev_adj(point))
 
 def on_up(event):
     global image_y
@@ -172,7 +188,7 @@ def on_backspace(event):
 
 root = tk.Tk()
 root.title("ALD Prod")
-canvas = tk.Canvas(root, width=1200, height=1200)
+canvas = tk.Canvas(root, width=canvas_size[0], height=canvas_size[1])
 # Pack the canvas into the Frame.
 canvas.pack(expand=tk.YES, fill=tk.BOTH)
 print(canvas.size())
