@@ -40,7 +40,7 @@ def rev_adj(point):
 def redraw_marks():
     for mark_line in mark_lines:
         canvas.delete(mark_line)
-    color = "blue"
+    color = "red"
 
     tl = adj(mark_top_left)
     tr = adj(mark_top_right)
@@ -48,10 +48,10 @@ def redraw_marks():
     br = adj(mark_bottom_right)
 
     # Outer box
-    mark_lines.append(canvas.create_line(tl, tr, fill=color, width=2)) 
-    mark_lines.append(canvas.create_line(tr, br, fill=color, width=2)) 
-    mark_lines.append(canvas.create_line(br, bl, fill=color, width=2)) 
-    mark_lines.append(canvas.create_line(bl, tl, fill=color, width=2)) 
+    mark_lines.append(canvas.create_line(tl, tr, fill=color, width=1)) 
+    mark_lines.append(canvas.create_line(tr, br, fill=color, width=1)) 
+    mark_lines.append(canvas.create_line(br, bl, fill=color, width=1)) 
+    mark_lines.append(canvas.create_line(bl, tl, fill=color, width=1)) 
 
     # Intermediate lines
     steps = 8
