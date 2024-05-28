@@ -19,6 +19,7 @@ need_resize = True
 anchor_point = None
 press_1_state = False
 canvas_size = (1800, 1200)
+hair_point = (canvas_size[0] / 2, canvas_size[1] / 2)
 
 # Default marks
 mark_type = "A"
@@ -131,8 +132,25 @@ def redraw_marks():
         cue = "NOT A LOGIC DIAGRAM!"
     else:
         cue = "UNKNOWN"
-
     mark_lines.append(canvas.create_text(50, 50, anchor=tk.NW, text=cue, fill=color, font=helv24))
+
+    # Text columns
+    rule_color = "#66dddd"
+    x_pitch = 19.85
+    x = mark_top_left[0]
+    for c in range(0, 130):
+        x = x + x_pitch
+        pa = adj((x, mark_top_left[1] - 360))
+        pb = adj((x, mark_bottom_left[1]))
+        mark_lines.append(canvas.create_line(pa, pb, fill=rule_color, width=1)) 
+
+    y_pitch = 25.1
+    y = mark_top_left[1] - 360 - 10
+    for c in range(0, 400):
+        y = y + y_pitch
+        pa = adj((mark_top_left[0], y))
+        pb = adj((mark_top_right[0], y))
+        mark_lines.append(canvas.create_line(pa, pb, fill=rule_color, width=1)) 
 
 def redraw_image():
     global tk_image, scale, original_image, resized_image, tk_photo_image, canvas
@@ -150,8 +168,8 @@ def redraw_image():
         need_resize = False
     tk_image = canvas.create_image(image_origin[0], image_origin[1], anchor=tk.NW, image=tk_photo_image)
 
-def redraw_hair(point):
-    global tk_hair_line_h, tk_hair_line_v, canvas, canvas_size, tk_hair_text
+def redraw_hair():
+    global tk_hair_line_h, tk_hair_line_v, canvas, canvas_size, tk_hair_text, hair_point
     # Undraw
     if tk_hair_line_v is not None:
         canvas.delete(tk_hair_line_v)
@@ -160,20 +178,34 @@ def redraw_hair(point):
     if tk_hair_text is not None:
         canvas.delete(tk_hair_text)
     # Redraw
-    tk_hair_line_v = canvas.create_line((point[0], 0), (point[0], canvas_size[1]), fill="black")
-    tk_hair_line_h = canvas.create_line((0, point[1]), (canvas_size[0], point[1]), fill="black")
+    tk_hair_line_v = canvas.create_line((hair_point[0], 0), (hair_point[0], canvas_size[1]), fill="black")
+    tk_hair_line_h = canvas.create_line((0, hair_point[1]), (canvas_size[0], hair_point[1]), fill="black")
     
-    adj_point = rev_adj(point)
+    adj_point = rev_adj(hair_point)
 
     cue = "[" + str(int(adj_point[0])) + ", " + str(int(adj_point[1])) + "]"
-    tk_hair_text = canvas.create_text(point[0] + 20, point[1] + 20, anchor=tk.NW, text=cue, fill='#119999',
-                                      font=helv16)
+    tk_hair_text = canvas.create_text(hair_point[0] + 20, hair_point[1] + 20, anchor=tk.NW, 
+                                      text=cue, fill='#119999', font=helv16)
 
 def on_up(event):
-    global image_y
+    global hair_point
+    hair_point = (hair_point[0], hair_point[1] - 1)
+    redraw_hair()
 
 def on_down(event):
-    global image_y
+    global hair_point
+    hair_point = (hair_point[0], hair_point[1] + 1)
+    redraw_hair()
+
+def on_left(event):
+    global hair_point
+    hair_point = (hair_point[0] - 1, hair_point[1])
+    redraw_hair()
+
+def on_right(event):
+    global hair_point
+    hair_point = (hair_point[0] + 1, hair_point[1])
+    redraw_hair()
 
 def on_mousewheel(event):
     global scale, need_resize
@@ -186,10 +218,15 @@ def on_mousewheel(event):
             need_resize = True
     redraw_image()
     redraw_marks()
+    redraw_hair()
 
 def on_motion(event):
-    global last_point, image_origin, anchor_point, moved_while_pressed
+
+    global last_point, image_origin, anchor_point, moved_while_pressed, hair_point
+
     last_point = (event.x, event.y)
+    hair_point = (event.x, event.y)
+
     if press_1_state and anchor_point is not None:
         moved_while_pressed = True
         delta_x = event.x - anchor_point[0]
@@ -199,7 +236,7 @@ def on_motion(event):
         anchor_point = (event.x, event.y)
         redraw_image()
         redraw_marks()
-    redraw_hair(last_point)
+    redraw_hair()
 
 def on_button_press_1(event):
     global anchor_point, press_1_state, moved_while_pressed
@@ -236,8 +273,7 @@ def on_f1(event):
         cycle = 0
 
     redraw_marks()
-    redraw_hair((event.x, event.y))
-
+    redraw_hair()
 
 def on_shift_button_press_1(event):
     print("ShiftPress1", event)
@@ -263,7 +299,7 @@ def on_f2(event):
     elif mark_type == "X":
         mark_type = "A"    
     redraw_marks()
-    redraw_hair((event.x, event.y))
+    redraw_hair()
 
 load_marks_if_possible()
 
@@ -286,6 +322,8 @@ canvas.bind("<Shift-ButtonPress-1>", on_shift_button_press_1)
 root.bind("<BackSpace>", on_backspace)
 root.bind("<Up>", on_up)
 root.bind("<Down>", on_down)
+root.bind("<Left>", on_left)
+root.bind("<Right>", on_right)
 root.bind("<F1>", on_f1)
 root.bind("<Escape>", on_escape)
 root.bind("q", on_q_key)
@@ -297,7 +335,7 @@ original_image = Image.open(imgfn)
 
 redraw_image()
 redraw_marks()
-redraw_hair((100, 100))
+redraw_hair()
 
 root.mainloop()
 
