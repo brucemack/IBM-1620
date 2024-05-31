@@ -15,15 +15,19 @@ resized_image = None
 tk_photo_image = None
 scale = 0.5
 scale_step = 0.025
-image_origin = (0, 0)
 need_resize = True
 anchor_point = None
 press_1_state = False
-canvas_size = (1800, 1200)
-hair_point = (canvas_size[0] / 2, canvas_size[1] / 2)
-
 # Default marks
 mark_type = "A"
+
+# All of these are in screen point terms
+image_origin = (0, 0)
+canvas_size = (1800, 1200)
+hair_point = (canvas_size[0] / 2, canvas_size[1] / 2)
+last_point = (0, 0)
+
+# All of these are in design point terms
 mark_top_left = (100, 100)
 mark_top_right = (200, 100)
 mark_bottom_right = (200, 200)
@@ -32,7 +36,6 @@ mark_bottom_left = (100, 200)
 shift_y = 0
 
 mark_lines = []
-last_point = (0, 0)
 cycle = 0
 helv16 = None
 helv24 = None
@@ -71,7 +74,7 @@ def store_marks():
 def adj(point):
     # Determine scale 
     scale = resized_image.size[0] / original_image.size[0]
-    return (int(point[0] * scale + image_origin[0]), int(point[1] * scale + image_origin[1]))
+    return round_p((point[0] * scale + image_origin[0], point[1] * scale + image_origin[1]))
 
 def rev_adj(point):
     # Determine scale 
@@ -123,18 +126,22 @@ def redraw_marks():
     mark_lines.append(canvas.create_line(br, bl, fill=color, width=1.5)) 
     mark_lines.append(canvas.create_line(bl, tl, fill=color, width=1.5)) 
 
-    # Grid lines (horizontal)
-    steps = 8
-    ticks_l = util.get_intermediate_points(tl, bl, steps)
-    ticks_r = util.get_intermediate_points(tr, br, steps)
+    # Draw the additional box lines (red dotted)
+    # NOTE: All calculations are done in design coordinates and are adjusted to screen
+    # coordinates (using adj()) at the last possible minute.
+
+    # Horizontal lines
+    row_count = 8
+    ticks_l = util.get_intermediate_points(mark_top_left, mark_bottom_left, row_count)
+    ticks_r = util.get_intermediate_points(mark_top_right, mark_bottom_right, row_count)
     for i in range(0, len(ticks_l)):
-         mark_lines.append(canvas.create_line(ticks_l[i], ticks_r[i], fill=color, width=1, dash=(2, 4)))     
-    # Grid lines (vertical)
-    steps = 7
-    ticks_t = util.get_intermediate_points(tl, tr, steps)
-    ticks_b = util.get_intermediate_points(bl, br, steps)
+         mark_lines.append(canvas.create_line(adj(ticks_l[i]), adj(ticks_r[i]), fill=color, width=1, dash=(2, 4)))     
+    # Vertical lines
+    col_count = 7
+    ticks_t = util.get_intermediate_points(mark_top_left, mark_top_right, col_count)
+    ticks_b = util.get_intermediate_points(mark_bottom_left, mark_bottom_right, col_count)
     for i in range(0, len(ticks_t)):
-         mark_lines.append(canvas.create_line(ticks_t[i], ticks_b[i], fill=color, width=1, dash=(2, 4))) 
+         mark_lines.append(canvas.create_line(adj(ticks_t[i]), adj(ticks_b[i]), fill=color, width=1, dash=(2, 4)))     
 
     # Page mark
     p0 = adj((mark_top_left[0] + 2190, mark_top_left[1] - 360))
@@ -158,26 +165,22 @@ def redraw_marks():
 
     rule_color = "#66dddd"
     col_count = 127
-    # 171
-    row_count = 175
+    row_count = 160
 
     # Extend up the top marks upwards along the slope of the left and right borders
-    tl = util.get_extended_point(tl, bl, -206)
-    tr = util.get_extended_point(tr, br, -206)
-    bl = util.get_extended_point(tl, bl, 2200)
-    br = util.get_extended_point(tr, br, 2200)
+    mark_top_left_ext = util.get_extended_point(mark_top_left, mark_bottom_left, -405)
+    mark_top_right_ext = util.get_extended_point(mark_top_right, mark_bottom_right, -405)
 
-    # Text columns (vertical)
-    ticks_t = util.get_intermediate_points(tl, tr, col_count)
-    ticks_b = util.get_intermediate_points(bl, br, col_count)
-    for i in range(0, len(ticks_t)):
-         mark_lines.append(canvas.create_line(ticks_t[i], ticks_b[i], fill=rule_color, width=1))     
-
-    # Text columns (horizontal)
-    ticks_l = util.get_intermediate_points(tl, bl, row_count)
-    ticks_r = util.get_intermediate_points(tr, br, row_count)
+    # Horizontal lines
+    ticks_l = util.get_intermediate_points(mark_top_left_ext, mark_bottom_left, row_count)
+    ticks_r = util.get_intermediate_points(mark_top_right_ext, mark_bottom_right, row_count)
     for i in range(0, len(ticks_l)):
-         mark_lines.append(canvas.create_line(ticks_l[i], ticks_r[i], fill=rule_color, width=1))     
+         mark_lines.append(canvas.create_line(adj(ticks_l[i]), adj(ticks_r[i]), fill=rule_color, width=1))     
+    # Vertical lines
+    ticks_t = util.get_intermediate_points(mark_top_left_ext, mark_top_right_ext, col_count)
+    ticks_b = util.get_intermediate_points(mark_bottom_left, mark_bottom_right, col_count)
+    for i in range(0, len(ticks_t)):
+         mark_lines.append(canvas.create_line(adj(ticks_t[i]), adj(ticks_b[i]), fill=rule_color, width=1))     
 
 def redraw_image():
     global tk_image, scale, original_image, resized_image, tk_photo_image, canvas
