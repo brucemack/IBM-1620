@@ -37,8 +37,6 @@ cycle = 0
 helv16 = None
 helv24 = None
 
-
-
 dir_name = "c:/users/bruce/Downloads/temp/f_ald/ilovepdf_split"
 file_name = "1620_F_ALD_SN11093-82"
 
@@ -80,11 +78,16 @@ def rev_adj(point):
     scale = resized_image.size[0] / original_image.size[0]
     return (int((point[0] - image_origin[0]) / scale), int(point[1] - image_origin[1]) / scale)
 
+def add_pts(point_a, point_b):
+    return (point_a[0] + point_b[0], point_a[1] + point_b[1])
+
 def sector(point):
+
     tl_d = util.get_distance(point, mark_top_left)
     tr_d = util.get_distance(point, mark_top_right)
     bl_d = util.get_distance(point, mark_bottom_left)
     br_d = util.get_distance(point, mark_bottom_right)
+
     if tl_d < tr_d and tl_d < bl_d and tl_d < br_d:
         return "tl"
     elif tr_d < tl_d and tr_d < bl_d and tr_d < br_d:
@@ -151,36 +154,30 @@ def redraw_marks():
         cue = "UNKNOWN"
     mark_lines.append(canvas.create_text(50, 50, anchor=tk.NW, text=cue, fill=color, font=helv24))
 
-    # Text columns (vertical)
+    # ----- Text Grid ---------------------------------------------------------
+
     rule_color = "#66dddd"
     col_count = 127
+    # 171
+    row_count = 175
+
+    # Extend up the top marks upwards along the slope of the left and right borders
+    tl = util.get_extended_point(tl, bl, -206)
+    tr = util.get_extended_point(tr, br, -206)
+    bl = util.get_extended_point(tl, bl, 2200)
+    br = util.get_extended_point(tr, br, 2200)
+
+    # Text columns (vertical)
     ticks_t = util.get_intermediate_points(tl, tr, col_count)
     ticks_b = util.get_intermediate_points(bl, br, col_count)
     for i in range(0, len(ticks_t)):
          mark_lines.append(canvas.create_line(ticks_t[i], ticks_b[i], fill=rule_color, width=1))     
 
-    #x_pitch = 19.85 / 2
-    #for c in range(1, count):
-    #    tick_t = util.get_intermediate_points_2(tl, tr, x_pitch * float(c))
-    #    tick_t = (tick_t[0], tick_t[1] + shift_y)
-    #    tick_b = util.get_intermediate_points_2(bl, br, x_pitch * float(c))
-    #    tick_b = (tick_b[0], tick_b[1] + shift_y)
-    #    mark_lines.append(canvas.create_line(round_p(tick_t), round_p(tick_b), fill=rule_color, width=1)) 
-
     # Text columns (horizontal)
-    row_count = 144
     ticks_l = util.get_intermediate_points(tl, bl, row_count)
     ticks_r = util.get_intermediate_points(tr, br, row_count)
     for i in range(0, len(ticks_l)):
          mark_lines.append(canvas.create_line(ticks_l[i], ticks_r[i], fill=rule_color, width=1))     
-
-    #y_pitch = 12.5
-    #for c in range(1, count):
-    #   tick_l = util.get_intermediate_points(tl, bl, y_pitch * float(c))
-    #    tick_l = (tick_l[0], tick_l[1] + shift_y)
-    #    tick_r = util.get_intermediate_points_2(tr, br, y_pitch * float(c))
-    #    tick_r = (tick_r[0], tick_r[1] + shift_y)
-    #    mark_lines.append(canvas.create_line(round_p(tick_l), round_p(tick_r), fill=rule_color, width=1)) 
 
 def redraw_image():
     global tk_image, scale, original_image, resized_image, tk_photo_image, canvas
@@ -218,24 +215,87 @@ def redraw_hair():
     tk_hair_text = canvas.create_text(hair_point[0] + 20, hair_point[1] + 20, anchor=tk.NW, 
                                       text=cue, fill='#119999', font=helv16)
 
+def set_nearest_mark(design_pt):
+
+    global mark_top_left, mark_top_right, mark_bottom_left, mark_bottom_right
+
+    # Figure out which mark the mouse is close to
+    s = sector(design_pt)
+    # Adjust the right mark
+    if s == "tl":
+        mark_top_left = design_pt
+    elif s == "tr":
+        mark_top_right = design_pt
+    elif s == "br":
+        mark_bottom_right = design_pt
+    else:
+        mark_bottom_left = design_pt
+
+def adj_nearest_mark(design_pt, adj):
+
+    global mark_top_left, mark_top_right, mark_bottom_left, mark_bottom_right
+
+    # Figure out which mark the mouse is close to
+    s = sector(design_pt)
+    print(s, adj)
+    # Adjust the right mark
+    if s == "tl":
+        mark_top_left = add_pts(mark_top_left, adj)
+    elif s == "tr":
+        mark_top_right = add_pts(mark_top_right, adj)
+    elif s == "br":
+        mark_bottom_right = add_pts(mark_bottom_right, adj)
+    else:
+        mark_bottom_left = add_pts(mark_bottom_left, adj)
+
+def screen_pt_to_design_pt(screen_pt):
+    return rev_adj(screen_pt)
+
 def on_up(event):
     global hair_point
-    hair_point = (hair_point[0], hair_point[1] - 1)
+    print("UP", hair_point)
+    hair_point = add_pts(hair_point, (0, -1))
+    print(hair_point)
     redraw_hair()
 
 def on_down(event):
     global hair_point
-    hair_point = (hair_point[0], hair_point[1] + 1)
+    hair_point = add_pts(hair_point, (0, 1))
     redraw_hair()
 
 def on_left(event):
     global hair_point
-    hair_point = (hair_point[0] - 1, hair_point[1])
+    hair_point = add_pts(hair_point, (-1, 0))
     redraw_hair()
 
 def on_right(event):
     global hair_point
-    hair_point = (hair_point[0] + 1, hair_point[1])
+    hair_point = add_pts(hair_point, (1, 0))
+    redraw_hair()
+
+
+def on_shift_up(event):
+    global hair_point
+    adj_nearest_mark(screen_pt_to_design_pt(hair_point), (0, -1))
+    redraw_marks()
+    redraw_hair()
+
+def on_shift_down(event):
+    global hair_point
+    adj_nearest_mark(screen_pt_to_design_pt(hair_point), (0, 1))
+    redraw_marks()
+    redraw_hair()
+
+def on_shift_left(event):
+    global hair_point
+    adj_nearest_mark(screen_pt_to_design_pt(hair_point), (-1, 0))
+    redraw_marks()
+    redraw_hair()
+
+def on_shift_right(event):
+    global hair_point
+    adj_nearest_mark(screen_pt_to_design_pt(hair_point), (1, 0))
+    redraw_marks()
     redraw_hair()
 
 def on_mousewheel(event):
@@ -287,22 +347,7 @@ def on_escape(event):
     cycle = 0
 
 def on_f1(event):
-
-    global cycle, mark_top_left, mark_top_right, mark_bottom_left, mark_bottom_right
-
-    m = rev_adj(hair_point)
-    s = sector(m)
-    print(s, m)
-
-    if s == "tl":
-        mark_top_left = m
-    elif s == "tr":
-        mark_top_right = m
-    elif s == "br":
-        mark_bottom_right = m
-    else:
-        mark_bottom_left = m
-
+    set_nearest_mark(screen_pt_to_design_pt(hair_point))
     redraw_marks()
     redraw_hair()
 
@@ -363,10 +408,17 @@ canvas.bind("<ButtonRelease-1>", on_button_release_1)
 canvas.bind("<Shift-ButtonPress-1>", on_shift_button_press_1)
 
 root.bind("<BackSpace>", on_backspace)
+
 root.bind("<Up>", on_up)
 root.bind("<Down>", on_down)
 root.bind("<Left>", on_left)
 root.bind("<Right>", on_right)
+
+root.bind("<Shift-Up>", on_shift_up)
+root.bind("<Shift-Down>", on_shift_down)
+root.bind("<Shift-Left>", on_shift_left)
+root.bind("<Shift-Right>", on_shift_right)
+
 root.bind("<F1>", on_f1)
 root.bind("<Escape>", on_escape)
 root.bind("q", on_q_key)
