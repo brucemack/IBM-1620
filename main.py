@@ -5,6 +5,45 @@ from PIL import Image, ImageTk
 from tkinter import simpledialog
 import os 
 import util 
+import math
+
+class Glyph:
+    
+    def __init__(self, name, rows, cols, data):
+        self.name = name
+        self.rows = rows 
+        self.cols = cols 
+        self.data = data
+
+    def corr(self, rows, cols, data):
+
+        max_rows = max(rows, self.rows)
+        max_cols = max(cols, self.cols)
+
+        total = 0
+        tests = 0
+
+        for row in range(0, max_rows):
+            for col in range(0, max_cols):
+
+                # Get the sample on each side
+                if row < self.rows and col < self.cols:
+                    our_pixel = self.data[row * cols + col]
+                else:
+                    our_pixel = 255
+
+                if row < rows and col < cols:
+                    their_pixel = data[row * cols + col]
+                else:
+                    their_pixel = 255
+
+                # Error
+                total = total + (our_pixel - their_pixel) * (our_pixel - their_pixel)
+                tests = tests + 1 
+
+        return math.sqrt(total / tests)
+
+glyph_dict = dict()
 
 tk_hair_line_h = None
 tk_hair_line_v = None
@@ -400,6 +439,67 @@ def on_f2(event):
     redraw_marks()
     redraw_hair()
 
+# Translates screen coordinates into a text coordinates
+def get_text_coordinates(screen_pt):
+    design_pt = rev_adj(screen_pt)
+    for r in range(0, len(text_grid_h) - 1):
+        for c in range(0, len(text_grid_v) - 1):
+            # Compute the intersections (upper left, lower right), not paying attention 
+            # to any skew
+            pt_0 = util.line_intersection(text_grid_v[c], text_grid_h[r])
+            pt_1 = util.line_intersection(text_grid_v[c + 1], text_grid_h[r + 1])
+            if util.point_in_rect(design_pt, (pt_0, pt_1)):
+                return (c, r)
+            
+    return None
+
+# Checking match
+def on_f11(event):
+    global text_grid_h, text_grid_v
+    # Figure out what cell the hair is in
+    pt = get_text_coordinates(hair_point)
+    if not pt:
+        return
+    text_c, text_r = pt
+    print("Checking", text_c, text_r)
+    # Compute the intersections (upper left, lower right), not paying attention 
+    # to any skew
+    pt_0 = util.line_intersection(text_grid_v[text_c], text_grid_h[text_r])
+    pt_1 = util.line_intersection(text_grid_v[text_c + 1], text_grid_h[text_r + 1])
+    # Convert back to screen coordinates
+    pt_0_screen = adj(pt_0)
+    pt_1_screen = adj(pt_1)
+
+    # Shift around a bit
+    lowest_score = 1000
+    lowest_gylp = None
+
+    for delta_x in [-3, -2, -1, 0, 1, 2, 3]:
+        for delta_y in [-3, -2, -1, 0, 1, 2, 3]:
+            # Capture that small part of the image
+            pt_0_image = round_p((pt_0_screen[0] - image_origin[0] + delta_x, pt_0_screen[1] - image_origin[1] + delta_y))
+            pt_1_image = round_p((pt_1_screen[0] - image_origin[0] + delta_x, pt_1_screen[1] - image_origin[1] + delta_y))
+            dx = pt_1_image[0] - pt_0_image[0]
+            dy = pt_1_image[1] - pt_0_image[1]
+            # Scan the mini-image out of the image
+            pixel_data = []
+            for y in range(0, dy):
+                for x in range(0, dx):
+                    pt_image = (pt_0_image[0] + x, pt_0_image[1] + y)
+                    pixel_data.append(resized_image.getpixel(pt_image)[0])
+
+            # Now compare to each glyph
+            for (key, value) in glyph_dict.items():
+                corr = value.corr(dy, dx, pixel_data)
+                #print(key, value.corr(dy, dx, pixel_data))
+                if corr < lowest_score:
+                    lowest_score = corr 
+                    lowest_gylp = value
+
+
+    print("Lowest", lowest_score, lowest_gylp.name)
+
+# Locking in a glyph
 def on_f12(event):
     global text_grid_h, text_grid_v
     # Figure out what cell the hair is in
@@ -412,10 +512,30 @@ def on_f12(event):
             pt_0 = util.line_intersection(text_grid_v[c], text_grid_h[r])
             pt_1 = util.line_intersection(text_grid_v[c + 1], text_grid_h[r + 1])
             if util.point_in_rect(hair_point_design, (pt_0, pt_1)):
-                print(r, c)
+                prompt = "Capture character at [" + str(c) + "," + str(r) + "]"
+                typed = simpledialog.askstring("Capture Character", prompt)
+                if len(typed) > 0:
+                    # Convert back to screen coordinates
+                    pt_0_screen = adj(pt_0)
+                    pt_1_screen = adj(pt_1)
+                    # Capture that small part of the image
+                    pt_0_image = round_p((pt_0_screen[0] - image_origin[0], pt_0_screen[1] - image_origin[1]))
+                    pt_1_image = round_p((pt_1_screen[0] - image_origin[0], pt_1_screen[1] - image_origin[1]))
+                    dx = pt_1_image[0] - pt_0_image[0]
+                    dy = pt_1_image[1] - pt_0_image[1]
+                    # Scan the mini-image
+                    pixel_data = []
+                    for y in range(0, dy):
+                        for x in range(0, dx):
+                            pt_image = (pt_0_image[0] + x, pt_0_image[1] + y)
+                            pixel_data.append(resized_image.getpixel(pt_image)[0])
+                    # Save the glyph
+                    glyph_dict[typed] = Glyph(typed, dy, dx, pixel_data)
+
+
+
                 return
 
-    #simpledialog.askstring("Capture Character", "Enter Character")
 
 load_marks_if_possible()
 compute_text_grid()
@@ -452,6 +572,7 @@ root.bind("<Escape>", on_escape)
 root.bind("q", on_q_key)
 root.bind("<F2>", on_f2)
 root.bind("<F12>", on_f12)
+root.bind("<F11>", on_f11)
 
 imgfn = dir_name + "/" + file_name + ".png"
 
