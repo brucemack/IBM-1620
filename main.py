@@ -3,6 +3,7 @@ import tkinter as tk
 import tkinter.font as TkFont
 from PIL import Image, ImageTk
 import os 
+import util 
 
 tk_hair_line_h = None
 tk_hair_line_v = None
@@ -28,14 +29,21 @@ mark_top_right = (200, 100)
 mark_bottom_right = (200, 200)
 mark_bottom_left = (100, 200)
 
+shift_y = 0
+
 mark_lines = []
 last_point = (0, 0)
 cycle = 0
 helv16 = None
 helv24 = None
 
+
+
 dir_name = "c:/users/bruce/Downloads/temp/f_ald/ilovepdf_split"
 file_name = "1620_F_ALD_SN11093-82"
+
+def round_p(p):
+    return (round(p[0]), round(p[1]))
 
 def load_marks_if_possible():
     global mark_type, mark_top_left, mark_top_right, mark_bottom_left, mark_bottom_right
@@ -72,7 +80,24 @@ def rev_adj(point):
     scale = resized_image.size[0] / original_image.size[0]
     return (int((point[0] - image_origin[0]) / scale), int(point[1] - image_origin[1]) / scale)
 
+def sector(point):
+    tl_d = util.get_distance(point, mark_top_left)
+    tr_d = util.get_distance(point, mark_top_right)
+    bl_d = util.get_distance(point, mark_bottom_left)
+    br_d = util.get_distance(point, mark_bottom_right)
+    if tl_d < tr_d and tl_d < bl_d and tl_d < br_d:
+        return "tl"
+    elif tr_d < tl_d and tr_d < bl_d and tr_d < br_d:
+        return "tr"
+    elif bl_d < tl_d and bl_d < tr_d and bl_d < br_d:
+        return "bl"
+    else:
+        return "br"
+    
 def redraw_marks():
+
+    global shift_y
+
     for mark_line in mark_lines:
         canvas.delete(mark_line)
     color = "red"
@@ -95,26 +120,18 @@ def redraw_marks():
     mark_lines.append(canvas.create_line(br, bl, fill=color, width=1.5)) 
     mark_lines.append(canvas.create_line(bl, tl, fill=color, width=1.5)) 
 
-    # Intermediate lines (horizontal)
+    # Grid lines (horizontal)
     steps = 8
-    delta_l = ((bl[0] - tl[0]) / steps, (bl[1] - tl[1]) / steps)
-    delta_r = ((br[0] - tr[0]) / steps, (br[1] - tr[1]) / steps)
-    point_l = tl
-    point_r = tr
-    for i in range(0, steps):
-        point_l = (point_l[0] + delta_l[0], point_l[1] + delta_l[1])
-        point_r = (point_r[0] + delta_r[0], point_r[1] + delta_r[1])
-        mark_lines.append(canvas.create_line(point_l, point_r, fill=color, width=1, dash=(2, 4))) 
-    # Vertical
+    ticks_l = util.get_intermediate_points(tl, bl, steps)
+    ticks_r = util.get_intermediate_points(tr, br, steps)
+    for i in range(0, len(ticks_l)):
+         mark_lines.append(canvas.create_line(ticks_l[i], ticks_r[i], fill=color, width=1, dash=(2, 4)))     
+    # Grid lines (vertical)
     steps = 7
-    delta_t = ((tr[0] - tl[0]) / steps, (tr[1] - tl[1]) / steps)
-    delta_b = ((br[0] - bl[0]) / steps, (br[1] - bl[1]) / steps)
-    point_t = tl
-    point_b = bl
-    for i in range(0, steps):
-        point_t = (point_t[0] + delta_t[0], point_t[1] + delta_t[1])
-        point_b = (point_b[0] + delta_b[0], point_b[1] + delta_b[1])
-        mark_lines.append(canvas.create_line(point_t, point_b, fill=color, width=1, dash=(2, 4))) 
+    ticks_t = util.get_intermediate_points(tl, tr, steps)
+    ticks_b = util.get_intermediate_points(bl, br, steps)
+    for i in range(0, len(ticks_t)):
+         mark_lines.append(canvas.create_line(ticks_t[i], ticks_b[i], fill=color, width=1, dash=(2, 4))) 
 
     # Page mark
     p0 = adj((mark_top_left[0] + 2190, mark_top_left[1] - 360))
@@ -134,23 +151,36 @@ def redraw_marks():
         cue = "UNKNOWN"
     mark_lines.append(canvas.create_text(50, 50, anchor=tk.NW, text=cue, fill=color, font=helv24))
 
-    # Text columns
+    # Text columns (vertical)
     rule_color = "#66dddd"
-    x_pitch = 19.85
-    x = mark_top_left[0]
-    for c in range(0, 130):
-        x = x + x_pitch
-        pa = adj((x, mark_top_left[1] - 360))
-        pb = adj((x, mark_bottom_left[1]))
-        mark_lines.append(canvas.create_line(pa, pb, fill=rule_color, width=1)) 
+    col_count = 127
+    ticks_t = util.get_intermediate_points(tl, tr, col_count)
+    ticks_b = util.get_intermediate_points(bl, br, col_count)
+    for i in range(0, len(ticks_t)):
+         mark_lines.append(canvas.create_line(ticks_t[i], ticks_b[i], fill=rule_color, width=1))     
 
-    y_pitch = 25.1
-    y = mark_top_left[1] - 360 - 10
-    for c in range(0, 400):
-        y = y + y_pitch
-        pa = adj((mark_top_left[0], y))
-        pb = adj((mark_top_right[0], y))
-        mark_lines.append(canvas.create_line(pa, pb, fill=rule_color, width=1)) 
+    #x_pitch = 19.85 / 2
+    #for c in range(1, count):
+    #    tick_t = util.get_intermediate_points_2(tl, tr, x_pitch * float(c))
+    #    tick_t = (tick_t[0], tick_t[1] + shift_y)
+    #    tick_b = util.get_intermediate_points_2(bl, br, x_pitch * float(c))
+    #    tick_b = (tick_b[0], tick_b[1] + shift_y)
+    #    mark_lines.append(canvas.create_line(round_p(tick_t), round_p(tick_b), fill=rule_color, width=1)) 
+
+    # Text columns (horizontal)
+    row_count = 144
+    ticks_l = util.get_intermediate_points(tl, bl, row_count)
+    ticks_r = util.get_intermediate_points(tr, br, row_count)
+    for i in range(0, len(ticks_l)):
+         mark_lines.append(canvas.create_line(ticks_l[i], ticks_r[i], fill=rule_color, width=1))     
+
+    #y_pitch = 12.5
+    #for c in range(1, count):
+    #   tick_l = util.get_intermediate_points(tl, bl, y_pitch * float(c))
+    #    tick_l = (tick_l[0], tick_l[1] + shift_y)
+    #    tick_r = util.get_intermediate_points_2(tr, br, y_pitch * float(c))
+    #    tick_r = (tick_r[0], tick_r[1] + shift_y)
+    #    mark_lines.append(canvas.create_line(round_p(tick_l), round_p(tick_r), fill=rule_color, width=1)) 
 
 def redraw_image():
     global tk_image, scale, original_image, resized_image, tk_photo_image, canvas
@@ -183,7 +213,8 @@ def redraw_hair():
     
     adj_point = rev_adj(hair_point)
 
-    cue = "[" + str(int(adj_point[0])) + ", " + str(int(adj_point[1])) + "]"
+    cue = "[" + str(int(adj_point[0])) + ", " + str(int(adj_point[1])) + "] " + \
+        sector(adj_point)
     tk_hair_text = canvas.create_text(hair_point[0] + 20, hair_point[1] + 20, anchor=tk.NW, 
                                       text=cue, fill='#119999', font=helv16)
 
@@ -259,18 +290,18 @@ def on_f1(event):
 
     global cycle, mark_top_left, mark_top_right, mark_bottom_left, mark_bottom_right
 
-    if cycle == 0:
-        mark_top_left = rev_adj((event.x, event.y))
-        cycle = 1
-    elif cycle == 1:
-        mark_top_right = rev_adj((event.x, event.y))
-        cycle = 2
-    elif cycle == 2:
-        mark_bottom_right = rev_adj((event.x, event.y))
-        cycle = 3
-    elif cycle == 3:
-        mark_bottom_left = rev_adj((event.x, event.y))
-        cycle = 0
+    m = rev_adj(hair_point)
+    s = sector(m)
+    print(s, m)
+
+    if s == "tl":
+        mark_top_left = m
+    elif s == "tr":
+        mark_top_right = m
+    elif s == "br":
+        mark_bottom_right = m
+    else:
+        mark_bottom_left = m
 
     redraw_marks()
     redraw_hair()
@@ -288,6 +319,18 @@ def on_q_key(event):
     print("Writing")
     store_marks()
     quit()
+
+def on_e_key(event):
+    global shift_y
+    shift_y = shift_y - 1
+    redraw_marks()
+    redraw_hair()
+
+def on_x_key(event):
+    global shift_y
+    shift_y = shift_y + 1
+    redraw_marks()
+    redraw_hair()
 
 # Changing the diagram type
 def on_f2(event):
@@ -328,6 +371,8 @@ root.bind("<F1>", on_f1)
 root.bind("<Escape>", on_escape)
 root.bind("q", on_q_key)
 root.bind("<F2>", on_f2)
+root.bind("e", on_e_key)
+root.bind("x", on_x_key)
 
 imgfn = dir_name + "/" + file_name + ".png"
 
