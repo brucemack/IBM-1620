@@ -2,6 +2,7 @@
 import tkinter as tk
 import tkinter.font as TkFont
 from PIL import Image, ImageTk
+from tkinter import simpledialog
 import os 
 import util 
 
@@ -32,8 +33,8 @@ mark_top_left = (100, 100)
 mark_top_right = (200, 100)
 mark_bottom_right = (200, 200)
 mark_bottom_left = (100, 200)
-
-shift_y = 0
+text_grid_h = None
+text_grid_v = None
 
 mark_lines = []
 cycle = 0
@@ -99,7 +100,30 @@ def sector(point):
         return "bl"
     else:
         return "br"
-    
+
+def compute_text_grid():
+
+    global text_grid_h, text_grid_v
+
+    col_count = 127
+    row_count = 160
+
+    # Extend up the top marks upwards along the slope of the left and right borders
+    mark_top_left_ext = util.get_extended_point(mark_top_left, mark_bottom_left, -405)
+    mark_top_right_ext = util.get_extended_point(mark_top_right, mark_bottom_right, -405)
+    ticks_l = util.get_intermediate_points(mark_top_left_ext, mark_bottom_left, row_count)
+    ticks_r = util.get_intermediate_points(mark_top_right_ext, mark_bottom_right, row_count)
+    ticks_t = util.get_intermediate_points(mark_top_left_ext, mark_top_right_ext, col_count)
+    ticks_b = util.get_intermediate_points(mark_bottom_left, mark_bottom_right, col_count)
+
+    # Generate the connecting lines
+    text_grid_h  = []
+    text_grid_v  = []
+    for i in range(0, len(ticks_l)):
+         text_grid_h.append((ticks_l[i], ticks_r[i]))
+    for i in range(0, len(ticks_t)):
+         text_grid_v.append((ticks_t[i], ticks_b[i]))
+
 def redraw_marks():
 
     global shift_y
@@ -164,23 +188,18 @@ def redraw_marks():
     # ----- Text Grid ---------------------------------------------------------
 
     rule_color = "#66dddd"
-    col_count = 127
-    row_count = 160
 
-    # Extend up the top marks upwards along the slope of the left and right borders
-    mark_top_left_ext = util.get_extended_point(mark_top_left, mark_bottom_left, -405)
-    mark_top_right_ext = util.get_extended_point(mark_top_right, mark_bottom_right, -405)
-
-    # Horizontal lines
-    ticks_l = util.get_intermediate_points(mark_top_left_ext, mark_bottom_left, row_count)
-    ticks_r = util.get_intermediate_points(mark_top_right_ext, mark_bottom_right, row_count)
-    for i in range(0, len(ticks_l)):
-         mark_lines.append(canvas.create_line(adj(ticks_l[i]), adj(ticks_r[i]), fill=rule_color, width=1))     
+    # Draw connecting lines
+    for i in range(0, len(text_grid_h)):
+         mark_lines.append(canvas.create_line(adj(text_grid_h[i][0]), adj(text_grid_h[i][1]), fill=rule_color, width=1))     
     # Vertical lines
-    ticks_t = util.get_intermediate_points(mark_top_left_ext, mark_top_right_ext, col_count)
-    ticks_b = util.get_intermediate_points(mark_bottom_left, mark_bottom_right, col_count)
-    for i in range(0, len(ticks_t)):
-         mark_lines.append(canvas.create_line(adj(ticks_t[i]), adj(ticks_b[i]), fill=rule_color, width=1))     
+    for i in range(0, len(text_grid_v)):
+         mark_lines.append(canvas.create_line(adj(text_grid_v[i][0]), adj(text_grid_v[i][1]), fill=rule_color, width=1))     
+
+    # Draw a cell for a test
+    #p0 = adj(util.line_intersection(lines_h[0], lines_v[0]))
+    #p1 = adj(util.line_intersection(lines_h[1], lines_v[1]))
+    #mark_lines.append(canvas.create_rectangle(p0[0], p0[1], p1[0], p1[1], fill="green"))
 
 def redraw_image():
     global tk_image, scale, original_image, resized_image, tk_photo_image, canvas
@@ -256,9 +275,7 @@ def screen_pt_to_design_pt(screen_pt):
 
 def on_up(event):
     global hair_point
-    print("UP", hair_point)
     hair_point = add_pts(hair_point, (0, -1))
-    print(hair_point)
     redraw_hair()
 
 def on_down(event):
@@ -276,28 +293,31 @@ def on_right(event):
     hair_point = add_pts(hair_point, (1, 0))
     redraw_hair()
 
-
 def on_shift_up(event):
     global hair_point
     adj_nearest_mark(screen_pt_to_design_pt(hair_point), (0, -1))
+    compute_text_grid()
     redraw_marks()
     redraw_hair()
 
 def on_shift_down(event):
     global hair_point
     adj_nearest_mark(screen_pt_to_design_pt(hair_point), (0, 1))
+    compute_text_grid()
     redraw_marks()
     redraw_hair()
 
 def on_shift_left(event):
     global hair_point
     adj_nearest_mark(screen_pt_to_design_pt(hair_point), (-1, 0))
+    compute_text_grid()
     redraw_marks()
     redraw_hair()
 
 def on_shift_right(event):
     global hair_point
     adj_nearest_mark(screen_pt_to_design_pt(hair_point), (1, 0))
+    compute_text_grid()
     redraw_marks()
     redraw_hair()
 
@@ -347,10 +367,10 @@ def on_button_release_1(event):
 def on_escape(event):
     global cycle, mark_top_left, mark_top_right, mark_bottom_left, mark_bottom_right
     print("Escape")
-    cycle = 0
 
 def on_f1(event):
     set_nearest_mark(screen_pt_to_design_pt(hair_point))
+    compute_text_grid()
     redraw_marks()
     redraw_hair()
 
@@ -368,18 +388,6 @@ def on_q_key(event):
     store_marks()
     quit()
 
-def on_e_key(event):
-    global shift_y
-    shift_y = shift_y - 1
-    redraw_marks()
-    redraw_hair()
-
-def on_x_key(event):
-    global shift_y
-    shift_y = shift_y + 1
-    redraw_marks()
-    redraw_hair()
-
 # Changing the diagram type
 def on_f2(event):
     global mark_type
@@ -392,7 +400,25 @@ def on_f2(event):
     redraw_marks()
     redraw_hair()
 
+def on_f12(event):
+    global text_grid_h, text_grid_v
+    # Figure out what cell the hair is in
+    hair_point_design = rev_adj(hair_point)
+    hit = None
+    for r in range(0, len(text_grid_h) - 1):
+        for c in range(0, len(text_grid_v) - 1):
+            # Compute the intersections (upper left, lower right), not paying attention 
+            # to any skew
+            pt_0 = util.line_intersection(text_grid_v[c], text_grid_h[r])
+            pt_1 = util.line_intersection(text_grid_v[c + 1], text_grid_h[r + 1])
+            if util.point_in_rect(hair_point_design, (pt_0, pt_1)):
+                print(r, c)
+                return
+
+    #simpledialog.askstring("Capture Character", "Enter Character")
+
 load_marks_if_possible()
+compute_text_grid()
 
 root = tk.Tk()
 root.title("ALD Prod")
@@ -402,7 +428,6 @@ helv24 = TkFont.Font(family='Arial', size=24, weight='bold', underline=1)
 
 # Pack the canvas into the Frame.
 canvas.pack(expand=tk.YES, fill=tk.BOTH)
-print(canvas.size())
 
 canvas.bind_all("<MouseWheel>", on_mousewheel)
 canvas.bind('<Motion>', on_motion)
@@ -426,8 +451,7 @@ root.bind("<F1>", on_f1)
 root.bind("<Escape>", on_escape)
 root.bind("q", on_q_key)
 root.bind("<F2>", on_f2)
-root.bind("e", on_e_key)
-root.bind("x", on_x_key)
+root.bind("<F12>", on_f12)
 
 imgfn = dir_name + "/" + file_name + ".png"
 
