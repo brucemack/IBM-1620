@@ -6,42 +6,7 @@ from tkinter import simpledialog
 import os 
 import util 
 import math
-
-class Glyph:
-    
-    def __init__(self, name, rows, cols, data):
-        self.name = name
-        self.rows = rows 
-        self.cols = cols 
-        self.data = data
-
-    def corr(self, rows, cols, data):
-
-        max_rows = max(rows, self.rows)
-        max_cols = max(cols, self.cols)
-
-        total = 0
-        tests = 0
-
-        for row in range(0, max_rows):
-            for col in range(0, max_cols):
-
-                # Get the sample on each side
-                if row < self.rows and col < self.cols:
-                    our_pixel = self.data[row * cols + col]
-                else:
-                    our_pixel = 255
-
-                if row < rows and col < cols:
-                    their_pixel = data[row * cols + col]
-                else:
-                    their_pixel = 255
-
-                # Error
-                total = total + (our_pixel - their_pixel) * (our_pixel - their_pixel)
-                tests = tests + 1 
-
-        return math.sqrt(total / tests)
+import glyphs 
 
 glyph_dict = dict()
 
@@ -82,6 +47,7 @@ helv24 = None
 
 dir_name = "c:/users/bruce/Downloads/temp/f_ald/ilovepdf_split"
 file_name = "1620_F_ALD_SN11093-82"
+glyph_file_name = "./glyph.txt"
 
 def round_p(p):
     return (round(p[0]), round(p[1]))
@@ -439,106 +405,94 @@ def on_f2(event):
     redraw_marks()
     redraw_hair()
 
-# Translates screen coordinates into a text coordinates
-def get_text_coordinates(screen_pt):
-    design_pt = rev_adj(screen_pt)
+# Checking match for the selected glyph
+def on_f11(event):
+
+    global text_grid_h, text_grid_v, glyph_dict
+
+    # Figure out what cell the hair is in by scanning the entire grid
+    hair_point_design = rev_adj(hair_point)
     for r in range(0, len(text_grid_h) - 1):
         for c in range(0, len(text_grid_v) - 1):
             # Compute the intersections (upper left, lower right), not paying attention 
-            # to any skew
+            # to any skew. This calculation happens in design space.
             pt_0 = util.line_intersection(text_grid_v[c], text_grid_h[r])
             pt_1 = util.line_intersection(text_grid_v[c + 1], text_grid_h[r + 1])
-            if util.point_in_rect(design_pt, (pt_0, pt_1)):
-                return (c, r)
-            
-    return None
+            if util.point_in_rect(hair_point_design, (pt_0, pt_1)):
 
-# Checking match
-def on_f11(event):
-    global text_grid_h, text_grid_v
-    # Figure out what cell the hair is in
-    pt = get_text_coordinates(hair_point)
-    if not pt:
-        return
-    text_c, text_r = pt
-    print("Checking", text_c, text_r)
-    # Compute the intersections (upper left, lower right), not paying attention 
-    # to any skew
-    pt_0 = util.line_intersection(text_grid_v[text_c], text_grid_h[text_r])
-    pt_1 = util.line_intersection(text_grid_v[text_c + 1], text_grid_h[text_r + 1])
-    # Convert back to screen coordinates
-    pt_0_screen = adj(pt_0)
-    pt_1_screen = adj(pt_1)
+                # At this point the pt_0/pt_1 defines the selected rectangle in design space
 
-    # Shift around a bit
-    lowest_score = 1000
-    lowest_gylp = None
+                # We shift around a bit looking for a good match
+                lowest_error = float('inf')
+                lowest_error_glyph = None
+                lowest_delta_x = 0
+                lowest_delta_y = 0
 
-    for delta_x in [-3, -2, -1, 0, 1, 2, 3]:
-        for delta_y in [-3, -2, -1, 0, 1, 2, 3]:
-            # Capture that small part of the image
-            pt_0_image = round_p((pt_0_screen[0] - image_origin[0] + delta_x, pt_0_screen[1] - image_origin[1] + delta_y))
-            pt_1_image = round_p((pt_1_screen[0] - image_origin[0] + delta_x, pt_1_screen[1] - image_origin[1] + delta_y))
-            dx = pt_1_image[0] - pt_0_image[0]
-            dy = pt_1_image[1] - pt_0_image[1]
-            # Scan the mini-image out of the image
-            pixel_data = []
-            for y in range(0, dy):
-                for x in range(0, dx):
-                    pt_image = (pt_0_image[0] + x, pt_0_image[1] + y)
-                    pixel_data.append(resized_image.getpixel(pt_image)[0])
+                for delta_x in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
+                    for delta_y in [4, 3, 2, 1, 0, -1, -2, -3, -4]:
 
-            # Now compare to each glyph
-            for (key, value) in glyph_dict.items():
-                corr = value.corr(dy, dx, pixel_data)
-                #print(key, value.corr(dy, dx, pixel_data))
-                if corr < lowest_score:
-                    lowest_score = corr 
-                    lowest_gylp = value
+                        shifted_pt_0 = (pt_0[0] + delta_x, pt_0[1] + delta_y)
+                        shifted_pt_1 = (pt_1[0] + delta_x, pt_1[1] + delta_y)
 
+                        dx = round(shifted_pt_1[0] - shifted_pt_0[0])
+                        dy = round(shifted_pt_1[1] - shifted_pt_0[1])
 
-    print("Lowest", lowest_score, lowest_gylp.name)
+                        # Make a potential glyph from the shifted area
+                        pixel_data = []
+                        for y in range(0, dy):
+                            for x in range(0, dx):
+                                pt_image = round_p((shifted_pt_0[0] + x, shifted_pt_0[1] + y))
+                                pixel_data.append(original_image.getpixel(pt_image)[0])
+                        potential_glyph = glyphs.Glyph(None, dy, dx, pixel_data)
 
-# Locking in a glyph
+                        # Now compare to each known glyph
+                        for (key, glyph) in glyph_dict.items():
+                            rmsd = glyph.rmsd(potential_glyph)
+                            if rmsd < lowest_error:
+                                # This is a new candidate!
+                                lowest_error = rmsd 
+                                lowest_error_glyph = glyph
+                                lowest_delta_x = delta_x
+                                lowest_delta_y = delta_y
+
+    if lowest_error_glyph == None:
+        print("Nothing found")
+    else:
+        print("Lowest", lowest_error_glyph.name, lowest_error, lowest_delta_x, lowest_delta_y)
+
+# Locking in a glyph and saving its bitmap
 def on_f12(event):
-    global text_grid_h, text_grid_v
-    # Figure out what cell the hair is in
+    global text_grid_h, text_grid_v, glyph_dict
+    # Figure out what cell the hair is in by scanning the entire grid
     hair_point_design = rev_adj(hair_point)
-    hit = None
     for r in range(0, len(text_grid_h) - 1):
         for c in range(0, len(text_grid_v) - 1):
             # Compute the intersections (upper left, lower right), not paying attention 
-            # to any skew
+            # to any skew. This calculation happens in design space.
             pt_0 = util.line_intersection(text_grid_v[c], text_grid_h[r])
             pt_1 = util.line_intersection(text_grid_v[c + 1], text_grid_h[r + 1])
             if util.point_in_rect(hair_point_design, (pt_0, pt_1)):
                 prompt = "Capture character at [" + str(c) + "," + str(r) + "]"
                 typed = simpledialog.askstring("Capture Character", prompt)
                 if len(typed) > 0:
-                    # Convert back to screen coordinates
-                    pt_0_screen = adj(pt_0)
-                    pt_1_screen = adj(pt_1)
-                    # Capture that small part of the image
-                    pt_0_image = round_p((pt_0_screen[0] - image_origin[0], pt_0_screen[1] - image_origin[1]))
-                    pt_1_image = round_p((pt_1_screen[0] - image_origin[0], pt_1_screen[1] - image_origin[1]))
-                    dx = pt_1_image[0] - pt_0_image[0]
-                    dy = pt_1_image[1] - pt_0_image[1]
-                    # Scan the mini-image
+                    # Capture that small part of the image in design space
+                    dx = round(pt_1[0] - pt_0[0])
+                    dy = round(pt_1[1] - pt_0[1])
+                    # Scan the mini-image and capture the pixels
                     pixel_data = []
                     for y in range(0, dy):
                         for x in range(0, dx):
-                            pt_image = (pt_0_image[0] + x, pt_0_image[1] + y)
-                            pixel_data.append(resized_image.getpixel(pt_image)[0])
-                    # Save the glyph
-                    glyph_dict[typed] = Glyph(typed, dy, dx, pixel_data)
-
-
-
+                            pt_image = (pt_0[0] + x, pt_0[1] + y)
+                            pixel_data.append(original_image.getpixel(pt_image)[0])
+                    # Save the glyphs
+                    glyph_dict[typed] = glyphs.Glyph(typed, dy, dx, pixel_data)
+                    glyphs.save_glyphs(glyph_file_name, glyph_dict)
                 return
 
 
 load_marks_if_possible()
 compute_text_grid()
+glyph_dict = glyphs.load_glyphs(glyph_file_name)
 
 root = tk.Tk()
 root.title("ALD Prod")
@@ -583,5 +537,3 @@ redraw_marks()
 redraw_hair()
 
 root.mainloop()
-
-
