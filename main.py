@@ -44,6 +44,8 @@ mark_lines = []
 cycle = 0
 helv16 = None
 helv24 = None
+offset_x = 0
+offset_y = 0
 
 dir_name = "c:/users/bruce/Downloads/temp/f_ald/ilovepdf_split"
 file_name = "1620_F_ALD_SN11093-82"
@@ -108,7 +110,7 @@ def sector(point):
 
 def compute_text_grid():
 
-    global text_grid_h, text_grid_v
+    global text_grid_h, text_grid_v, offset_y, offset_x
 
     col_count = 127
     row_count = 160
@@ -116,10 +118,11 @@ def compute_text_grid():
     # Extend up the top marks upwards along the slope of the left and right borders
     mark_top_left_ext = util.get_extended_point(mark_top_left, mark_bottom_left, -405)
     mark_top_right_ext = util.get_extended_point(mark_top_right, mark_bottom_right, -405)
-    ticks_l = util.get_intermediate_points(mark_top_left_ext, mark_bottom_left, row_count)
-    ticks_r = util.get_intermediate_points(mark_top_right_ext, mark_bottom_right, row_count)
-    ticks_t = util.get_intermediate_points(mark_top_left_ext, mark_top_right_ext, col_count)
-    ticks_b = util.get_intermediate_points(mark_bottom_left, mark_bottom_right, col_count)
+
+    ticks_l = util.get_intermediate_points(mark_top_left_ext, mark_bottom_left, row_count, offset_x, offset_y)
+    ticks_r = util.get_intermediate_points(mark_top_right_ext, mark_bottom_right, row_count, offset_x, offset_y)
+    ticks_t = util.get_intermediate_points(mark_top_left_ext, mark_top_right_ext, col_count, offset_x, offset_y)
+    ticks_b = util.get_intermediate_points(mark_bottom_left, mark_bottom_right, col_count, offset_x, offset_y)
 
     # Generate the connecting lines
     text_grid_h  = []
@@ -131,10 +134,12 @@ def compute_text_grid():
 
 def redraw_marks():
 
-    global shift_y
+    global shift_y, mark_lines
 
     for mark_line in mark_lines:
         canvas.delete(mark_line)
+    mark_lines = []
+
     color = "red"
 
     tl = adj(mark_top_left)
@@ -200,11 +205,6 @@ def redraw_marks():
     # Vertical lines
     for i in range(0, len(text_grid_v)):
          mark_lines.append(canvas.create_line(adj(text_grid_v[i][0]), adj(text_grid_v[i][1]), fill=rule_color, width=1))     
-
-    # Draw a cell for a test
-    #p0 = adj(util.line_intersection(lines_h[0], lines_v[0]))
-    #p1 = adj(util.line_intersection(lines_h[1], lines_v[1]))
-    #mark_lines.append(canvas.create_rectangle(p0[0], p0[1], p1[0], p1[1], fill="green"))
 
 def redraw_image():
     global tk_image, scale, original_image, resized_image, tk_photo_image, canvas
@@ -298,6 +298,7 @@ def on_right(event):
     hair_point = add_pts(hair_point, (1, 0))
     redraw_hair()
 
+
 def on_shift_up(event):
     global hair_point
     adj_nearest_mark(screen_pt_to_design_pt(hair_point), (0, -1))
@@ -322,6 +323,35 @@ def on_shift_left(event):
 def on_shift_right(event):
     global hair_point
     adj_nearest_mark(screen_pt_to_design_pt(hair_point), (1, 0))
+    compute_text_grid()
+    redraw_marks()
+    redraw_hair()
+
+
+def on_alt_up(event):
+    global offset_x, offset_y
+    offset_y = offset_y - 1
+    compute_text_grid()
+    redraw_marks()
+    redraw_hair()
+
+def on_alt_down(event):
+    global offset_x, offset_y
+    offset_y = offset_y + 1
+    compute_text_grid()
+    redraw_marks()
+    redraw_hair()
+
+def on_alt_left(event):
+    global offset_x, offset_y
+    offset_x = offset_x - 1
+    compute_text_grid()
+    redraw_marks()
+    redraw_hair()
+
+def on_alt_right(event):
+    global offset_x, offset_y
+    offset_x = offset_x + 1
     compute_text_grid()
     redraw_marks()
     redraw_hair()
@@ -427,9 +457,10 @@ def on_f11(event):
                 lowest_error_glyph = None
                 lowest_delta_x = 0
                 lowest_delta_y = 0
+                best_rmsd_by_glyph = dict()
 
-                for delta_x in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
-                    for delta_y in [4, 3, 2, 1, 0, -1, -2, -3, -4]:
+                for delta_x in [-8, -6, -4, -2, -1, 0, 1, 2, 4, 6, 8]:
+                    for delta_y in [-8, -6, -4, -2, -1, 0, 1, 2, 4, 6, 8]:
 
                         shifted_pt_0 = (pt_0[0] + delta_x, pt_0[1] + delta_y)
                         shifted_pt_1 = (pt_1[0] + delta_x, pt_1[1] + delta_y)
@@ -445,20 +476,40 @@ def on_f11(event):
                                 pixel_data.append(original_image.getpixel(pt_image)[0])
                         potential_glyph = glyphs.Glyph(None, dy, dx, pixel_data)
 
-                        # Now compare to each known glyph
-                        for (key, glyph) in glyph_dict.items():
-                            rmsd = glyph.rmsd(potential_glyph)
+                        # Now compare to each known glyph to figure out where we have the lowest error
+                        for (key, official_glyph) in glyph_dict.items():
+                            rmsd = official_glyph.rmsd(potential_glyph)
+
+                            # Track the best match we've had on each glyph
+                            if key not in best_rmsd_by_glyph or rmsd < best_rmsd_by_glyph[key]:
+                                best_rmsd_by_glyph[key] = rmsd
+
                             if rmsd < lowest_error:
                                 # This is a new candidate!
                                 lowest_error = rmsd 
-                                lowest_error_glyph = glyph
+                                lowest_error_glyph = official_glyph
                                 lowest_delta_x = delta_x
                                 lowest_delta_y = delta_y
 
     if lowest_error_glyph == None:
         print("Nothing found")
     else:
+        # Calculate the second place
+        second_lowest_error = float('inf')
+        second_lowest_glyph = None
+        for (key, rmsd) in best_rmsd_by_glyph.items():
+            if rmsd > lowest_error and rmsd < second_lowest_error:
+                second_lowest_error = rmsd
+                second_lowest_glyph = key
+
         print("Lowest", lowest_error_glyph.name, lowest_error, lowest_delta_x, lowest_delta_y)
+        print("     Second", second_lowest_glyph, second_lowest_error)
+
+        #for (key, rmsd) in best_rmsd_by_glyph.items():
+        #    print(key, 20 * math.log10(rmsd / lowest_error))
+
+
+
 
 # Locking in a glyph and saving its bitmap
 def on_f12(event):
@@ -489,6 +540,20 @@ def on_f12(event):
                     glyphs.save_glyphs(glyph_file_name, glyph_dict)
                 return
 
+
+def on_f7(event):
+    global offset_y 
+    offset_y = offset_y + 1
+    compute_text_grid()
+    redraw_marks()
+    redraw_hair()
+
+def on_f8(event):
+    global offset_y 
+    offset_y = offset_y - 1
+    compute_text_grid()
+    redraw_marks()
+    redraw_hair()
 
 load_marks_if_possible()
 compute_text_grid()
@@ -521,12 +586,20 @@ root.bind("<Shift-Down>", on_shift_down)
 root.bind("<Shift-Left>", on_shift_left)
 root.bind("<Shift-Right>", on_shift_right)
 
+root.bind("<Alt-Up>", on_alt_up)
+root.bind("<Alt-Down>", on_alt_down)
+root.bind("<Alt-Left>", on_alt_left)
+root.bind("<Alt-Right>", on_alt_right)
+
 root.bind("<F1>", on_f1)
 root.bind("<Escape>", on_escape)
 root.bind("q", on_q_key)
 root.bind("<F2>", on_f2)
 root.bind("<F12>", on_f12)
 root.bind("<F11>", on_f11)
+
+root.bind("<F7>", on_f7)
+root.bind("<F8>", on_f8)
 
 imgfn = dir_name + "/" + file_name + ".png"
 

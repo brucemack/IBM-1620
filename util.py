@@ -8,10 +8,10 @@ def get_extended_point(start_point, end_point, ext):
     dy = dy / length
     return (start_point[0] + dx * ext, start_point[1] + dy * ext)
 
-def get_intermediate_points(start_point, end_point, count):
+def get_intermediate_points(start_point, end_point, count, offset_x = 0, offset_y = 0):
     """
     Takes a starting and ending point and creates count intermediate points,
-    not covering the start point.
+    covering the start point and the end point
     """
     dx = (end_point[0] - start_point[0]) / count
     dy = (end_point[1] - start_point[1]) / count
@@ -19,7 +19,7 @@ def get_intermediate_points(start_point, end_point, count):
     y = start_point[1]
     result = []
     for i in range(0, count + 1):
-        result.append((x + i * dx, y + i * dy))
+        result.append(((x + i * dx)  + offset_x, (y + i * dy) + offset_y))
     return result
 
 def get_distance(point_a, point_b):
