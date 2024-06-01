@@ -1,7 +1,7 @@
 # Copyright (c) 2024 Bruce MacKinnon
 import tkinter as tk
 import tkinter.font as TkFont
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageFilter
 from tkinter import simpledialog
 import os 
 import util 
@@ -459,8 +459,8 @@ def on_f11(event):
                 lowest_delta_y = 0
                 best_rmsd_by_glyph = dict()
 
-                for delta_x in [-8, -6, -4, -2, -1, 0, 1, 2, 4, 6, 8]:
-                    for delta_y in [-8, -6, -4, -2, -1, 0, 1, 2, 4, 6, 8]:
+                for delta_x in [-3, -2, -1, 0, 1, 2, 3 ]:
+                    for delta_y in [-3, -2, -1, 0, 1, 2, 3]:
 
                         shifted_pt_0 = (pt_0[0] + delta_x, pt_0[1] + delta_y)
                         shifted_pt_1 = (pt_1[0] + delta_x, pt_1[1] + delta_y)
@@ -602,8 +602,9 @@ root.bind("<F7>", on_f7)
 root.bind("<F8>", on_f8)
 
 imgfn = dir_name + "/" + file_name + ".png"
-
 original_image = Image.open(imgfn)
+# Filter the image to try to resolve speckling
+#original_image = original_image.filter(ImageFilter.BLUR)
 
 redraw_image()
 redraw_marks()

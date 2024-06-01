@@ -8,6 +8,7 @@ import os
 import util 
 import math
 import glyphs 
+import sys
 
 glyph_file_name = "./glyph.txt"
 glyph_dict = dict()
@@ -147,7 +148,7 @@ root.bind("<F1>", on_f1)
 #root.bind("<F12>", on_f12)
 #root.bind("<F11>", on_f11)
 
-load_glyph("q")
+load_glyph(sys.argv[1])
 redraw_grid()
 redraw_glyph()
 redraw_hair()
