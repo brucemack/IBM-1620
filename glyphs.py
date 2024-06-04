@@ -49,6 +49,23 @@ class Glyph:
                     s = s + "?"
             print(s)
 
+    def fill(self):
+        new_data = []
+        for row in range(0, self.rows):
+            for col in range(0, self.cols):
+                self_pixel = self.data[row * self.cols + col]
+                new_data.append(self_pixel)
+        for row in range(1, self.rows - 1):
+            for col in range(1, self.cols - 1):
+                up_pixel = self.data[(row - 1) * self.cols + col]
+                down_pixel = self.data[(row + 1) * self.cols + col]
+                left_pixel = self.data[(row) * self.cols + col - 1]
+                right_pixel = self.data[(row) * self.cols + col + 1]
+                self_pixel = self.data[row * self.cols + col]
+                if self_pixel == 255 and up_pixel == 0 and down_pixel == 0 and left_pixel == 0 and right_pixel == 0:
+                    new_data[row * self.cols + col] = 0
+        self.data = new_data               
+
 def save_glyphs(out_fn: str, g):
     s = ""
     for _, glyph in g.items():

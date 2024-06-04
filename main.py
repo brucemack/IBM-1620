@@ -46,9 +46,12 @@ helv16 = None
 helv24 = None
 offset_x = 0
 offset_y = 0
+col_count = 127
+row_count = 160
 
 dir_name = "c:/users/bruce/Downloads/temp/f_ald/ilovepdf_split"
 file_name = "1620_F_ALD_SN11093-82"
+#file_name = "1620_F_ALD_SN11093-112"
 glyph_file_name = "./glyph.txt"
 
 def round_p(p):
@@ -87,23 +90,21 @@ def adj(point):
 def rev_adj(point):
     # Determine scale 
     scale = resized_image.size[0] / original_image.size[0]
-    return (int((point[0] - image_origin[0]) / scale), int(point[1] - image_origin[1]) / scale)
+    return (round((point[0] - image_origin[0]) / scale), round(point[1] - image_origin[1]) / scale)
 
 def add_pts(point_a, point_b):
     return (point_a[0] + point_b[0], point_a[1] + point_b[1])
 
-def sector(point):
+def sector(p):
 
-    tl_d = util.get_distance(point, mark_top_left)
-    tr_d = util.get_distance(point, mark_top_right)
-    bl_d = util.get_distance(point, mark_bottom_left)
-    br_d = util.get_distance(point, mark_bottom_right)
+    mid_x = 1700
+    mid_y = 2300
 
-    if tl_d < tr_d and tl_d < bl_d and tl_d < br_d:
+    if p[0] < mid_x and p[1] < mid_y:
         return "tl"
-    elif tr_d < tl_d and tr_d < bl_d and tr_d < br_d:
+    elif p[0] >= mid_x and p[1] < mid_y:
         return "tr"
-    elif bl_d < tl_d and bl_d < tr_d and bl_d < br_d:
+    elif p[0] < mid_x and p[1] > mid_y:
         return "bl"
     else:
         return "br"
@@ -111,9 +112,6 @@ def sector(point):
 def compute_text_grid():
 
     global text_grid_h, text_grid_v, offset_y, offset_x
-
-    col_count = 127
-    row_count = 160
 
     # Extend up the top marks upwards along the slope of the left and right borders
     mark_top_left_ext = util.get_extended_point(mark_top_left, mark_bottom_left, -405)
@@ -131,6 +129,20 @@ def compute_text_grid():
          text_grid_h.append((ticks_l[i], ticks_r[i]))
     for i in range(0, len(ticks_t)):
          text_grid_v.append((ticks_t[i], ticks_b[i]))
+
+def point_to_cr(screen_point):
+    # Figure out what cell the screen point is in by scanning the entire grid
+    hair_point_design = rev_adj(screen_point)
+    for r in range(0, len(text_grid_h) - 1):
+        for c in range(0, len(text_grid_v) - 1):
+            # Compute the intersections (upper left, lower right), not paying attention 
+            # to any skew. This calculation happens in design space.
+            pt_0 = util.line_intersection(text_grid_v[c], text_grid_h[r])
+            pt_1 = util.line_intersection(text_grid_v[c + 1], text_grid_h[r + 1])
+            if util.point_in_rect(hair_point_design, (pt_0, pt_1)):
+                return (c, r)
+    return None
+
 
 def redraw_marks():
 
@@ -235,10 +247,14 @@ def redraw_hair():
     tk_hair_line_v = canvas.create_line((hair_point[0], 0), (hair_point[0], canvas_size[1]), fill="black")
     tk_hair_line_h = canvas.create_line((0, hair_point[1]), (canvas_size[0], hair_point[1]), fill="black")
     
+    cr = point_to_cr(hair_point)
     adj_point = rev_adj(hair_point)
 
     cue = "[" + str(int(adj_point[0])) + ", " + str(int(adj_point[1])) + "] " + \
         sector(adj_point)
+    if cr != None:
+        c, r = cr
+        cue = cue + " (col=" + str(c) + ", row=" + str(r) + ")" 
     tk_hair_text = canvas.create_text(hair_point[0] + 20, hair_point[1] + 20, anchor=tk.NW, 
                                       text=cue, fill='#119999', font=helv16)
 
@@ -248,6 +264,7 @@ def set_nearest_mark(design_pt):
 
     # Figure out which mark the mouse is close to
     s = sector(design_pt)
+    print(s)
     # Adjust the right mark
     if s == "tl":
         mark_top_left = design_pt
@@ -278,6 +295,75 @@ def adj_nearest_mark(design_pt, adj):
 def screen_pt_to_design_pt(screen_pt):
     return rev_adj(screen_pt)
 
+def recognize(pt_0, pt_1):
+
+    # At this point the pt_0/pt_1 defines the selected rectangle in design space
+
+    # We shift around a bit looking for a good match
+    lowest_error = float('inf')
+    lowest_error_glyph = None
+    lowest_delta_x = 0
+    lowest_delta_y = 0
+    best_rmsd_by_glyph = dict()
+
+    for delta_x in [-2, -1, 0, 1, 2 ]:
+        for delta_y in [-3, -2, -1, 0, 1, 2, 3]:
+
+            shifted_pt_0 = (pt_0[0] + delta_x, pt_0[1] + delta_y)
+            shifted_pt_1 = (pt_1[0] + delta_x, pt_1[1] + delta_y)
+
+            dx = round(shifted_pt_1[0] - shifted_pt_0[0])
+            dy = round(shifted_pt_1[1] - shifted_pt_0[1])
+
+            # Make a potential glyph from the shifted area
+            pixel_data = []
+            for y in range(0, dy):
+                for x in range(0, dx):
+                    pt_image = round_p((shifted_pt_0[0] + x, shifted_pt_0[1] + y))
+                    pixel_data.append(original_image.getpixel(pt_image)[0])
+            potential_glyph = glyphs.Glyph(None, dy, dx, pixel_data)
+
+            # Eliminate lone white spots
+            potential_glyph.fill()
+
+
+            # Now compare to each known glyph to figure out where we have the lowest error
+            for (key, official_glyph) in glyph_dict.items():
+                rmsd = official_glyph.rmsd(potential_glyph)
+
+                # Track the best match we've had on each glyph
+                if key not in best_rmsd_by_glyph or rmsd < best_rmsd_by_glyph[key]:
+                    best_rmsd_by_glyph[key] = rmsd
+
+                if rmsd < lowest_error:
+                    # This is a new candidate!
+                    lowest_error = rmsd 
+                    lowest_error_glyph = official_glyph
+                    lowest_delta_x = delta_x
+                    lowest_delta_y = delta_y
+
+    return lowest_error_glyph, lowest_error, lowest_delta_x, lowest_delta_y
+
+def scan():
+    for r in range(2, row_count):
+        s = ""
+        for c in range(0, col_count):
+            # Compute the intersections (upper left, lower right), not paying attention 
+            # to any skew. This calculation happens in design space.
+            pt_0 = util.line_intersection(text_grid_v[c], text_grid_h[r])
+            pt_1 = util.line_intersection(text_grid_v[c + 1], text_grid_h[r + 1])
+            g, error, delta_x, delta_y = recognize(pt_0, pt_1)
+            if g == None:
+                s = s + " "
+            else:
+                s = s + g.name 
+        print(r, s)
+
+def fmt1(f):
+    return str(int(f))
+
+# ===== Events ================================================================
+
 def on_up(event):
     global hair_point
     hair_point = add_pts(hair_point, (0, -1))
@@ -297,7 +383,6 @@ def on_right(event):
     global hair_point
     hair_point = add_pts(hair_point, (1, 0))
     redraw_hair()
-
 
 def on_shift_up(event):
     global hair_point
@@ -415,9 +500,6 @@ def on_shift_button_press_1(event):
 def on_backspace(event):
     print("Backspace", event)
 
-def fmt1(f):
-    return str(int(f))
-
 def on_q_key(event):
     print("Writing")
     store_marks()
@@ -435,6 +517,9 @@ def on_f2(event):
     redraw_marks()
     redraw_hair()
 
+
+
+
 # Checking match for the selected glyph
 def on_f11(event):
 
@@ -449,67 +534,14 @@ def on_f11(event):
             pt_0 = util.line_intersection(text_grid_v[c], text_grid_h[r])
             pt_1 = util.line_intersection(text_grid_v[c + 1], text_grid_h[r + 1])
             if util.point_in_rect(hair_point_design, (pt_0, pt_1)):
-
                 # At this point the pt_0/pt_1 defines the selected rectangle in design space
-
-                # We shift around a bit looking for a good match
-                lowest_error = float('inf')
-                lowest_error_glyph = None
-                lowest_delta_x = 0
-                lowest_delta_y = 0
-                best_rmsd_by_glyph = dict()
-
-                for delta_x in [-3, -2, -1, 0, 1, 2, 3 ]:
-                    for delta_y in [-3, -2, -1, 0, 1, 2, 3]:
-
-                        shifted_pt_0 = (pt_0[0] + delta_x, pt_0[1] + delta_y)
-                        shifted_pt_1 = (pt_1[0] + delta_x, pt_1[1] + delta_y)
-
-                        dx = round(shifted_pt_1[0] - shifted_pt_0[0])
-                        dy = round(shifted_pt_1[1] - shifted_pt_0[1])
-
-                        # Make a potential glyph from the shifted area
-                        pixel_data = []
-                        for y in range(0, dy):
-                            for x in range(0, dx):
-                                pt_image = round_p((shifted_pt_0[0] + x, shifted_pt_0[1] + y))
-                                pixel_data.append(original_image.getpixel(pt_image)[0])
-                        potential_glyph = glyphs.Glyph(None, dy, dx, pixel_data)
-
-                        # Now compare to each known glyph to figure out where we have the lowest error
-                        for (key, official_glyph) in glyph_dict.items():
-                            rmsd = official_glyph.rmsd(potential_glyph)
-
-                            # Track the best match we've had on each glyph
-                            if key not in best_rmsd_by_glyph or rmsd < best_rmsd_by_glyph[key]:
-                                best_rmsd_by_glyph[key] = rmsd
-
-                            if rmsd < lowest_error:
-                                # This is a new candidate!
-                                lowest_error = rmsd 
-                                lowest_error_glyph = official_glyph
-                                lowest_delta_x = delta_x
-                                lowest_delta_y = delta_y
+                lowest_error_glyph, lowest_error, lowest_delta_x, lowest_delta_y = \
+                    recognize(pt_0, pt_1)
 
     if lowest_error_glyph == None:
         print("Nothing found")
     else:
-        # Calculate the second place
-        second_lowest_error = float('inf')
-        second_lowest_glyph = None
-        for (key, rmsd) in best_rmsd_by_glyph.items():
-            if rmsd > lowest_error and rmsd < second_lowest_error:
-                second_lowest_error = rmsd
-                second_lowest_glyph = key
-
         print("Lowest", lowest_error_glyph.name, lowest_error, lowest_delta_x, lowest_delta_y)
-        print("     Second", second_lowest_glyph, second_lowest_error)
-
-        #for (key, rmsd) in best_rmsd_by_glyph.items():
-        #    print(key, 20 * math.log10(rmsd / lowest_error))
-
-
-
 
 # Locking in a glyph and saving its bitmap
 def on_f12(event):
@@ -542,18 +574,10 @@ def on_f12(event):
 
 
 def on_f7(event):
-    global offset_y 
-    offset_y = offset_y + 1
-    compute_text_grid()
-    redraw_marks()
-    redraw_hair()
+    scan()
 
 def on_f8(event):
-    global offset_y 
-    offset_y = offset_y - 1
-    compute_text_grid()
-    redraw_marks()
-    redraw_hair()
+    pass
 
 load_marks_if_possible()
 compute_text_grid()
