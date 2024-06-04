@@ -7,6 +7,7 @@ import os
 import util 
 import math
 import json
+import sys
 
 in_base_dir = "/home/bruce/host/IBM-1620/f_ald/png"
 
@@ -25,13 +26,15 @@ anchor_point = (0, 0)
 press_1_state = False
 hair_point = (0, 0)
 tk_hair_objects = []
+mark_0 = (0,0)
+tk_mark_objects = []
 
 image_type = 0
 image_name = None 
 image_rotation = 0
 
 def load_image(n):
-    global in_fn, original_image, image_type, image_rotation, image_name
+    global in_fn, original_image, image_type, image_rotation, image_name, mark_0
     image_name = n
     image_rotation = 0
     image_type = 0
@@ -44,14 +47,17 @@ def load_image(n):
             meta = json.load(f)
             image_rotation = meta["image_rotation"]
             image_type = meta["image_type"]
+            mark_0 = (meta["mark_0_x"], meta["mark_0_y"])
 
 def save_image_meta():
-    global image_name, image_type, image_rotation, in_base_dir
+    global image_name, image_type, image_rotation, in_base_dir, mark_0
     # Save metadata 
     meta = {
         "image_name": image_name,
         "image_type": image_type,
-        "image_rotation": image_rotation
+        "image_rotation": image_rotation,
+        "mark_0_x": mark_0[0],
+        "mark_0_y": mark_0[1]
     }
     print("Saving ...")
     with open(in_base_dir + "/" + image_name + ".json", "w+") as f:
@@ -76,8 +82,22 @@ def redraw_image():
 
 def screen_to_design(point):
     global scale, image_origin
-    # Determine scale 
     return ((point[0] - image_origin[0]) / scale, (point[1] - image_origin[1]) / scale)
+
+def design_to_screen(point):
+    global scale, image_origin
+    return (point[0] * scale + image_origin[0], point[1] * scale + image_origin[1])
+
+def redraw_marks():
+    global tk_mark_objects, canvas, canvas_size, mark_0
+    # Undraw
+    for o in tk_mark_objects:
+        canvas.delete(o)
+    tk_mark_objects = []
+    s = design_to_screen(mark_0)
+    # Redraw
+    tk_mark_objects.append(canvas.create_line((0, round(s[1])), (canvas_size[0], round(s[1])), fill="red"))
+    tk_mark_objects.append(canvas.create_line((round(s[0]), 0), (round(s[0]), canvas_size[1]), fill="red"))
 
 def redraw_hair():
     global tk_hair_objects, canvas, canvas_size, image_type
@@ -115,6 +135,7 @@ def on_motion(event):
         # Reset anchor
         anchor_point = (event.x, event.y)
         redraw_image()
+        redraw_marks()
     redraw_hair()
 
 def on_button_press_1(event):
@@ -131,6 +152,7 @@ def on_pageup(event):
     scale = scale + 0.1
     update_image()
     redraw_image()
+    redraw_marks()
     redraw_hair()
 
 def on_pagedown(event):
@@ -139,6 +161,7 @@ def on_pagedown(event):
         scale = scale - 0.1
     update_image()
     redraw_image()
+    redraw_marks()
     redraw_hair()
 
 def on_key_q(event):
@@ -146,6 +169,7 @@ def on_key_q(event):
     image_rotation = image_rotation + rotation_tick
     update_image()
     redraw_image()
+    redraw_marks()
     redraw_hair()
 
 def on_key_w(event):
@@ -153,13 +177,40 @@ def on_key_w(event):
     image_rotation = image_rotation - rotation_tick
     update_image()
     redraw_image()
+    redraw_marks()
     redraw_hair()
 
-def on_f3(event):
-    global image_type, rotation
-    # Save metadata 
-    save_image_meta()
-    quit()
+def on_f1(event):
+    global mark_0
+    mark_0 = screen_to_design(hair_point)
+    redraw_marks()
+    redraw_hair()
+    
+def on_shift_up(event):
+    global mark_0
+    if mark_0[1] > 0:
+        mark_0 = (mark_0[0], mark_0[1] - 1)
+    redraw_marks()
+    redraw_hair()
+
+def on_shift_down(event):
+    global mark_0
+    mark_0 = (mark_0[0], mark_0[1] + 1)
+    redraw_marks()
+    redraw_hair()
+
+def on_shift_left(event):
+    global mark_0
+    if mark_0[0] > 0:
+        mark_0 = (mark_0[0] - 1, mark_0[1])
+    redraw_marks()
+    redraw_hair()
+
+def on_shift_right(event):
+    global mark_0
+    mark_0 = (mark_0[0] + 1, mark_0[1])
+    redraw_marks()
+    redraw_hair()
 
 def on_f2(event):
     global image_type 
@@ -170,6 +221,15 @@ def on_f2(event):
     elif image_type == 2:
         image_type = 0
     redraw_hair()   
+
+def on_f3(event):
+    global image_type, rotation
+    # Save metadata 
+    save_image_meta()
+    quit()
+
+def on_escape(event):
+    quit()
 
 # Setup TK
 root = tk.Tk()
@@ -187,14 +247,22 @@ root.bind("<Prior>", on_pageup)
 root.bind("<Next>", on_pagedown)
 root.bind("q", on_key_q)
 root.bind("w", on_key_w)
+root.bind("<F1>", on_f1)
 root.bind("<F2>", on_f2)
 root.bind("<F3>", on_f3)
+root.bind("<Escape>", on_escape)
+root.bind("<Shift-Up>", on_shift_up)
+root.bind("<Shift-Down>", on_shift_down)
+root.bind("<Shift-Left>", on_shift_left)
+root.bind("<Shift-Right>", on_shift_right)
 
-in_fn = "page_82"
+#in_fn = "page_82"
+in_fn = sys.argv[1]
 load_image(in_fn)
 
 update_image()
 redraw_image()
+redraw_marks()
+redraw_hair()
 
 root.mainloop()
-
