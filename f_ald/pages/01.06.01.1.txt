@@ -1,15 +1,57 @@
+# COPYRIGHT (C) 2024 - Bruce MacKinnon
+#
+# The "page:" tag describes the overall page
+#
 page:
   part: 2153519 
   title: CONSOLE CONTROL MANUAL RESET
   num: 01.06.01.1 
   pdf: 74
 
+# Each block on the page will have its own section.
+# The blocks are organized in a grid coordinate system
+# that is designated by the "coo:" tag below.  "coo: 2D"
+# means column 2, row D.  There is no row I.
+#
+# We enter the columns left to right. Inside of each column
+# we enter the rows top to bottom.  For example, page 74 
+# has these blocks: 
+#
+# 2D, 2D, 2F, 3C, 3D, 4D, 5A, 5C, 5E, 5G, 5J
+#
+# The inputs to the block are on the left side of the 
+# block and have single-letter identifiers.  The outputs 
+# of the block are on the right side of the block and 
+# have single letter identifiers.
+#
+# We only need to record the block inputs using the "inp:"
+# tag.
+#
+# Block inputs will either connect to:
+# 
+# 1. A wire on the left side of the page using the [xxxxx] 
+#    identifier format.
+# 2. The output of another block on the page using the XX.Y
+#    identifier format where XX is the block coordinate and 
+#    Y is the output pin letter.
+#
+# It is possible that a block input will be connected to more
+# than one thing. Use comma-separation to make a list.
+#
+# There is no need to capture the block outputs.
+#
+# NOTE: here are a few pieces of information on the block that 
+# do not need to be captured.
+#
+# NOTE: Use image of page 74 as an example to compare the original
+# diagram with the information recorded here.
+#
 block:
-  loc: 1A16
+  loc: 1G16
   typ: MX--
   cir: 01
   coo: 2D
-  inputs:
+  inp:
     B: [+S MANUAL RESET]
     D: [+S CLOCK OFF]
 
@@ -19,6 +61,7 @@ block:
   cir: 01
   coo: 2E
   inp: 
+# Here's an example of an input that connects to another block's output.
     A: 2F.CL
 
 block: 
@@ -45,6 +88,8 @@ block:
   cir: 04
   coo: 3D
   inp:
+# Here's an example of a block input that connects to two different 
+# block outputs.  
     F: 2D/G, 2E/E
 
 block:
@@ -96,6 +141,13 @@ block:
   inp: 
     B: 3C/L, 3D/A
 
+# Each UNIQUE output on the right side of the page will 
+# have an "out:" section.
+#
+# The "net:" tag gives the name of the wire.
+# The "dri:" tag gives the list of block OUTPUTS that 
+#  the net is connected to (i.e. driving block outputs)
+
 out:
   net: [-S MANUAL RESET P1]
   dri: 5A/H
@@ -115,6 +167,3 @@ out:
 out: 
   net: [-S RESET NOT RUN]
   dri: 5G/K
-
-
-
