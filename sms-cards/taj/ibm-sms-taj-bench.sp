@@ -29,8 +29,8 @@ qs   r2   reset2 r3    pnp033
 rx8 r3 c 30
 
 * 1 MHz clock
-Vd d 0 pulse (0 6 4000n 1n 1n 50n 1u)
-Vq q 0 pulse (0 6 4000n 1n 1n 50n 1u)
+Vd d 0 pulse (-6 0 4000n 1n 1n 150n 1u)
+Vq q 0 pulse (-6 0 4000n 1n 1n 150n 1u)
 
 * Jumper wires
 rx0 p r 1
@@ -56,7 +56,7 @@ X1 a b c d e f g h gnd k l vn12 vp12 p q r SMS_CARD_TAJ
 .nodeset v(b)=-12 v(p)=0
 
 .control
-    tran 1000p 20u
+    tran 1000p 50u
     plot x1.t3_b b x1.t1_b p
 .endc
 
