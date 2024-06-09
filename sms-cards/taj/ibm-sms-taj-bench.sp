@@ -9,7 +9,7 @@ rgnd gnd 0 0
 
 *            PULSE (V1    V2   TD   TR  TF  PW   PER  NP )
 * Reset pulse
-Vreset1 reset1 0 pulse (0 -12 1000n 1n 1n 1000n 10u 1)
+Vreset1 reset1 0 pulse (0 -12 1000n 10n 10n 1000n 10u 1)
 Vreset2 reset2 0 0
 
 * Reset circuits
