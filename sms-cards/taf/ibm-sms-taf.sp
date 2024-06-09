@@ -1,4 +1,3 @@
-
 * TAF
 * 1 MHz oscilator
 * https://static.righto.com/sms/TAF.html

@@ -18,8 +18,9 @@
 + ISC=7.546u NE=1.796 NC=1.364 RB=1.885 RE=306.4m RC=1.727u)
 
 * TODO: Figure out the characteristics of these diodes
-.MODEL diodeAS D 
-.MODEL diodeCD D 
-.MODEL diodeGS D 
+* NOTE: Adding a realistic capacitance resolves simulation convergence problems
+.MODEL diodeAS D(CJO=10p RS=2 TT=10n) 
+.MODEL diodeCD D(CJO=10p RS=2 TT=10n)
+.MODEL diodeGS D(CJO=10p RS=2 TT=10n) 
 
 .model switch1 sw 
