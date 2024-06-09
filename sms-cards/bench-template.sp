@@ -4,7 +4,7 @@
 
 vs1 vp12 0 12
 vs2 vn12 0 -12
-vgnd gnd 0 0 
+rgnd gnd 0 0 
 
 * vta a 0 -0.1
 *            PULSE (V1    V2   TD   TR  TF  PW   PER  NP )

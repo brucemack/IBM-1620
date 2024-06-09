@@ -25,7 +25,7 @@ R3 k t4_b 5.6k
 * QXXXXXXX nc nb ne <ns> <tj> mname <area=val> <areac=val>
 * + <areab=val> <m=val> <off> <ic=vbe,vce> <temp=val>
 * + <dtemp=val>
-Qt4 e t4_b 0 pnp33
+Qt4 e t4_b 0 pnp033
 
 * -----
 
@@ -39,7 +39,7 @@ R16 h t6_b 5.6k
 * QXXXXXXX nc nb ne <ns> <tj> mname <area=val> <areac=val>
 * + <areab=val> <m=val> <off> <ic=vbe,vce> <temp=val>
 * + <dtemp=val>
-Qt6 c t6_b 0 pnp33
+Qt6 c t6_b 0 pnp033
 
 * -----
 
@@ -53,6 +53,6 @@ R5 r t5_b 5.6k
 * QXXXXXXX nc nb ne <ns> <tj> mname <area=val> <areac=val>
 * + <areab=val> <m=val> <off> <ic=vbe,vce> <temp=val>
 * + <dtemp=val>
-Qt5 d t5_b 0 pnp33
+Qt5 d t5_b 0 pnp033
 
 .ENDS
