@@ -1,0 +1,22 @@
+part: 2153519 
+title: "CONSOLE CONTROL MANUAL RESET"
+num: 01.06.01.1 
+pdf: 74
+
+blocks:
+
+  - loc: 1G16
+    typ: MX--
+    cir: 01
+    coo: 2D
+    inp:
+      B: [ "+S MANUAL RESET" ]
+      D: [ "+S CLOCK OFF", B4.R ]
+
+outputs:
+  - net: "test1"
+    dri: B4.Q
+  - net: "test2"
+    dri: [ B4.R ]
+
+
