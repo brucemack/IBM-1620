@@ -1,6 +1,8 @@
 * Generic test bench
 
-.include "ibm-sms-XXXX.sp"
+.include "../ibm-sms-models.sp"
+.include "../ibm-sms-components.sp"
+.include "XXXX.sp"
 
 vs1 vp12 0 12
 vs2 vn12 0 -12

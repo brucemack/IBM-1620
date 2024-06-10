@@ -2,8 +2,8 @@
 
 .include "../ibm-sms-models.sp"
 .include "../ibm-sms-components.sp"
-.include "ibm-sms-taj.sp"
-.include "../taf/ibm-sms-taf.sp"
+.include "taj.sp"
+.include "../taf/taf.sp"
 
 vs1 vp12 0 12
 vs2 vn12 0 -12

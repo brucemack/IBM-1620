@@ -1,5 +1,7 @@
 
-.include "ibm-sms-cd.sp"
+.include "../ibm-sms-models.sp"
+.include "../ibm-sms-components.sp"
+.include "cd.sp"
 
 Vs1 vp12 0 12
 Vs2 vn12 0 -12

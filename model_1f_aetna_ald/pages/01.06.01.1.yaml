@@ -4,7 +4,7 @@
 #
 page:
   part: 2153519 
-  title: CONSOLE CONTROL MANUAL RESET
+  title: "CONSOLE CONTROL MANUAL RESET"
   num: 01.06.01.1 
   pdf: 74
 
@@ -46,100 +46,91 @@ page:
 # NOTE: Use image of page 74 as an example to compare the original
 # diagram with the information recorded here.
 #
-block:
-  loc: 1G16
-  typ: MX--
-  cir: 01
-  coo: 2D
-  inp:
-    B: [+S MANUAL RESET]
-    D: [+S CLOCK OFF]
+blocks:
 
-block:
-  loc: 1A10
-  typ: CAB-
-  cir: 01
-  coo: 2E
-  inp: 
+  - loc: 1G16
+    typ: MX--
+    cir: 01
+    coo: 2D
+    inp:
+      B: "+S MANUAL RESET"
+      D: "+S CLOCK OFF"
+
+  - loc: 1A10
+    typ: CAB-
+    cir: 01
+    coo: 2E
+    inp: 
 # Here's an example of an input that connects to another block's output.
-    A: 2F.CL
+      A: 2F.CL
 
-block: 
-  loc: 1A10      
-  typ: CAB-
-  cir: 02
-  coo: 2F
-  inp:
-    F: [+S RD WR CALL]
-    G: [-S I/O EXIT TR]
-    H: [+S FILE OP]
+  - loc: 1A10      
+    typ: CAB-
+    cir: 02
+    coo: 2F
+    inp:
+      F: "+S RD WR CALL"
+      G: "-S I/O EXIT TR"
+      H: "+S FILE OP"
 
-block:
-  loc: 1J17
-  typ: MH--
-  cir: 01
-  coo: 3C
-  inp:
-    K: [-S PWR OFF RESET]
+  - loc: 1J17
+    typ: MH--
+    cir: 01
+    coo: 3C
+    inp:
+      K: "-S PWR OFF RESET"
 
-block: 
-  loc: 1D16
-  typ: MH--
-  cir: 04
-  coo: 3D
-  inp:
+  - loc: 1D16
+    typ: MH--
+    cir: 04
+    coo: 3D
+    inp:
 # Here's an example of a block input that connects to two different 
 # block outputs.  
-    F: 2D/G, 2E/E
+      F: 2D.G, 2E.E
 
-block:
-  loc: 1J17
-  typ: MH--
-  cir: 02
-  coo: 4D
-  inp: 
-    P: 3C/L, 3D/A
+  - loc: 1J17
+    typ: MH--
+    cir: 02
+    coo: 4D
+    inp: 
+      P: 3C/L, 3D/A
     
-block:
-  loc: 1C16
-  typ: CEYB
-  cir: 03
-  coo: 5A
-  inp: 
-    F: 4D/D
+  - loc: 1C16
+    typ: CEYB
+    cir: 03
+    coo: 5A
+    inp: 
+      F: 4D.D
 
-block: 
-  loc: 2D21
-  typ: MH--
-  cir: 04
-  coo: 5C
-  inp: 
-    F: 3C/L, 3D/A
+  - loc: 2D21
+    typ: MH--
+    cir: 04
+    coo: 5C
+    inp: 
+      F: 3C.L, 3D.A
 
-block: 
-  loc: 1F15
-  typ: CEYB
-  cir: 03
-  coo: 5E
-  inp:
-    F: 4D/D 
+  - loc: 1F15
+    typ: CEYB
+    cir: 03
+    coo: 5E
+    inp:
+      F: 4D.D 
 
-block: 
-  loc: 1D02 
-  typ: MX--
-  cir: 04 
-  coo: 5G 
-  inp: 
-    Q: 3C/L, 3D/A
-    R: [-S RUN P1]
+  - loc: 1D02 
+    typ: MX--
+    cir: 04 
+    coo: 5G 
+    inp: 
+      Q: 3C.L, 3D.A
+      R: "-S RUN P1"
 
-block: 
-  loc: 1A13
-  typ: MX--
-  cir: 01 
-  coo: 5J
-  inp: 
-    B: 3C/L, 3D/A
+  - loc: 1A13
+    typ: MX--
+    cir: 01 
+    coo: 5J
+    inp: 
+      B: 3C.L, 3D.A
 
 # Each UNIQUE output on the right side of the page will 
 # have an "out:" section.
@@ -148,22 +139,15 @@ block:
 # The "dri:" tag gives the list of block OUTPUTS that 
 #  the net is connected to (i.e. driving block outputs)
 
-out:
-  net: [-S MANUAL RESET P1]
-  dri: 5A/H
+outputs:
+  - net: "-S MANUAL RESET P1"
+    dri: 5A.H
+  - net: "-S MANUAL RESET P2"
+    dri: 5C.A 
+  - net: "-S MANUAL RESET P3"
+    dri: 5E.H 
+  - net: "-S MANUAL RESET P11"
+    dri: 4D.D
+  - net: "-S RESET NOT RUN"
+    dri: 5G.K
 
-out: 
-  net: [-S MANUAL RESET P2]
-  dri: 5C/A 
-
-out: 
-  net: [-S MANUAL RESET P3]
-  dri: 5E/H 
-
-out: 
-  net: [-S MANUAL RESET P11]
-  dri: 4D/D
-
-out: 
-  net: [-S RESET NOT RUN]
-  dri: 5G/K
