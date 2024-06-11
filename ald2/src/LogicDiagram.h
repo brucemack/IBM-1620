@@ -22,6 +22,7 @@ namespace LogicDiagram {
         std::string typ, loc, coo;
         int cir;
         std::map<std::string, std::vector<std::string>> inp;
+        std::map<std::string, std::vector<std::string>> out;
     };
 
     struct Output {
@@ -36,6 +37,8 @@ namespace LogicDiagram {
         std::string pdf;
         std::vector<Block> blocks;
         std::vector<Output> outputs;
+
+        const Block& getBlockByCoordinate(const std::string& coo) const;
     };
 }
 
@@ -57,17 +60,35 @@ namespace YAML {
             rhs.loc = node["loc"].as<std::string>();
             rhs.coo = node["coo"].as<std::string>();
             rhs.cir = node["cir"].as<int>();
-            auto j = node["inp"];
-            for (auto it1 = std::begin(j); it1 != std::end(j); it1++) {
-                // This should be an iterable list of node names
-                if (!it1->second.IsSequence())
-                    return false;
-                // Create an empty vector that will receive the strings
-                rhs.inp[it1->first.as<std::string>()] = std::vector<std::string>();
-                auto k = it1->second;
-                for (auto it2 = std::begin(k); it2 != std::end(k); it2++)
-                    rhs.inp[it1->first.as<std::string>()].push_back(it2->as<std::string>());
+
+            if (node["inp"]) {
+                auto j = node["inp"];
+                for (auto it1 = std::begin(j); it1 != std::end(j); it1++) {
+                    // This should be an iterable list of node names
+                    if (!it1->second.IsSequence())
+                        return false;
+                    // Create an empty vector that will receive the strings
+                    rhs.inp[it1->first.as<std::string>()] = std::vector<std::string>();
+                    auto k = it1->second;
+                    for (auto it2 = std::begin(k); it2 != std::end(k); it2++)
+                        rhs.inp[it1->first.as<std::string>()].push_back(it2->as<std::string>());
+                }
             }
+
+            if (node["out"]) {
+                auto j = node["out"];
+                for (auto it1 = std::begin(j); it1 != std::end(j); it1++) {
+                    // This should be an iterable list of node names
+                    if (!it1->second.IsSequence())
+                        return false;
+                    // Create an empty vector that will receive the strings
+                    rhs.inp[it1->first.as<std::string>()] = std::vector<std::string>();
+                    auto k = it1->second;
+                    for (auto it2 = std::begin(k); it2 != std::end(k); it2++)
+                        rhs.out[it1->first.as<std::string>()].push_back(it2->as<std::string>());
+                }
+            }
+
             return true;
         }
     };

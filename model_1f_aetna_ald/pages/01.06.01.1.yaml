@@ -86,14 +86,14 @@ blocks:
     inp:
 # Here's an example of a block input that connects to two different 
 # block outputs.  
-      F: [ D.G, 2E.E ]
+      F: [ 2D.G, 2E.E ]
 
   - loc: 1J17
     typ: MH--
     cir: 02
     coo: 4D
     inp: 
-      P: [ 3C.L, 3D/A ]
+      P: [ 3C.L, 3D.A ]
     
   - loc: 1C16
     typ: CEYB

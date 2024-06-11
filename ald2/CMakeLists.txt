@@ -29,6 +29,7 @@ endif()
 add_executable(main-1
   src/main-1.cpp
   src/Components.cpp
+  src/LogicDiagram.cpp
 )
 
 target_link_libraries(main-1 PUBLIC yaml-cpp::yaml-cpp) 

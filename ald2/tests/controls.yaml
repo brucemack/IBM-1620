@@ -1,0 +1,18 @@
+part: 1
+title: "Test Controls"
+num: 00.01.01.1 
+pdf: None
+
+blocks:
+  - loc: 0001
+    typ: SW
+    cir: 01
+    coo: 1A
+    out:
+      A: [ "+S MANUAL RESET" ]
+      B: [ "+S CLOCK OFF" ]
+      C: [ "+S RD WR CALL" ]
+      D: [ "-S I/O EXIT TR" ]
+      E: [ "+S FILE OP" ]
+      F: [ "-S PWR OFF RESET" ]
+      G: [ "-S RUN P1" ]
