@@ -199,7 +199,18 @@ int main(int, const char**) {
         }
     }
     
-    // Create a spice block for each 
+    // Create a spice line for each card
+    int lineCounter = 1;
+    machine.visitAllCards([&lineCounter](const Card& card) mutable {
+        string line = "X";
+        line = line + std::to_string(l);
+        // Pins
+        line = line + " SMS_CARD_" + card.getMeta().getType();
+        cout << line << endl;
+        l++;
+    });
+
+
     /*
     std::for_each(begin(wires), end(wires), [](const Wire& wire) {
         for (const string& p : wire.pins) {

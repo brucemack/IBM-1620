@@ -29,6 +29,10 @@ public:
     CardMeta() { }
     CardMeta(const std::string& type);
 
+    std::string getType() const { return _type; }
+    
+private:
+
     std::string _type;
 };
 
@@ -38,7 +42,10 @@ public:
     Card(const CardMeta& meta, const PlugLocation& loc);
 
     const CardMeta& getMeta() const { return _meta; }
+
     const PlugLocation& getLocation() const { return _loc; }
+
+    bool isPinUsed(const std::string& id) const;
 
     /**
      * Gets the pin with the ID provided, creating one 

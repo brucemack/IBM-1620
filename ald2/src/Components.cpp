@@ -22,6 +22,10 @@ Pin& Card::getPin(const string& id) {
     return _pins.at(id);
 }
 
+bool Card::isPinUsed(const std::string& id) const {
+    return !(_pins.find(id) == _pins.end());
+}
+
 void Card::dumpOn(std::ostream& str) const {
     str << "Pins:" << endl;
     visitAllPins([&str](const string& pinId, const Pin& pin) {
