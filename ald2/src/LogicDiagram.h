@@ -46,6 +46,8 @@ namespace LogicDiagram {
         const Block& getBlockByCoordinate(const std::string& coo) const;
     };
 
+    extern std::vector<std::string> PinNames;
+
     bool validPinName(const std::string& pinName);
 
     struct BlockCooPin {

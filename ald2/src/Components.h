@@ -30,7 +30,15 @@ public:
     CardMeta(const std::string& type);
 
     std::string getType() const { return _type; }
-    
+
+    virtual std::vector<std::string> getPinNames() const;
+
+    /**
+     * Used when a pin is not explicitly connected in the ALD.
+     * This is helpful for ground/rail pins.
+     */
+    virtual std::string getDefaultNode(const std::string& pinName) const;
+
 private:
 
     std::string _type;
@@ -52,6 +60,8 @@ public:
      * if necessary.
      */
     Pin& getPin(const std::string& id);
+
+    const Pin& getPinConst(const std::string& id) const;
 
     void dumpOn(std::ostream& str) const;
 

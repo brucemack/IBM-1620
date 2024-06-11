@@ -4,11 +4,16 @@
 #include <span>
 #include <unordered_set>
 #include <vector>
+#include <memory>
 
 #include "yaml-cpp/yaml.h"
 
 #include "LogicDiagram.h"
+
 #include "Components.h"
+#include "cards/CardONE.h"
+#include "cards/CardZERO.h"
+#include "cards/CardHIZ.h"
 
 using namespace std;
 
@@ -31,7 +36,7 @@ vector<LogicDiagram::Page> loadAldPages(const vector<string> fns) {
 }
 
 void processAlds(const vector<LogicDiagram::Page>& pages, 
-    const map<string, CardMeta>& cardMeta, 
+    const map<string, unique_ptr<CardMeta>>& cardMeta, 
     Machine& machine, 
     map<string, Pin&>& namedSignals) {
 
@@ -45,7 +50,8 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
             if (cardMeta.find(block.typ) == cardMeta.end())
                 throw string("Invalid card type on page/block " + 
                     page.num + "/" + block.coo + " : " + block.typ);
-            Card& card = machine.getOrCreateCard(cardMeta.at(block.typ), block.loc);
+            
+            Card& card = machine.getOrCreateCard(*(cardMeta.at(block.typ).get()), block.loc);
             // Register signal names for outputs
             for (auto [outputPinId, driverRefList] : block.out) {
                 // Resolve the Pin
@@ -150,17 +156,17 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
 int main(int, const char**) {
 
     // Load the card metadata
-    map<string, CardMeta> cardMeta;   
-    cardMeta["ONE"] = CardMeta("ONE");
-    cardMeta["ZERO"] = CardMeta("ZERO");
-    cardMeta["HIZ"] = CardMeta("HIZ");
+    map<string, unique_ptr<CardMeta>> cardMeta;   
 
-    cardMeta["MX"] = CardMeta("MX");
-    cardMeta["CAB"] = CardMeta("CAB");
-    cardMeta["MH"] = CardMeta("MH");
-    cardMeta["CEYB"] = CardMeta("CEYB");
-    cardMeta["TAF"] = CardMeta("TAF");
-    cardMeta["TAJ"] = CardMeta("TAJ");
+    cardMeta["ONE"] = make_unique<CardONEMeta>();
+    cardMeta["ZERO"] = make_unique<CardZEROMeta>();
+    cardMeta["HIZ"] = make_unique<CardHIZMeta>();
+    cardMeta["MX"] = make_unique<CardMeta>("MX");
+    cardMeta["CAB"] = make_unique<CardMeta>("CAB");
+    cardMeta["MH"] = make_unique<CardMeta>("MH");
+    cardMeta["CEYB"] = make_unique<CardMeta>("CEYB");
+    cardMeta["TAF"] = make_unique<CardMeta>("TAF");
+    cardMeta["TAJ"] = make_unique<CardMeta>("TAJ");
 
     // Read ALD and popular machine
     Machine machine;
@@ -191,23 +197,52 @@ int main(int, const char**) {
     vector<Wire> wires = machine.generateWires();
     
     // Setup the mapping between pins and wires
+    cout << "Wires" << endl;
     map<string, string> pinToWire;
     for (const Wire& w : wires) {
         string wireName = w.pins.at(0);
         for (const string& pin : w.pins) {
             pinToWire[pin] = wireName;
+            cout << pin << " -> " << wireName << endl;
         }
     }
     
+    // SPICE GENERATION
     // Create a spice line for each card
     int lineCounter = 1;
-    machine.visitAllCards([&lineCounter](const Card& card) mutable {
-        string line = "X";
-        line = line + std::to_string(l);
+    machine.visitAllCards([&lineCounter, &pinToWire](const Card& card) mutable {
+        string line = "X_" + card.getLocation().toString();
+        //line = line + std::to_string(lineCounter);
         // Pins
+        for (string pinName : card.getMeta().getPinNames()) {
+            if (card.isPinUsed(pinName)) {
+                const Pin& pin = card.getPinConst(pinName);
+                // Figure out which wire 
+                if (pinToWire.find(pin.getDesc()) == pinToWire.end()) {
+                    //throw string("Pin " + pin.getDesc() + " not wired")
+                    line = line + " ";
+                    line = line + "?";
+                }
+                else {
+                    line = line + " W";
+                    line = line + pinToWire[pin.getDesc()];
+                }
+            } 
+            else if (!card.getMeta().getDefaultNode(pinName).empty()) {
+                line = line + " ";
+                line = line + card.getMeta().getDefaultNode(pinName);
+            }
+            else 
+            {
+                // Tie to unused
+                line = line + " ";
+                line = line + card.getLocation().toString() + "_" + pinName + "_UNUSED";
+            }
+        }
+
         line = line + " SMS_CARD_" + card.getMeta().getType();
         cout << line << endl;
-        l++;
+        lineCounter++;
     });
 
 

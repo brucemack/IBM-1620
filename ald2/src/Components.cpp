@@ -3,12 +3,29 @@
 #include <unordered_set>
 #include <string>
 
+#include "LogicDiagram.h"
 #include "Components.h"
 
 using namespace std;
 
 CardMeta::CardMeta(const std::string& type)
 :   _type(type) {    
+}
+
+std::vector<std::string> CardMeta::getPinNames() const {
+    return LogicDiagram::PinNames;
+}
+
+std::string CardMeta::getDefaultNode(const std::string& pinName) const {
+    if (pinName == "J") {
+        return "gnd";
+    } else if (pinName == "N") {
+        return "vp12";
+    } else if (pinName == "M") {
+        return "vn12";
+    } else {
+        return string();
+    }
 }
 
 Card::Card(const CardMeta& meta, const PlugLocation& loc)
@@ -19,6 +36,12 @@ Card::Card(const CardMeta& meta, const PlugLocation& loc)
 Pin& Card::getPin(const string& id) {
     if (_pins.find(id) == _pins.end())
         _pins.emplace(id, Pin(*this, id));
+    return _pins.at(id);
+}
+
+const Pin& Card::getPinConst(const string& id) const {
+    if (_pins.find(id) == _pins.end())
+        throw string("Pin not defined: " + id);
     return _pins.at(id);
 }
 
@@ -54,7 +77,8 @@ void Machine::dumpOn(std::ostream& str) const {
     str << "Cards:" << endl;
     visitAllCards([&str](const Card& card) {
         cout << "====================" << endl;
-        cout << card.getLocation().toString() << " : " << card.getMeta()._type << endl;
+        cout << card.getLocation().toString() << " : " << card.getMeta().getType() << endl;
+        cout << card.getMeta().getPinNames().size() << endl;
         card.dumpOn(str);
     });
 }

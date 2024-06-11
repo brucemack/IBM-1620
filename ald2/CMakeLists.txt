@@ -30,8 +30,9 @@ add_executable(main-1
   src/main-1.cpp
   src/Pin.cpp 
   src/PlugLocation.cpp
-  src/Components.cpp
   src/LogicDiagram.cpp
+  src/Components.cpp
+  src/cards/CardHIZ.cpp
 )
 
 target_link_libraries(main-1 PUBLIC yaml-cpp::yaml-cpp) 

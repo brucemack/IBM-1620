@@ -5,17 +5,17 @@ pdf: None
 
 blocks:
 # Used to tie signals high
-  - loc: 9991
-    typ: ONE
-    cir: 01
-    coo: 1A
+#  - loc: 9991
+#    typ: ONE
+#    cir: 01
+#    coo: 1A
 # Used to tie signals low
-  - loc: 9992
-    typ: ZERO
-    cir: 01
-    coo: 1B
+#  - loc: 9992
+#    typ: ZERO
+#    cir: 01
+#    coo: 1B
 # Used to tie signals to high-impedance
-  - loc: 9993
+  - loc: HIZ0
     typ: HIZ
     cir: 01
     coo: 1C
