@@ -63,6 +63,12 @@ int main(int, const char**) {
             });
         }
 
-
+        {
+            auto a = LogicDiagram::parsePinRefs("0000.CL");
+            assert(a[0].coo == "0000");;
+            assert(a[0].pinId == "C");;
+            assert(a[1].coo == "0000");;
+            assert(a[1].pinId == "L");;
+        }
     }
 }

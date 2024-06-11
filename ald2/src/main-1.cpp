@@ -3,6 +3,7 @@
 #include <string>
 #include <span>
 #include <unordered_set>
+#include <vector>
 
 #include "yaml-cpp/yaml.h"
 
@@ -16,20 +17,6 @@ static bool isPinRef(const string& ref) {
         return true;
     } else {
         return false;
-    }
-}
-
-struct BlockCooPin {
-    string coo;
-    string pinId;
-};
-
-static BlockCooPin parsePinRef(const string& ref) {
-    std::size_t p = ref.find('.');
-    if (p > 0 && p < ref.size() - 1) {
-        return { ref.substr(0, p), ref.substr(p + 1) };
-    } else {
-        throw string("Invalid block/pin reference: " + ref);
     }
 }
 
@@ -86,22 +73,24 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
         for (const LogicDiagram::Output& output : page.outputs) {
             for (auto driverRef : output.inp) {                
                 if (isPinRef(driverRef)) {
-                    BlockCooPin bp = parsePinRef(driverRef);
-                    // Resolve the local block on this page
-                    const LogicDiagram::Block& block = page.getBlockByCoordinate(bp.coo);
-                    // Determine the card/pin
-                    Card& card = machine.getCard(block.loc);
-                    Pin& pin = card.getPin(bp.pinId);
-                    // Check for conflict
-                    if (namedSignals.find(output.net) != namedSignals.end()) {
-                        if (!(namedSignals.at(output.net) == pin)) {
-                            throw string("Conflicting signal name on page " + 
-                                page.num + " :  " + output.net);
+                    // REMEMBER: It's possible to mention multiple pins in one reference.
+                    for (LogicDiagram::BlockCooPin bp : LogicDiagram::parsePinRefs(driverRef)) {
+                        // Resolve the local block on this page
+                        const LogicDiagram::Block& block = page.getBlockByCoordinate(bp.coo);
+                        // Determine the card/pin
+                        Card& card = machine.getCard(block.loc);
+                        Pin& pin = card.getPin(bp.pinId);
+                        // Check for conflict
+                        if (namedSignals.find(output.net) != namedSignals.end()) {
+                            if (!(namedSignals.at(output.net) == pin)) {
+                                throw string("Conflicting signal name on page " + 
+                                    page.num + " :  " + output.net);
+                            }
+                        } 
+                        // Register named signal
+                        else {
+                            namedSignals.emplace(output.net, pin);
                         }
-                    } 
-                    // Register named signal
-                    else {
-                        namedSignals.emplace(output.net, pin);
                     }
                 }
             }
@@ -118,23 +107,26 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                 for (auto [inputPinId, driverRefList] : block.inp) {            
                     Pin& inputPin = card.getPin(inputPinId);
                     for (auto driverRef : driverRefList) {
+                        
                         // Trace back to what is driving this input.  There are two 
                         // cases:
-                        // 1. A block.bin reference on the same page.
+                        // 1. A block.pin(s) reference on the same page.
                         // 2. A global signal name
-                        //
+                        
                         if (isPinRef(driverRef)) {
-                            BlockCooPin driverBlockPin = parsePinRef(driverRef);
-                            // Map the blockId to the block
-                            const LogicDiagram::Block& driverBlock = 
-                                page.getBlockByCoordinate(driverBlockPin.coo);
-                            // Map the block to the card
-                            Card& driverCard = machine.getCard(driverBlock.loc);
-                            // Get the pin
-                            Pin& driverPin = driverCard.getPin(driverBlockPin.pinId);
-                            // Make the connection back to the driver
-                            inputPin.connect(driverPin);
-                            driverPin.connect(inputPin);
+                            // It is possible to reference multiple pins in one reference!
+                            for (LogicDiagram::BlockCooPin driverBlockPin : LogicDiagram::parsePinRefs(driverRef)) {
+                                // Map the blockId to the block
+                                const LogicDiagram::Block& driverBlock = 
+                                    page.getBlockByCoordinate(driverBlockPin.coo);
+                                // Map the block to the card
+                                Card& driverCard = machine.getCard(driverBlock.loc);
+                                // Get the pin
+                                Pin& driverPin = driverCard.getPin(driverBlockPin.pinId);
+                                // Make the connection back to the driver
+                                inputPin.connect(driverPin);
+                                driverPin.connect(inputPin);
+                            }
                         }
                         else {
                             // Find what block/pin the signal name points to
@@ -190,12 +182,26 @@ int main(int, const char**) {
 
     // Generate wires
     vector<Wire> wires = machine.generateWires();
+    /*
+    // Setup the mapping between pins and wires
+    map<string, string> pinToWire;
+    for (const Wire& w : wires) {
+        string wireName = w.pins.at(0);
+        for (const string& pin : w.pins) {
+            pinToWire(pin, wireName);
+        }
+    }
     
+    // Create a spice block for each 
+
+
+
+
     std::for_each(begin(wires), end(wires), [](const Wire& wire) {
         for (const string& p : wire.pins) {
             cout << p << " ";
         }
         cout << endl;
     });
-    
+    */
 }

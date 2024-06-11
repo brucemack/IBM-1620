@@ -13,10 +13,15 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <iostream>
 
 #include "yaml-cpp/yaml.h"
 
 namespace LogicDiagram {
+
+    struct Card {
+        std::string typ;
+    };
 
     struct Block {
         std::string typ, loc, coo;
@@ -40,6 +45,23 @@ namespace LogicDiagram {
 
         const Block& getBlockByCoordinate(const std::string& coo) const;
     };
+
+    bool validPinName(const std::string& pinName);
+
+    struct BlockCooPin {
+        std::string coo;
+        std::string pinId;
+    };
+
+    /**
+     * Takes a string in format xxx.ab and returns a vector of block coordinated/pins
+     * in this format:
+     * 
+     * { xxx.a, xxx.b }
+     * 
+     * Notice that a multi-character bin designation is treated like multiple pins.
+    */
+    std::vector<BlockCooPin> parsePinRefs(const std::string& ref);
 }
 
 static void removeTrailingCharacters(std::string &str, const char charToRemove) {
@@ -67,11 +89,14 @@ namespace YAML {
                     // This should be an iterable list of node names
                     if (!it1->second.IsSequence())
                         return false;
+                    std::string pinName = it1->first.as<std::string>();
+                    if (!LogicDiagram::validPinName(pinName)) 
+                        throw std::string("Invalid pin name on block " + rhs.loc + " : " + pinName);
                     // Create an empty vector that will receive the strings
-                    rhs.inp[it1->first.as<std::string>()] = std::vector<std::string>();
+                    rhs.inp[pinName] = std::vector<std::string>();
                     auto k = it1->second;
                     for (auto it2 = std::begin(k); it2 != std::end(k); it2++)
-                        rhs.inp[it1->first.as<std::string>()].push_back(it2->as<std::string>());
+                        rhs.inp[pinName].push_back(it2->as<std::string>());
                 }
             }
 
@@ -81,8 +106,11 @@ namespace YAML {
                     // This should be an iterable list of node names
                     if (!it1->second.IsSequence())
                         return false;
+                    std::string pinName = it1->first.as<std::string>();
+                    if (!LogicDiagram::validPinName(pinName)) 
+                        throw std::string("Invalid pin name on block " + rhs.loc + " : " + pinName);
                     // Create an empty vector that will receive the strings
-                    rhs.inp[it1->first.as<std::string>()] = std::vector<std::string>();
+                    rhs.inp[pinName] = std::vector<std::string>();
                     auto k = it1->second;
                     for (auto it2 = std::begin(k); it2 != std::end(k); it2++)
                         rhs.out[it1->first.as<std::string>()].push_back(it2->as<std::string>());
