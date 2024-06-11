@@ -17,28 +17,8 @@
 #include <iostream>
 #include <vector>
 
-class PlugLocation {
-public:
-
-    PlugLocation(const std::string& locationCode) : _loc(locationCode) { }
-    PlugLocation(const PlugLocation& other) : _loc(other._loc) { }
-
-    std::string toString() const { return _loc; }
-    bool operator==(const PlugLocation& other) const { return _loc == other._loc; }
-
-private:
-
-    std::string _loc;
-};
-
-template<>
-struct std::hash<PlugLocation>
-{
-    std::size_t operator()(const PlugLocation& s) const noexcept
-    {
-        return std::hash<std::string>{}(s.toString());
-    }
-};
+#include "Pin.h"
+#include "PlugLocation.h"
 
 class PinMeta {
 };
@@ -50,27 +30,6 @@ public:
     CardMeta(const std::string& type);
 
     std::string _type;
-};
-
-class Card;
-
-class Pin {
-public:
-
-    Pin(Card& card, const std::string& id);
-
-    bool operator== (const Pin& other) const;
-
-    void connect(Pin& pin);
-
-    std::string getDesc() const;
-    std::string getConnectionDesc() const;
-
-private:
-
-    Card& _card;
-    std::string _id;
-    std::vector<std::reference_wrapper<Pin>> _connections;
 };
 
 class Card {
@@ -89,13 +48,14 @@ public:
 
     void dumpOn(std::ostream& str) const;
 
+    void visitAllPins(const std::function<void (const std::string& id, const Pin&)> f) const;
+
 private:
 
     const CardMeta& _meta;
     PlugLocation _loc;
     std::map<std::string, Pin> _pins;
 };
-
 
 class Machine {
 public:
@@ -104,6 +64,8 @@ public:
     Card& getOrCreateCard(const CardMeta& cardMeta, const PlugLocation& location);
 
     void dumpOn(std::ostream& str) const;
+
+    void visitAllCards(const std::function<void (const Card&)> c) const;
 
 private:
 

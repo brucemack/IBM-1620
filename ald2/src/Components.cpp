@@ -9,43 +9,6 @@ CardMeta::CardMeta(const std::string& type)
 :   _type(type) {    
 }
 
-Pin::Pin(Card& card, const string& id) 
-:   _card(card),
-    _id(id) {        
-}
-
-string Pin::getDesc() const {
-    return _card.getLocation().toString() + "/" + _id;
-}
-
-string Pin::getConnectionDesc() const {
-    string res;
-    bool first = true;
-    for (auto conn : _connections) {
-        if (!first)
-            res = res + ", ";
-        res = res + conn.get().getDesc();
-        first = false;
-    }
-    return res;
-}
-
-void Pin::connect(Pin& pin) { 
-    // Check to see if the connection is redundant
-    if (std::find_if(_connections.begin(), _connections.end(), 
-        [&pin](const std::reference_wrapper<Pin>& x) { 
-            return std::addressof(pin) == std::addressof(x.get()); 
-        }
-    ) != _connections.end()) {
-        throw string("Redundant pin connection: " + pin.getDesc());
-    }
-    _connections.push_back(std::reference_wrapper<Pin>(pin));
-}
-
-bool Pin::operator== (const Pin& other) const { 
-    return this == std::addressof(other); 
-}
-
 Card::Card(const CardMeta& meta, const PlugLocation& loc)
 :   _meta(meta),
     _loc(loc) {
@@ -59,9 +22,14 @@ Pin& Card::getPin(const string& id) {
 
 void Card::dumpOn(std::ostream& str) const {
     str << "Pins:" << endl;
-    for (auto [ pinId, pin] : _pins) {
-        str << pinId << " -> " << pin.getConnectionDesc() << endl;
-    }
+    visitAllPins([&str](const string& pinId, const Pin& pin) {
+        str << pinId << " -> " << pin.getConnectionsDesc() << endl;
+    });
+}
+
+void Card::visitAllPins(const std::function<void (const string& id, const Pin&)> f) const {
+    for (auto [ pinId, pin] : _pins) 
+        f(pinId, pin);
 }
 
 Card& Machine::getCard(const PlugLocation& loc) {
@@ -78,8 +46,15 @@ Card& Machine::getOrCreateCard(const CardMeta& meta,const PlugLocation& loc)  {
 
 void Machine::dumpOn(std::ostream& str) const {
     str << "Cards:" << endl;
-    for (auto [loc, card] : _cards) {
-        cout << loc.toString() << " : " << card.getMeta()._type << endl;
+    visitAllCards([&str](const Card& card) {
+        cout << "====================" << endl;
+        cout << card.getLocation().toString() << " : " << card.getMeta()._type << endl;
         card.dumpOn(str);
-    }
+    });
 }
+
+void Machine::visitAllCards(const std::function<void (const Card&)> f) const {
+    for (auto [loc, card] : _cards)
+        f(card);
+}
+

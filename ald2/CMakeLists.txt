@@ -28,6 +28,8 @@ endif()
 #
 add_executable(main-1
   src/main-1.cpp
+  src/Pin.cpp 
+  src/PlugLocation.cpp
   src/Components.cpp
   src/LogicDiagram.cpp
 )
@@ -38,6 +40,8 @@ target_link_libraries(main-1 PUBLIC yaml-cpp::yaml-cpp)
 #
 add_executable(unit-test-1
   tests/unit-test-1.cpp
+  src/Pin.cpp 
+  src/PlugLocation.cpp
   src/Components.cpp
   src/LogicDiagram.cpp
 )

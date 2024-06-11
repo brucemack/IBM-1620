@@ -2,6 +2,7 @@
 #include <map>
 #include <string>
 #include <span>
+#include <unordered_set>
 
 #include "yaml-cpp/yaml.h"
 
@@ -170,12 +171,6 @@ int main(int, const char**) {
     // Named signals
     map<string, Pin&> namedSignals;
 
-    //YAML::Node c = YAML::LoadFile("../tests/01.06.01.1.yaml");
-    //LogicDiagram::Page page = c.as<LogicDiagram::Page>();
-    //cout << page.part << endl;
-    //cout << page.blocks.size() << endl;
-    //cout << page.outputs.size() << endl;
-
     vector<string> fns;
     fns.push_back("../tests/01.06.01.1.yaml");
     fns.push_back("../tests/controls.yaml");
@@ -192,4 +187,29 @@ int main(int, const char**) {
     cout << "Named Signals:" << endl;
     for (auto [key, value] : namedSignals)
         cout << key << " : " << value.getDesc() << endl;
+
+    // Generate wires
+    cout << "Wire generation" << endl;
+    unordered_set<string> pinsSeen;
+    machine.visitAllCards([&pinsSeen](const Card& card) {
+        cout << "Card " << card.getLocation().toString() << endl;
+        card.visitAllPins([&pinsSeen, &card](const string& pinId, const Pin& pin) {
+            cout << "  " << pin.getDesc() << " ";
+            if (pinsSeen.find(pin.getDesc()) != pinsSeen.end()) {
+                cout << "Already processed" << endl;
+            }
+            else {
+                string wire;
+                // Visit all pins that connect to this pin
+                pin.visitAllConnections([&pinsSeen, &wire](const Pin& connectedPin) {
+                    if (!wire.empty())
+                        wire = wire + ", ";
+                    wire = wire + connectedPin.getDesc();
+                    // Make sure not to hit this again.
+                    pinsSeen.insert(connectedPin.getDesc());                    
+                });
+                cout << "Wire: " << wire << endl;
+            }
+        });
+    });
 }
