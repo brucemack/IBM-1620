@@ -57,6 +57,10 @@ private:
     std::map<std::string, Pin> _pins;
 };
 
+struct Wire {
+    std::vector<std::string> pins;
+};
+
 class Machine {
 public:
 
@@ -66,6 +70,11 @@ public:
     void dumpOn(std::ostream& str) const;
 
     void visitAllCards(const std::function<void (const Card&)> c) const;
+
+    /**
+     * Generates all of the unique wires, given the current state of the machine.
+     */
+    std::vector<Wire> generateWires() const;
 
 private:
 

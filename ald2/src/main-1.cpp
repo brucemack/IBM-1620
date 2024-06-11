@@ -189,27 +189,13 @@ int main(int, const char**) {
         cout << key << " : " << value.getDesc() << endl;
 
     // Generate wires
-    cout << "Wire generation" << endl;
-    unordered_set<string> pinsSeen;
-    machine.visitAllCards([&pinsSeen](const Card& card) {
-        cout << "Card " << card.getLocation().toString() << endl;
-        card.visitAllPins([&pinsSeen, &card](const string& pinId, const Pin& pin) {
-            cout << "  " << pin.getDesc() << " ";
-            if (pinsSeen.find(pin.getDesc()) != pinsSeen.end()) {
-                cout << "Already processed" << endl;
-            }
-            else {
-                string wire;
-                // Visit all pins that connect to this pin
-                pin.visitAllConnections([&pinsSeen, &wire](const Pin& connectedPin) {
-                    if (!wire.empty())
-                        wire = wire + ", ";
-                    wire = wire + connectedPin.getDesc();
-                    // Make sure not to hit this again.
-                    pinsSeen.insert(connectedPin.getDesc());                    
-                });
-                cout << "Wire: " << wire << endl;
-            }
-        });
+    vector<Wire> wires = machine.generateWires();
+    
+    std::for_each(begin(wires), end(wires), [](const Wire& wire) {
+        for (const string& p : wire.pins) {
+            cout << p << " ";
+        }
+        cout << endl;
     });
+    
 }

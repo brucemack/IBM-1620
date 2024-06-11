@@ -23,7 +23,7 @@ Pin::Pin(Card& card, const string& id)
 }
 
 string Pin::getDesc() const {
-    return _card.getLocation().toString() + "/" + _id;
+    return _card.getLocation().toString() + "." + _id;
 }
 
 string Pin::getConnectionsDesc() const {
@@ -58,12 +58,12 @@ size_t Pin::hash() const {
     return std::hash<std::string>{}(_id) + std::hash<PlugLocation>{}(_card.getLocation());
 }
 
-void Pin::visitImmediateConnections(const std::function<void (const Pin&)> &f) const {
+void Pin::visitImmediateConnections(const std::function<void (const Pin&)> f) const {
     for (auto conn : _connections) 
         f(conn.get());
 }
 
-void Pin::visitAllConnections(const std::function<void (const Pin&)> &f) const {
+void Pin::visitAllConnections(const std::function<void (const Pin&)> f) const {
     // If there are no connections then leave immediately
     if (_connections.empty())
         return;

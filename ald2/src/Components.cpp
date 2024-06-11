@@ -1,5 +1,7 @@
 #include <iostream>
 #include <algorithm>
+#include <unordered_set>
+#include <string>
 
 #include "Components.h"
 
@@ -58,3 +60,27 @@ void Machine::visitAllCards(const std::function<void (const Card&)> f) const {
         f(card);
 }
 
+std::vector<Wire> Machine::generateWires() const {
+
+    auto result = std::vector<Wire>();
+    unordered_set<string> pinsSeen;
+
+    visitAllCards([&pinsSeen, &result](const Card& card) {
+        card.visitAllPins([&pinsSeen, &result, &card](const string& pinId, const Pin& pin) {
+            if (pinsSeen.find(pin.getDesc()) == pinsSeen.end()) {
+                // Here is where we accumulate the pins on the wire
+                vector<string> wirePins;
+                // Visit all pins that connect to this pin
+                pin.visitAllConnections([&pinsSeen, &wirePins](const Pin& connectedPin) {                    
+                    wirePins.push_back(connectedPin.getDesc());
+                    // Make sure not to hit this again.
+                    pinsSeen.insert(connectedPin.getDesc());                    
+                });
+                if (!wirePins.empty()) 
+                    result.push_back({ wirePins } );
+            }
+        });
+    });
+
+    return result;
+}

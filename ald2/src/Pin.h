@@ -36,9 +36,9 @@ public:
 
     size_t hash() const;
 
-    void visitImmediateConnections(const std::function<void (const Pin&)> &f) const;
+    void visitImmediateConnections(const std::function<void (const Pin&)> f) const;
 
-    void visitAllConnections(const std::function<void (const Pin&)>  &f) const;
+    void visitAllConnections(const std::function<void (const Pin&)> f) const;
 
 private:
 
