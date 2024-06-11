@@ -18,15 +18,6 @@ static bool isPinRef(const string& ref) {
     }
 }
 
-struct BlockLocPin {
-    string loc;
-    string pinId;
-};
-
-ostream& operator << (ostream &os, const BlockLocPin &s) {
-    return (os << "Loc: " << s.loc << "\nPinId: " << s.pinId << std::endl);
-}
-
 struct BlockCooPin {
     string coo;
     string pinId;
@@ -54,7 +45,7 @@ vector<LogicDiagram::Page> loadAldPages(const vector<string> fns) {
 void processAlds(const vector<LogicDiagram::Page>& pages, 
     const map<string, CardMeta>& cardMeta, 
     Machine& machine, 
-    map<string, BlockLocPin>& aliases) {
+    map<string, Pin&>& namedSignals) {
 
     // PASS #1
     // - Register all cards
@@ -66,18 +57,26 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
             if (cardMeta.find(block.typ) == cardMeta.end())
                 throw string("Invalid card type on page/block " + 
                     page.num + "/" + block.coo + " : " + block.typ);
-            machine.getOrCreateCard(cardMeta.at(block.typ), block.loc);
-            // Outputs
-            for (auto [outputPinId, driverRefList] : block.out) {      
+            Card& card = machine.getOrCreateCard(cardMeta.at(block.typ), block.loc);
+            // Register signal names for outputs
+            for (auto [outputPinId, driverRefList] : block.out) {
+                // Resolve the Pin
+                Pin& pin = card.getPin(outputPinId);
+                // Look through everything that the pin is connected to
                 for (auto driverRef : driverRefList) {
-                    // Only pay attention to outputs that use net names
+                    // Only pay attention to outputs that use signal names
                     if (!isPinRef(driverRef)) {
-                        // TODO: CHECK FOR CONFLICT
-                        //if (aliases.find(driverRef) != aliases.end()) 
-                        //    throw string("Duplicate alias on page " + 
-                        //        page.num + " :  " + output.net);
-                        BlockLocPin bp { block.loc, outputPinId };
-                        aliases[driverRef] = bp;
+                        // Check for conflict
+                        if (namedSignals.find(driverRef) != namedSignals.end()) {
+                            if (!(namedSignals.at(driverRef) == pin)) {
+                                throw string("Conflicting signal name on page " + 
+                                    page.num + " :  " + driverRef);
+                            }
+                        } 
+                        // Register named signal
+                        else {
+                            namedSignals.emplace(driverRef, pin);
+                        }
                     }
                 }
             }
@@ -89,12 +88,20 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                     BlockCooPin bp = parsePinRef(driverRef);
                     // Resolve the local block on this page
                     const LogicDiagram::Block& block = page.getBlockByCoordinate(bp.coo);
-                    // Now create a global identifier
-                    BlockLocPin bp2 { block.loc, bp.pinId };
-                    // TODO: CHECK FOR CONFLICT
-                    //if (aliases.find(output.net) != aliases.end()) 
-                    //    throw string("Duplicate alias on page " + 
-                    aliases[output.net] = bp2;
+                    // Determine the card/pin
+                    Card& card = machine.getCard(block.loc);
+                    Pin& pin = card.getPin(bp.pinId);
+                    // Check for conflict
+                    if (namedSignals.find(output.net) != namedSignals.end()) {
+                        if (!(namedSignals.at(output.net) == pin)) {
+                            throw string("Conflicting signal name on page " + 
+                                page.num + " :  " + output.net);
+                        }
+                    } 
+                    // Register named signal
+                    else {
+                        namedSignals.emplace(output.net, pin);
+                    }
                 }
             }
         }
@@ -130,13 +137,10 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                         }
                         else {
                             // Find what block/pin the signal name points to
-                            if (aliases.find(driverRef) == aliases.end()) 
+                            if (namedSignals.find(driverRef) == namedSignals.end()) 
                                 throw string("Input reference to unknown signal: " + driverRef);
-                            BlockLocPin driverBlockPin = aliases.at(driverRef);
-                            // Map the block to the card
-                            Card& driverCard = machine.getCard(driverBlockPin.loc);
                             // Get the pin
-                            Pin& driverPin = driverCard.getPin(driverBlockPin.pinId);
+                            Pin& driverPin = namedSignals.at(driverRef);
                             // Make the connection back to the driver
                             inputPin.connect(driverPin);
                             driverPin.connect(inputPin);
@@ -163,8 +167,8 @@ int main(int, const char**) {
     // Read ALD and popular machine
     Machine machine;
 
-    // Alias
-    map<string, BlockLocPin> aliases;
+    // Named signals
+    map<string, Pin&> namedSignals;
 
     //YAML::Node c = YAML::LoadFile("../tests/01.06.01.1.yaml");
     //LogicDiagram::Page page = c.as<LogicDiagram::Page>();
@@ -178,14 +182,14 @@ int main(int, const char**) {
     vector<LogicDiagram::Page> pages = loadAldPages(fns);
 
     try {
-        processAlds(pages, cardMeta, machine, aliases);
+        processAlds(pages, cardMeta, machine, namedSignals);
         machine.dumpOn(cout);
     }
     catch (const string& ex) {
         cout << ex << endl;
     }
 
-    cout << "Aliases:" << endl;
-    for (auto [key, value] : aliases)
-        cout << key << " : " << value << endl;
+    cout << "Named Signals:" << endl;
+    for (auto [key, value] : namedSignals)
+        cout << key << " : " << value.getDesc() << endl;
 }

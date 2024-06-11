@@ -34,3 +34,12 @@ add_executable(main-1
 
 target_link_libraries(main-1 PUBLIC yaml-cpp::yaml-cpp) 
 
+# ------ unit-test-1 -----------------------------------------------------------
+#
+add_executable(unit-test-1
+  tests/unit-test-1.cpp
+  src/Components.cpp
+  src/LogicDiagram.cpp
+)
+
+target_link_libraries(unit-test-1 PUBLIC yaml-cpp::yaml-cpp) 
