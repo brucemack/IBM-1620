@@ -1,0 +1,37 @@
+# IBM-1620 Logic Reproduction Project
+# COPYRIGHT (C) 2024 - Bruce MacKinnon
+
+# These tags describes the overall page
+#
+part: 2162346
+title: "CLOCK OSC + CONTROL"
+num: 01.10.05.1 
+pdf: 86
+
+blocks:
+
+  - note: "Master oscillator (1 MHz)"
+    loc: 1A15
+    typ: TAF-
+    cir: 01
+    coo: 4F
+
+  - note: "Flip-flop for creating two phases of master clock"
+    loc: 1A16
+    typ: TAJ-
+    cir: 01
+    coo: 5F
+    inp:
+      R: [ 5F.P ]
+      Q: [ 4F.D, 4F.C ]
+      C: [ "-S MANUAL RESET" ]
+
+  - note: "Flip-flop for creating two phases of master clock"
+    loc: 1A16
+    typ: TAJ-
+    cir: 02
+    coo: 5G
+    inp:
+      A: [ 5G.B ]
+      D: [ 4F.D, 4F.C ]
+

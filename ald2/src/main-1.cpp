@@ -151,11 +151,16 @@ int main(int, const char**) {
 
     // Load the card metadata
     map<string, CardMeta> cardMeta;   
+    cardMeta["ONE"] = CardMeta("ONE");
+    cardMeta["ZERO"] = CardMeta("ZERO");
+    cardMeta["HIZ"] = CardMeta("HIZ");
+
     cardMeta["MX"] = CardMeta("MX");
     cardMeta["CAB"] = CardMeta("CAB");
     cardMeta["MH"] = CardMeta("MH");
     cardMeta["CEYB"] = CardMeta("CEYB");
-    cardMeta["SW"] = CardMeta("SW");
+    cardMeta["TAF"] = CardMeta("TAF");
+    cardMeta["TAJ"] = CardMeta("TAJ");
 
     // Read ALD and popular machine
     Machine machine;
@@ -164,8 +169,10 @@ int main(int, const char**) {
     map<string, Pin&> namedSignals;
 
     vector<string> fns;
-    fns.push_back("../tests/01.06.01.1.yaml");
-    fns.push_back("../tests/controls.yaml");
+    //fns.push_back("../tests/01.06.01.1.yaml");
+    //fns.push_back("../tests/controls.yaml");
+    fns.push_back("../../model_1f_aetna_ald/pages/01.10.05.1.yaml");
+    fns.push_back("../../model_1f_aetna_ald/pages/controls.yaml");
     vector<LogicDiagram::Page> pages = loadAldPages(fns);
 
     try {
@@ -182,21 +189,18 @@ int main(int, const char**) {
 
     // Generate wires
     vector<Wire> wires = machine.generateWires();
-    /*
+    
     // Setup the mapping between pins and wires
     map<string, string> pinToWire;
     for (const Wire& w : wires) {
         string wireName = w.pins.at(0);
         for (const string& pin : w.pins) {
-            pinToWire(pin, wireName);
+            pinToWire[pin] = wireName;
         }
     }
     
     // Create a spice block for each 
-
-
-
-
+    /*
     std::for_each(begin(wires), end(wires), [](const Wire& wire) {
         for (const string& p : wire.pins) {
             cout << p << " ";
