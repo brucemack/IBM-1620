@@ -20,19 +20,39 @@
 #include "Pin.h"
 #include "PlugLocation.h"
 
-class PinMeta {
+enum PinType {
+    UNKNOWN,
+    INPUT, 
+    OUTPUT,
+    GND,
+    VP12,
+    VN12
+};
+
+// TODO: static member - conversion operator??
+PinType str2PinType(const std::string& str);
+
+struct PinMeta {
+    std::string id;
+    PinType type;
 };
 
 class CardMeta {
 public:
 
     CardMeta() { }
-    CardMeta(const std::string& type, const std::string& desc);
+    CardMeta(const std::string& type, const std::string& desc,
+        const std::map<std::string, PinMeta>& pinMeta);
 
     std::string getType() const { return _type; }
     std::string getDesc() const { return _desc; }
 
-    virtual std::vector<std::string> getPinNames() const;
+    std::vector<std::string> getPinNames() const;
+
+    std::vector<std::string> getSignalPinNames() const;
+
+    // TODO: Add a way to get the pinmeta in its entirety
+    PinType getPinType(const std::string pinId) const;
 
     /**
      * Used when a pin is not explicitly connected in the ALD.
@@ -44,6 +64,7 @@ private:
 
     std::string _type;
     std::string _desc;
+    std::unordered_map<std::string, PinMeta> _pinMeta;
 };
 
 class Card {

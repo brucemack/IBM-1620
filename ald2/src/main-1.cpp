@@ -26,9 +26,26 @@ static bool isPinRef(const string& ref) {
 }
 
 unique_ptr<CardMeta> loadCardMeta(const string& baseDir, const string& code) {
+    
     YAML::Node c = YAML::LoadFile(baseDir + "/sms-cards/" + code + "/" + code + ".yaml");
-    unique_ptr<CardMeta> m = make_unique<CardMeta>(code, c["description"].as<string>());
-    return m;
+
+    std::map<std::string, PinMeta> pinMeta;
+    YAML::Node pins = c["pins"];
+    if (!pins.IsMap()) 
+        throw string("Format error in card meta file : " + code);
+    for (auto it = begin(pins); it != end(pins); it++) {
+        string pinId = it->first.as<std::string>();
+        YAML::Node pin = it->second;
+        if (!pin.IsMap()) 
+            throw string("Format error in card meta file : " + code);
+        string type = pin["type"].as<std::string>();
+        // Ignore not connected pins
+        if (type == "NC")
+            continue;
+        PinMeta pm { pinId, str2PinType(type) };
+        pinMeta[pinId] = pm;
+    }
+    return make_unique<CardMeta>(code, c["description"].as<string>(), pinMeta);
 }
 
 vector<LogicDiagram::Page> loadAldPages(const vector<string> fns) {
@@ -159,6 +176,86 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
     }
 }
 
+// SPICE GENERATION
+static void generateSpice(const Machine& machine, const map<string, string>& pinToWire) {
+
+    // Create a spice line for each card
+    int lineCounter = 1;
+    machine.visitAllCards([&lineCounter, &pinToWire](const Card& card) mutable {
+        string line = "X_" + card.getLocation().toString();
+        //line = line + std::to_string(lineCounter);
+        // Pins
+        for (string pinName : card.getMeta().getPinNames()) {
+            if (card.isPinUsed(pinName)) {
+                const Pin& pin = card.getPinConst(pinName);
+                // Figure out which wire 
+                if (pinToWire.find(pin.getDesc()) == pinToWire.end()) {
+                    //throw string("Pin " + pin.getDesc() + " not wired")
+                    line = line + " ";
+                    line = line + "?";
+                }
+                else {
+                    line = line + " W_";
+                    line = line + pinToWire.at(pin.getDesc());
+                }
+            } 
+            else if (!card.getMeta().getDefaultNode(pinName).empty()) {
+                line = line + " ";
+                line = line + card.getMeta().getDefaultNode(pinName);
+            }
+            else 
+            {
+                // Tie to unused
+                line = line + " W_";
+                line = line + card.getLocation().toString() + "_" + pinName;
+            }
+        }
+
+        line = line + " SMS_CARD_" + card.getMeta().getType();
+
+        cout << "* Card " << card.getMeta().getType() + " at location " + card.getLocation().toString() 
+            + " - " + card.getMeta().getDesc() << endl;
+        cout << line << endl;
+        lineCounter++;
+    });
+}
+
+static void generateVerilog(const Machine& machine, const map<string, string>& pinToWire,
+    ostream& str) {
+
+    machine.visitAllCards([&pinToWire, &str](const Card& card) mutable {
+
+        string moduleId = "X_" + card.getLocation().toString();
+
+        str << "// Card " << card.getMeta().getType() + " at location " + card.getLocation().toString() 
+            + " - " + card.getMeta().getDesc() << endl;
+
+        str << "   SMS_CARD_";
+        str << card.getMeta().getType();
+        str << " ";
+        str << moduleId;
+        str << "(";
+
+        // Pins
+        for (string pinName : card.getMeta().getSignalPinNames()) {
+            if (card.isPinUsed(pinName)) {
+                const Pin& pin = card.getPinConst(pinName);
+                str << pinName << "(";
+                // Figure out which wire the pin is connected to
+                if (pinToWire.find(pin.getDesc()) == pinToWire.end()) {
+                    str << "?";
+                }
+                else {
+                    str << "W_" + pinToWire.at(pin.getDesc());
+                }
+                str << "), ";
+            } 
+        }
+
+        str << ");" << endl;
+    });
+}
+
 int main(int, const char**) {
 
     string baseDir = "/home/bruce/IBM1620/hardware";
@@ -170,12 +267,16 @@ int main(int, const char**) {
     cardMeta["ONE"] = make_unique<CardONEMeta>();
     cardMeta["ZERO"] = make_unique<CardZEROMeta>();
     cardMeta["HIZ"] = make_unique<CardHIZMeta>();
-    {
+    try {
         YAML::Node c = YAML::LoadFile(baseDir + "/sms-cards/cards.yaml");
         for (auto it = begin(c["cards"]); it != end(c["cards"]); it++) {
             string id = it->as<string>();
             cardMeta[id] = loadCardMeta(baseDir, id);
         }
+    }
+    catch (const string& ex) {
+        cout << "Failed to load SMS metadata : " + ex << endl;
+        return -1;
     }
 
     // Read ALD and popular machine
@@ -216,55 +317,12 @@ int main(int, const char**) {
             cout << pin << " -> " << wireName << endl;
         }
     }
-    
-    // SPICE GENERATION
-    // Create a spice line for each card
-    int lineCounter = 1;
-    machine.visitAllCards([&lineCounter, &pinToWire](const Card& card) mutable {
-        string line = "X_" + card.getLocation().toString();
-        //line = line + std::to_string(lineCounter);
-        // Pins
-        for (string pinName : card.getMeta().getPinNames()) {
-            if (card.isPinUsed(pinName)) {
-                const Pin& pin = card.getPinConst(pinName);
-                // Figure out which wire 
-                if (pinToWire.find(pin.getDesc()) == pinToWire.end()) {
-                    //throw string("Pin " + pin.getDesc() + " not wired")
-                    line = line + " ";
-                    line = line + "?";
-                }
-                else {
-                    line = line + " W.";
-                    line = line + pinToWire[pin.getDesc()];
-                }
-            } 
-            else if (!card.getMeta().getDefaultNode(pinName).empty()) {
-                line = line + " ";
-                line = line + card.getMeta().getDefaultNode(pinName);
-            }
-            else 
-            {
-                // Tie to unused
-                line = line + " W.";
-                line = line + card.getLocation().toString() + "." + pinName;
-            }
-        }
 
-        line = line + " SMS_CARD_" + card.getMeta().getType();
+    generateSpice(machine, pinToWire);
 
-        cout << "* Card " << card.getMeta().getType() + " at location " + card.getLocation().toString() 
-            + " - " + card.getMeta().getDesc() << endl;
-        cout << line << endl;
-        lineCounter++;
-    });
-
-
-    /*
-    std::for_each(begin(wires), end(wires), [](const Wire& wire) {
-        for (const string& p : wire.pins) {
-            cout << p << " ";
-        }
-        cout << endl;
-    });
-    */
+    try {
+        generateVerilog(machine, pinToWire, std::cout);
+    } catch (const string& ex) {
+        cout << "Failed to generate Verilog: " << ex << endl;
+    }
 }

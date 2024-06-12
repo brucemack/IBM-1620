@@ -7,7 +7,7 @@
    This work is being made available for non-commercial use. Redistribution, commercial 
    use or sale of any part is prohibited.
 */
-#include "cards/CardHIZ.h"
+#include "cards/CardZERO.h"
 
 using namespace std;
 
@@ -15,10 +15,9 @@ static map<string, PinMeta> Pins = {
     { "A", PinMeta { "A", PinType:: OUTPUT } }
 };
 
-CardHIZMeta::CardHIZMeta() 
-: CardMeta("HIZ", "High Impedance", Pins) {     
+CardZEROMeta::CardZEROMeta() 
+: CardMeta("ZERO", "Logical 0", Pins) { 
 }
 
-std::vector<std::string> CardHIZMeta::getPinNames() const {
-    return std::vector<std::string> { "A" };
-}
+
+

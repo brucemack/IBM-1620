@@ -17,15 +17,54 @@
 
 using namespace std;
 
-CardMeta::CardMeta(const string& type, const string& desc)
+PinType str2PinType(const string& str) {
+    if (str == "UNKNOWN") 
+        return PinType::UNKNOWN;
+    else if (str == "INPUT")
+        return PinType::INPUT;
+    else if (str == "OUTPUT")
+        return PinType::OUTPUT;
+    else if (str == "GND")
+        return PinType::GND;
+    else if (str == "VP12")
+        return PinType::VP12;
+    else if (str == "VN12")
+        return PinType::VN12;
+    else 
+        throw string("Unrecognized pin type: " + str);
+}
+
+CardMeta::CardMeta(const string& type, const string& desc, 
+    const map<string, PinMeta>& pinMeta)
 :   _type(type),
     _desc(desc) {    
+    _pinMeta.insert(begin(pinMeta), end(pinMeta));
 }
 
+// TODO: PREDICATE SUPPORT
 std::vector<std::string> CardMeta::getPinNames() const {
-    return LogicDiagram::PinNames;
+    std::vector<std::string> result;
+    for (auto [n, v] : _pinMeta)
+        result.push_back(n);
+    return result;
 }
 
+std::vector<std::string> CardMeta::getSignalPinNames() const {
+    std::vector<std::string> result;
+    for (auto [n, v] : _pinMeta)
+        if (v.type == PinType::INPUT ||
+            v.type == PinType::OUTPUT)
+            result.push_back(n);
+    return result;
+}
+
+PinType CardMeta::getPinType(const string pinId) const {
+    if (_pinMeta.find(pinId) == _pinMeta.end()) 
+        throw string("Invalid pin ID : " + pinId);
+    return _pinMeta.at(pinId).type;
+}
+
+// TODO: Move to metadata
 std::string CardMeta::getDefaultNode(const std::string& pinName) const {
     if (pinName == "J") {
         return "gnd";
@@ -61,8 +100,9 @@ bool Card::isPinUsed(const std::string& id) const {
 
 void Card::dumpOn(std::ostream& str) const {
     str << "Pins:" << endl;
-    visitAllPins([&str](const string& pinId, const Pin& pin) {
-        str << pinId << " -> " << pin.getConnectionsDesc() << endl;
+    visitAllPins([&str, &meta = _meta](const string& pinId, const Pin& pin) {
+        PinType pt = meta.getPinType(pinId);
+        str << pinId << " " << (int)pt << " -> " << pin.getConnectionsDesc() << endl;
     });
 }
 
