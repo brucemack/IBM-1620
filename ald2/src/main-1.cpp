@@ -5,11 +5,11 @@
 #include <unordered_set>
 #include <vector>
 #include <memory>
+#include <algorithm>
 
 #include "yaml-cpp/yaml.h"
 
 #include "LogicDiagram.h"
-
 #include "Components.h"
 #include "cards/CardONE.h"
 #include "cards/CardZERO.h"
@@ -23,6 +23,20 @@ static bool isPinRef(const string& ref) {
     } else {
         return false;
     }
+}
+
+string toLower(const string& r) {
+    string data = r;
+    std::transform(data.begin(), data.end(), data.begin(),
+        [](char c){ return std::tolower(c); });
+    return data;
+}
+
+string dotToUnder(const string& r) {
+    string data = r;
+    std::transform(data.begin(), data.end(), data.begin(),
+        [](char c){ if (c == '.') return '_'; else return c; });
+    return data;
 }
 
 unique_ptr<CardMeta> loadCardMeta(const string& baseDir, const string& code) {
@@ -221,7 +235,13 @@ static void generateSpice(const Machine& machine, const map<string, string>& pin
 }
 
 static void generateVerilog(const Machine& machine, const map<string, string>& pinToWire,
+    const vector<string>& wireNames,
     ostream& str) {
+
+    // Dump the wire names
+    for (string w : wireNames) {
+        str << "  wire W_" << dotToUnder(w) << ";" << endl;
+    }
 
     machine.visitAllCards([&pinToWire, &str](const Card& card) mutable {
 
@@ -237,18 +257,22 @@ static void generateVerilog(const Machine& machine, const map<string, string>& p
         str << "(";
 
         // Pins
+        bool first = true;
         for (string pinName : card.getMeta().getSignalPinNames()) {
             if (card.isPinUsed(pinName)) {
+                if (!first) 
+                    str << ", ";
                 const Pin& pin = card.getPinConst(pinName);
-                str << pinName << "(";
+                str << "." << toLower(pinName) << "(";
                 // Figure out which wire the pin is connected to
                 if (pinToWire.find(pin.getDesc()) == pinToWire.end()) {
                     str << "?";
                 }
                 else {
-                    str << "W_" + pinToWire.at(pin.getDesc());
+                    str << "W_" + dotToUnder(pinToWire.at(pin.getDesc()));
                 }
-                str << "), ";
+                str << ")";
+                first = false;
             } 
         }
 
@@ -310,8 +334,10 @@ int main(int, const char**) {
     // Setup the mapping between pins and wires
     cout << "Wires" << endl;
     map<string, string> pinToWire;
+    vector<string> wireNames;
     for (const Wire& w : wires) {
         string wireName = w.pins.at(0);
+        wireNames.push_back(wireName);
         for (const string& pin : w.pins) {
             pinToWire[pin] = wireName;
             cout << pin << " -> " << wireName << endl;
@@ -321,7 +347,7 @@ int main(int, const char**) {
     generateSpice(machine, pinToWire);
 
     try {
-        generateVerilog(machine, pinToWire, std::cout);
+        generateVerilog(machine, pinToWire, wireNames, std::cout);
     } catch (const string& ex) {
         cout << "Failed to generate Verilog: " << ex << endl;
     }
