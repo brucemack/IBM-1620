@@ -1,4 +1,4 @@
-* Generic test bench
+* IBM 1620 Test Bench
 * IBM 1620 Logic Reproduction Project
 *
 * We have this in the .spiceinit file:
