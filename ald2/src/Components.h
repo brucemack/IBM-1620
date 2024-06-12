@@ -1,4 +1,4 @@
-/* IBM-1620 Logic Reproduction 
+/* IBM 1620 Logic Reproduction Project
    Copyright (C) 2024 - Bruce MacKinnon
  
    This work is covered under the terms of the GNU Public License (V3). Please consult the 
@@ -27,9 +27,10 @@ class CardMeta {
 public:
 
     CardMeta() { }
-    CardMeta(const std::string& type);
+    CardMeta(const std::string& type, const std::string& desc);
 
     std::string getType() const { return _type; }
+    std::string getDesc() const { return _desc; }
 
     virtual std::vector<std::string> getPinNames() const;
 
@@ -42,6 +43,7 @@ public:
 private:
 
     std::string _type;
+    std::string _desc;
 };
 
 class Card {

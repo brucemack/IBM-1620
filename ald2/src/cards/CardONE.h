@@ -15,7 +15,7 @@
 class CardONEMeta : public CardMeta {
 public:
 
-    CardONEMeta() : CardMeta("ONE") { };
+    CardONEMeta() : CardMeta("ONE", "Logical 1") { };
 
     virtual std::vector<std::string> getPinNames() const {
         return std::vector<std::string> { "A" };

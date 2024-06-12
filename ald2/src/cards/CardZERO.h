@@ -15,7 +15,7 @@
 class CardZEROMeta : public CardMeta {
 public:
 
-    CardZEROMeta() : CardMeta("ZERO") { };
+    CardZEROMeta() : CardMeta("ZERO", "Logical 0") { };
 
     virtual std::vector<std::string> getPinNames() const {
         return std::vector<std::string> { "A" };

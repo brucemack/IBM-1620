@@ -1,4 +1,4 @@
-/* IBM-1620 Logic Reproduction 
+/* IBM 1620 Logic Reproduction Project
    Copyright (C) 2024 - Bruce MacKinnon
  
    This work is covered under the terms of the GNU Public License (V3). Please consult the 

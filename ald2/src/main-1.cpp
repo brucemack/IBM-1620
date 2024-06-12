@@ -25,6 +25,12 @@ static bool isPinRef(const string& ref) {
     }
 }
 
+unique_ptr<CardMeta> loadCardMeta(const string& baseDir, const string& code) {
+    YAML::Node c = YAML::LoadFile(baseDir + "/sms-cards/" + code + "/" + code + ".yaml");
+    unique_ptr<CardMeta> m = make_unique<CardMeta>(code, c["description"].as<string>());
+    return m;
+}
+
 vector<LogicDiagram::Page> loadAldPages(const vector<string> fns) {
     auto result = vector<LogicDiagram::Page>();
     for (auto fn : fns) {
@@ -155,18 +161,23 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
 
 int main(int, const char**) {
 
+    string baseDir = "/home/bruce/IBM-1620";
+
     // Load the card metadata
     map<string, unique_ptr<CardMeta>> cardMeta;   
 
+    // Special purpose cards
     cardMeta["ONE"] = make_unique<CardONEMeta>();
     cardMeta["ZERO"] = make_unique<CardZEROMeta>();
     cardMeta["HIZ"] = make_unique<CardHIZMeta>();
-    cardMeta["MX"] = make_unique<CardMeta>("MX");
-    cardMeta["CAB"] = make_unique<CardMeta>("CAB");
-    cardMeta["MH"] = make_unique<CardMeta>("MH");
-    cardMeta["CEYB"] = make_unique<CardMeta>("CEYB");
-    cardMeta["TAF"] = make_unique<CardMeta>("TAF");
-    cardMeta["TAJ"] = make_unique<CardMeta>("TAJ");
+    {
+        YAML::Node c = YAML::LoadFile(baseDir + "/sms-cards/cards.yaml");
+        for (auto it = begin(c["cards"]); it != end(c["cards"]); it++) {
+            string id = it->as<string>();
+            cout << "Loading " << id << endl;
+            cardMeta[id] = loadCardMeta(baseDir, id);
+        }
+    }
 
     // Read ALD and popular machine
     Machine machine;
@@ -235,12 +246,15 @@ int main(int, const char**) {
             else 
             {
                 // Tie to unused
-                line = line + " ";
+                line = line + " W";
                 line = line + card.getLocation().toString() + "_" + pinName + "_UNUSED";
             }
         }
 
         line = line + " SMS_CARD_" + card.getMeta().getType();
+
+        cout << "* Card " << card.getMeta().getType() + " at location " + card.getLocation().toString() 
+            + " - " + card.getMeta().getDesc() << endl;
         cout << line << endl;
         lineCounter++;
     });
