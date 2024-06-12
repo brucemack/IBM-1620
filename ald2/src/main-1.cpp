@@ -161,7 +161,7 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
 
 int main(int, const char**) {
 
-    string baseDir = "/home/bruce/IBM-1620";
+    string baseDir = "/home/bruce/IBM1620/hardware";
 
     // Load the card metadata
     map<string, unique_ptr<CardMeta>> cardMeta;   
@@ -174,7 +174,6 @@ int main(int, const char**) {
         YAML::Node c = YAML::LoadFile(baseDir + "/sms-cards/cards.yaml");
         for (auto it = begin(c["cards"]); it != end(c["cards"]); it++) {
             string id = it->as<string>();
-            cout << "Loading " << id << endl;
             cardMeta[id] = loadCardMeta(baseDir, id);
         }
     }
@@ -235,7 +234,7 @@ int main(int, const char**) {
                     line = line + "?";
                 }
                 else {
-                    line = line + " W";
+                    line = line + " W.";
                     line = line + pinToWire[pin.getDesc()];
                 }
             } 
@@ -246,8 +245,8 @@ int main(int, const char**) {
             else 
             {
                 // Tie to unused
-                line = line + " W";
-                line = line + card.getLocation().toString() + "_" + pinName + "_UNUSED";
+                line = line + " W.";
+                line = line + card.getLocation().toString() + "." + pinName;
             }
         }
 

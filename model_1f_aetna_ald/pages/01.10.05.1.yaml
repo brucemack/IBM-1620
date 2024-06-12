@@ -16,6 +16,21 @@ pdf: 86
 
 blocks:
 
+  - loc: 1B17
+    typ: TAG-
+    cir: 02 
+    coo: 4B
+    inp:
+      A: [ "TEST ONE"]
+      H: [ 5G.B ]
+  - loc: 1B17
+    typ: TAG-
+    cir: 03 
+    coo: 4D
+    inp:
+      E: [ "TEST ONE"]
+      F: [ 5F.P ]
+
   - note: "Master oscillator (1 MHz)"
     loc: 1A15
     typ: TAF-

@@ -5,10 +5,12 @@ pdf: None
 
 blocks:
 # Used to tie signals high
-#  - loc: 9991
-#    typ: ONE
-#    cir: 01
-#    coo: 1A
+  - loc: 9991
+    typ: ONE
+    cir: 01
+    coo: 1A
+    out: 
+      A: [ "TEST ONE" ]
 # Used to tie signals low
 #  - loc: 9992
 #    typ: ZERO
