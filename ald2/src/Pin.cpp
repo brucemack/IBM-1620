@@ -39,15 +39,17 @@ string Pin::getConnectionsDesc() const {
 }
 
 void Pin::connect(Pin& pin) { 
-    // Check to see if the connection is redundant
+    // Check to see if the connection is redundant. If so, we
+    // can just ignore it (not doing any harm)
     if (std::find_if(_connections.begin(), _connections.end(), 
         [&pin](const std::reference_wrapper<Pin>& x) { 
             return std::addressof(pin) == std::addressof(x.get()); 
         }
     ) != _connections.end()) {
-        throw string("Redundant pin connection: " + pin.getDesc());
+        //throw string("Redundant pin connection: " + pin.getDesc());
+    } else {
+        _connections.push_back(std::reference_wrapper<Pin>(pin));
     }
-    _connections.push_back(std::reference_wrapper<Pin>(pin));
 }
 
 bool Pin::operator== (const Pin& other) const { 

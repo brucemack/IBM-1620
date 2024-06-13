@@ -16,10 +16,24 @@ blocks:
 #    typ: ZERO
 #    cir: 01
 #    coo: 1B
-# Used to tie signals to high-impedance
-  - loc: HIZ0
-    typ: HIZ
+
+# Used to tie signals to power-on reset
+  - loc: 9992
+    typ: RST
     cir: 01
     coo: 1C
     out:
       A: [ "-S MANUAL RESET" ]
+
+  - loc: 9000
+    typ: IND
+    cir: 01
+    coo: 1A
+    inp:
+      A: [ "+S CLOCK DR A"]
+  - loc: 9001
+    typ: IND
+    cir: 01
+    coo: 1A
+    inp:
+      A: [ "+S CLOCK DR B"]      

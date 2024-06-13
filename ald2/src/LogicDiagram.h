@@ -30,8 +30,8 @@ namespace LogicDiagram {
         std::map<std::string, std::vector<std::string>> out;
     };
 
-    struct Output {
-        std::string net;
+    struct Alias {
+        std::string name;
         std::vector<std::string> inp;
     };
 
@@ -41,7 +41,7 @@ namespace LogicDiagram {
         std::string num;
         std::string pdf;
         std::vector<Block> blocks;
-        std::vector<Output> outputs;
+        std::vector<Alias> aliases;
 
         const Block& getBlockByCoordinate(const std::string& coo) const;
     };
@@ -66,6 +66,7 @@ namespace LogicDiagram {
     std::vector<BlockCooPin> parsePinRefs(const std::string& ref);
 }
 
+// TODO: MOVE TO UTIL
 static void removeTrailingCharacters(std::string &str, const char charToRemove) {
     str.erase (str.find_last_not_of(charToRemove) + 1, std::string::npos );
 }
@@ -77,7 +78,7 @@ namespace YAML {
         static bool decode(const Node& node, LogicDiagram::Block& rhs) {
             if (!node.IsMap()) 
                 return false;
-            // The trailing hypthens are removed
+            // The trailing hyphens are removed
             std::string typ = node["typ"].as<std::string>();
             removeTrailingCharacters(typ, '-');
             rhs.typ = typ;
@@ -124,46 +125,46 @@ namespace YAML {
     };
 
     template<>
-    struct convert<LogicDiagram::Output> {
-        static bool decode(const Node& node, LogicDiagram::Output& rhs) {
+    struct convert<LogicDiagram::Alias> {
+        static bool decode(const Node& node, LogicDiagram::Alias& lhs) {
             if (!node.IsMap()) 
                 return false;
-            rhs.net = node["net"].as<std::string>();
+            lhs.name = node["name"].as<std::string>();
             auto j = node["inp"];
             // This should be an iterable list of node names
             if (!j.IsSequence())
                 return false;
             for (auto it2 = std::begin(j); it2 != std::end(j); it2++)
-                rhs.inp.push_back(it2->as<std::string>());
+                lhs.inp.push_back(it2->as<std::string>());
             return true;
         }
     };
 
     template<>
     struct convert<LogicDiagram::Page> {
-        static bool decode(const Node& node, LogicDiagram::Page& rhs) {
+        static bool decode(const Node& node, LogicDiagram::Page& lhs) {
             if (!node.IsMap()) 
                 return false;
-            rhs.part = node["part"].as<std::string>();
-            rhs.title = node["title"].as<std::string>();
-            rhs.num = node["num"].as<std::string>();
+            lhs.part = node["part"].as<std::string>();
+            lhs.title = node["title"].as<std::string>();
+            lhs.num = node["num"].as<std::string>();
             if (node["pdf"]) 
-                rhs.pdf = node["pdf"].as<std::string>();
+                lhs.pdf = node["pdf"].as<std::string>();
             if (node["blocks"]) {
                 auto j = node["blocks"];
                 // This should be an iterable list of blocks
                 if (!j.IsSequence())
                     return false;
                 for (auto it2 = std::begin(j); it2 != std::end(j); it2++)
-                    rhs.blocks.push_back(it2->as<LogicDiagram::Block>());
+                    lhs.blocks.push_back(it2->as<LogicDiagram::Block>());
             }
-            if (node["outputs"]) {
-                auto j = node["outputs"];
-                // This should be an iterable list of blocks
+            if (node["aliases"]) {
+                auto j = node["aliases"];
+                // This should be an iterable list of aliases
                 if (!j.IsSequence())
                     return false;
                 for (auto it2 = std::begin(j); it2 != std::end(j); it2++)
-                    rhs.outputs.push_back(it2->as<LogicDiagram::Output>());
+                    lhs.aliases.push_back(it2->as<LogicDiagram::Alias>());
             }
             return true;
         }

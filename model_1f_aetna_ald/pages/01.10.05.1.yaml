@@ -23,6 +23,7 @@ blocks:
     inp:
       A: [ "TEST ONE"]
       H: [ 5G.B ]
+
   - loc: 1B17
     typ: TAG-
     cir: 03 
@@ -56,3 +57,28 @@ blocks:
       A: [ 5G.B ]
       D: [ 4F.D, 4F.C ]
 
+  - note: "Clock driver."
+    warn: "Ignored the G input"
+    gate: 01BA
+    loc: 1B15
+    typ: TFC-
+    cir: 01
+    coo: 6B
+    inp:
+      K: [ 4B.PL ]
+
+  - note: "Clock driver."
+    warn: "Ignored the H input"
+    gate: 01BA
+    loc: 1B15
+    typ: TFC-
+    cir: 04
+    coo: 6D
+    inp:
+      F: [ 4D.C ]
+
+aliases:
+  - name: "+S CLOCK DR A"
+    inp: [ 6B.LR ]
+  - name: "+S CLOCK DR B"
+    inp: [ 6D.A ]

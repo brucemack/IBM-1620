@@ -133,20 +133,20 @@ blocks:
       B: [ 3C.L, 3D.A ]
 
 # Each UNIQUE output on the right side of the page will 
-# have an "out:" section.
+# have an alias section.
 #
-# The "net:" tag gives the name of the wire.
-# The "dri:" tag gives the list of block OUTPUTS that 
+# The "name:" tag gives the name of the wire.
+# The "imp:" tag gives the list of block OUTPUTS that 
 #  the net is connected to (i.e. driving block outputs)
 
-outputs:
-  - net: "-S MANUAL RESET P1"
+aliases:
+  - name: "-S MANUAL RESET P1"
     inp: [ 5A.H ]
-  - net: "-S MANUAL RESET P2"
+  - name: "-S MANUAL RESET P2"
     inp: [ 5C.A ]
-  - net: "-S MANUAL RESET P3"
+  - name: "-S MANUAL RESET P3"
     inp: [ 5E.H ]
-  - net: "-S MANUAL RESET P11"
+  - name: "-S MANUAL RESET P11"
     inp: [ 4D.D ]
-  - net: "-S RESET NOT RUN"
+  - name: "-S RESET NOT RUN"
     inp: [ 5G.K ]

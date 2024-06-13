@@ -1,0 +1,82 @@
+# IBM-1620 Logic Reproduction Project
+# COPYRIGHT (C) 2024 - Bruce MacKinnon
+
+part: 2162349
+title: "CLOCK C7 C8"
+num: 01.10.09.1 
+pdf: 90
+notes: "Part of cascading clock registers"
+
+blocks:
+
+  - note: "Input chained from C6"
+    gate: 01BA
+    loc: 1B13
+    typ: TAG-
+    cir: 01
+    coo: 3B
+    inp:
+      B: [ "+S C 6 P" ]
+      D: [ "+S CLOCK DR B" ]
+
+  - note: "Input chained from C6"
+    gate: 01BA
+    loc: 1B13
+    typ: TAG-
+    cir: 02
+    coo: 3C
+    inp:
+      A: [ "+S CLOCK DR B" ]
+      H: [ "+S NOT C 6 P" ]
+
+  - note: "Input chained from C7"
+    gate: 01BA
+    loc: 1B13
+    typ: TAG-
+    cir: 03
+    coo: 3F
+    inp:
+      E: [ 4B.E ]
+      F: [ "+S CLOCK DR A" ]
+
+  - note: "Input chained from C7"
+    gate: 01BA
+    loc: 1B13
+    typ: TAG-
+    cir: 04
+    coo: 3G
+    inp:
+      Q: [ "+S CLOCK DR A" ]
+      R: [ 4B.D ]
+
+  - note: "C7"
+    gate: 01BA
+    loc: 1A13
+    typ: TCZ-
+    cir: 02
+    coo: 4B
+    inp:
+      A: [ 3B.G ]
+      G: [ "-S MANUAL RESET" ]
+      H: [ 3C.PL ]
+
+  - note: "C8"
+    gate: 01BA
+    loc: 1A13
+    typ: TCZ-
+    cir: 01
+    coo: 4F
+    inp:
+      K: [ 3F.C ]
+      L: [ "-S MANUAL RESET" ]
+      Q: [ 3G.K ]
+
+aliases:
+  - name: "+S C 7 P"
+    inp: [ 4B.E ]
+  - name: "+S NOT C 7 P"
+    inp: [ 4B.D ]
+  - name: "+S C 8 P"
+    inp: [ 4F.B ]
+  - name: "+S NOT C 8 P"
+    inp: [ 4F.C ]

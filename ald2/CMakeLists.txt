@@ -35,6 +35,8 @@ add_executable(main-1
   src/cards/CardHIZ.cpp
   src/cards/CardONE.cpp
   src/cards/CardZERO.cpp
+  src/cards/CardIND.cpp
+  src/cards/CardRST.cpp
 )
 
 target_link_libraries(main-1 PUBLIC yaml-cpp::yaml-cpp) 
@@ -50,6 +52,8 @@ add_executable(unit-test-1
   src/cards/CardHIZ.cpp
   src/cards/CardONE.cpp
   src/cards/CardZERO.cpp
+  src/cards/CardIND.cpp
+  src/cards/CardRST.cpp
 )
 
 target_link_libraries(unit-test-1 PUBLIC yaml-cpp::yaml-cpp) 

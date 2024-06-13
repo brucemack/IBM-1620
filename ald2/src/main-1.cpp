@@ -14,6 +14,8 @@
 #include "cards/CardONE.h"
 #include "cards/CardZERO.h"
 #include "cards/CardHIZ.h"
+#include "cards/CardIND.h"
+#include "cards/CardRST.h"
 
 using namespace std;
 
@@ -65,6 +67,7 @@ unique_ptr<CardMeta> loadCardMeta(const string& baseDir, const string& code) {
 vector<LogicDiagram::Page> loadAldPages(const vector<string> fns) {
     auto result = vector<LogicDiagram::Page>();
     for (auto fn : fns) {
+        cout << "Working on " << fn << endl;
         YAML::Node c = YAML::LoadFile(fn);
         LogicDiagram::Page page = c.as<LogicDiagram::Page>();
         result.push_back(page);
@@ -113,8 +116,8 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
             }
         }
         // Register all of the cross-page net aliases
-        for (const LogicDiagram::Output& output : page.outputs) {
-            for (auto driverRef : output.inp) {                
+        for (const LogicDiagram::Alias& alias : page.aliases) {
+            for (auto driverRef : alias.inp) {                
                 if (isPinRef(driverRef)) {
                     // REMEMBER: It's possible to mention multiple pins in one reference.
                     for (LogicDiagram::BlockCooPin bp : LogicDiagram::parsePinRefs(driverRef)) {
@@ -123,17 +126,23 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                         // Determine the card/pin
                         Card& card = machine.getCard(block.loc);
                         Pin& pin = card.getPin(bp.pinId);
-                        // Check for conflict
-                        if (namedSignals.find(output.net) != namedSignals.end()) {
-                            if (!(namedSignals.at(output.net) == pin)) {
-                                throw string("Conflicting signal name on page " + 
-                                    page.num + " :  " + output.net);
+                        /*
+                        REMOVING ALIAS CHECK - WILL HAPPEN LATER
+                        // Check for conflict with existing alias
+                        if (namedSignals.find(alias.name) != namedSignals.end()) {
+                            if (!(namedSignals.at(alias.name) == pin)) {
+                                string msg = "Conflicting signal name on page " + 
+                                    page.num + " :  " + alias.name + " vs " +
+                                    namedSignals.at(alias.name).getDesc();
+                                throw string(msg);
                             }
                         } 
                         // Register named signal
                         else {
-                            namedSignals.emplace(output.net, pin);
+                            namedSignals.emplace(alias.name, pin);
                         }
+                        */
+                        namedSignals.emplace(alias.name, pin);
                     }
                 }
             }
@@ -154,8 +163,10 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                         // Trace back to what is driving this input.  There are two 
                         // cases:
                         // 1. A block.pin(s) reference on the same page.
-                        // 2. A global signal name
+                        // 2. A global signal alias
                         
+
+
                         if (isPinRef(driverRef)) {
                             // It is possible to reference multiple pins in one reference!
                             for (LogicDiagram::BlockCooPin driverBlockPin : LogicDiagram::parsePinRefs(driverRef)) {
@@ -177,6 +188,9 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                                 throw string("Input reference to unknown signal: " + driverRef);
                             // Get the pin
                             Pin& driverPin = namedSignals.at(driverRef);
+                            //cout << "Connecting " << driverRef << endl;
+                            //cout << "  "  << driverPin.getDesc() << endl;
+                            //cout << "  "  << inputPin.getDesc() << endl;
                             // Make the connection back to the driver
                             inputPin.connect(driverPin);
                             driverPin.connect(inputPin);
@@ -240,17 +254,17 @@ static void generateVerilog(const Machine& machine, const map<string, string>& p
 
     // Dump the wire names
     for (string w : wireNames) {
-        str << "  wire W_" << dotToUnder(w) << ";" << endl;
+        str << "    wire W_" << dotToUnder(w) << ";" << endl;
     }
 
     machine.visitAllCards([&pinToWire, &str](const Card& card) mutable {
 
         string moduleId = "X_" + card.getLocation().toString();
 
-        str << "// Card " << card.getMeta().getType() + " at location " + card.getLocation().toString() 
+        str << "    // Card " << card.getMeta().getType() + " at location " + card.getLocation().toString() 
             + " - " + card.getMeta().getDesc() << endl;
 
-        str << "   SMS_CARD_";
+        str << "    SMS_CARD_";
         str << card.getMeta().getType();
         str << " ";
         str << moduleId;
@@ -266,7 +280,7 @@ static void generateVerilog(const Machine& machine, const map<string, string>& p
                 str << "." << toLower(pinName) << "(";
                 // Figure out which wire the pin is connected to
                 if (pinToWire.find(pin.getDesc()) == pinToWire.end()) {
-                    str << "?";
+                    // It's OK to have a port connected to nothing
                 }
                 else {
                     str << "W_" + dotToUnder(pinToWire.at(pin.getDesc()));
@@ -291,6 +305,10 @@ int main(int, const char**) {
     cardMeta["ONE"] = make_unique<CardONEMeta>();
     cardMeta["ZERO"] = make_unique<CardZEROMeta>();
     cardMeta["HIZ"] = make_unique<CardHIZMeta>();
+    cardMeta["IND"] = make_unique<CardINDMeta>();
+    cardMeta["RST"] = make_unique<CardRSTMeta>();
+
+    // Load defined cards
     try {
         YAML::Node c = YAML::LoadFile(baseDir + "/sms-cards/cards.yaml");
         for (auto it = begin(c["cards"]); it != end(c["cards"]); it++) {
@@ -313,6 +331,11 @@ int main(int, const char**) {
     //fns.push_back("../tests/01.06.01.1.yaml");
     //fns.push_back("../tests/controls.yaml");
     fns.push_back("../../model_1f_aetna_ald/pages/01.10.05.1.yaml");
+    fns.push_back("../../model_1f_aetna_ald/pages/01.10.06.1.yaml");
+    fns.push_back("../../model_1f_aetna_ald/pages/01.10.07.1.yaml");
+    fns.push_back("../../model_1f_aetna_ald/pages/01.10.08.1.yaml");
+    fns.push_back("../../model_1f_aetna_ald/pages/01.10.09.1.yaml");
+    fns.push_back("../../model_1f_aetna_ald/pages/01.10.10.1.yaml");
     fns.push_back("../../model_1f_aetna_ald/pages/controls.yaml");
     vector<LogicDiagram::Page> pages = loadAldPages(fns);
 
@@ -344,7 +367,7 @@ int main(int, const char**) {
         }
     }
 
-    generateSpice(machine, pinToWire);
+    //generateSpice(machine, pinToWire);
 
     try {
         generateVerilog(machine, pinToWire, wireNames, std::cout);
