@@ -96,7 +96,8 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                 throw string("Invalid card type on page/block " + 
                     page.num + "/" + block.coo + " : " + block.typ);
             
-            Card& card = machine.getOrCreateCard(*(cardMeta.at(block.typ).get()), block.loc);
+            Card& card = machine.getOrCreateCard(*(cardMeta.at(block.typ).get()), { block.gate, block.loc });
+
             // Register signal names for outputs
             for (auto [outputPinId, driverRefList] : block.out) {
                 // Resolve the Pin
@@ -129,24 +130,9 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                         // Resolve the local block on this page
                         const LogicDiagram::Block& block = page.getBlockByCoordinate(bp.coo);
                         // Determine the card/pin
-                        Card& card = machine.getCard(block.loc);
+                        Card& card = machine.getCard({ block.gate, block.loc});
                         Pin& pin = card.getPin(bp.pinId);
-                        /*
-                        REMOVING ALIAS CHECK - WILL HAPPEN LATER
-                        // Check for conflict with existing alias
-                        if (namedSignals.find(alias.name) != namedSignals.end()) {
-                            if (!(namedSignals.at(alias.name) == pin)) {
-                                string msg = "Conflicting signal name on page " + 
-                                    page.num + " :  " + alias.name + " vs " +
-                                    namedSignals.at(alias.name).getDesc();
-                                throw string(msg);
-                            }
-                        } 
-                        // Register named signal
-                        else {
-                            namedSignals.emplace(alias.name, pin);
-                        }
-                        */
+                        // Register the alias
                         namedSignals.emplace(alias.name, pin);
                     }
                 }
@@ -159,7 +145,7 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
     for (const LogicDiagram::Page& page : pages) {
         for (const LogicDiagram::Block& block : page.blocks) {
             try {
-                Card& card = machine.getCard(block.loc);
+                Card& card = machine.getCard({ block.gate, block.loc });
                 // Get the inputs connected
                 for (auto [inputPinId, driverRefList] : block.inp) {            
                     Pin& inputPin = card.getPin(inputPinId);
@@ -169,9 +155,6 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                         // cases:
                         // 1. A block.pin(s) reference on the same page.
                         // 2. A global signal alias
-                        
-
-
                         if (isPinRef(driverRef)) {
                             // It is possible to reference multiple pins in one reference!
                             for (LogicDiagram::BlockCooPin driverBlockPin : LogicDiagram::parsePinRefs(driverRef)) {
@@ -179,7 +162,7 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                                 const LogicDiagram::Block& driverBlock = 
                                     page.getBlockByCoordinate(driverBlockPin.coo);
                                 // Map the block to the card
-                                Card& driverCard = machine.getCard(driverBlock.loc);
+                                Card& driverCard = machine.getCard({ driverBlock.gate, driverBlock.loc });
                                 // Get the pin
                                 Pin& driverPin = driverCard.getPin(driverBlockPin.pinId);
                                 // Make the connection back to the driver
@@ -358,13 +341,6 @@ int main(int, const char**) {
             fns.push_back(aldBaseDir + "/" + id + ".yaml");
         }
     }
-    //fns.push_back("../../model_1f_aetna_ald/pages/01.10.05.1.yaml");
-    //fns.push_back("../../model_1f_aetna_ald/pages/01.10.06.1.yaml");
-    //fns.push_back("../../model_1f_aetna_ald/pages/01.10.07.1.yaml");
-    //fns.push_back("../../model_1f_aetna_ald/pages/01.10.08.1.yaml");
-    //fns.push_back("../../model_1f_aetna_ald/pages/01.10.09.1.yaml");
-    //fns.push_back("../../model_1f_aetna_ald/pages/01.10.10.1.yaml");
-    //fns.push_back("../../model_1f_aetna_ald/pages/controls.yaml");
     vector<LogicDiagram::Page> pages = loadAldPages(fns);
 
     try {

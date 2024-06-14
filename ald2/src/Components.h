@@ -105,6 +105,7 @@ class Machine {
 public:
 
     Card& getCard(const PlugLocation& location);
+
     Card& getOrCreateCard(const CardMeta& cardMeta, const PlugLocation& location);
 
     void dumpOn(std::ostream& str) const;

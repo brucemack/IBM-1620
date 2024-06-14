@@ -10,5 +10,5 @@
 #include "PlugLocation.h"
 
 bool PlugLocation::operator== (const PlugLocation& other) const { 
-    return _loc == other._loc; 
+    return _gate == other._gate && _loc == other._loc; 
 }
