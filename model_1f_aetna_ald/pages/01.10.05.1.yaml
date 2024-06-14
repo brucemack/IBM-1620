@@ -16,7 +16,8 @@ pdf: 86
 
 blocks:
 
-  - loc: 1B17
+  - gate: 01BA
+    loc: 1B17
     typ: TAG-
     cir: 02 
     coo: 4B
@@ -24,7 +25,8 @@ blocks:
       A: [ "TEST ONE"]
       H: [ 5G.B ]
 
-  - loc: 1B17
+  - gate: 01BA
+    loc: 1B17
     typ: TAG-
     cir: 03 
     coo: 4D
@@ -32,13 +34,15 @@ blocks:
       E: [ "TEST ONE"]
       F: [ 5F.P ]
 
-  - note: "Master oscillator (1 MHz)"
+  - gate: 01BA
+    note: "Master oscillator (1 MHz)"
     loc: 1A15
     typ: TAF-
     cir: 01
     coo: 4F
 
   - note: "Flip-flop for creating two phases of master clock"
+    gate: 01BA
     loc: 1A16
     typ: TAJ-
     cir: 01
@@ -49,6 +53,7 @@ blocks:
       C: [ "-S MANUAL RESET" ]
 
   - note: "Flip-flop for creating two phases of master clock"
+    gate: 01BA
     loc: 1A16
     typ: TAJ-
     cir: 02

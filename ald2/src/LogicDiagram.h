@@ -24,7 +24,7 @@ namespace LogicDiagram {
     };
 
     struct Block {
-        std::string typ, loc, coo;
+        std::string typ, gate, loc, coo;
         int cir;
         std::map<std::string, std::vector<std::string>> inp;
         std::map<std::string, std::vector<std::string>> out;
@@ -82,6 +82,7 @@ namespace YAML {
             std::string typ = node["typ"].as<std::string>();
             removeTrailingCharacters(typ, '-');
             rhs.typ = typ;
+            rhs.gate = node["gate"].as<std::string>();
             rhs.loc = node["loc"].as<std::string>();
             rhs.coo = node["coo"].as<std::string>();
             rhs.cir = node["cir"].as<int>();

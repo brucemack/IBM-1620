@@ -48,7 +48,8 @@ pdf: 74
 #
 blocks:
 
-  - loc: 1G16
+  - gate: 01BA
+    loc: 1G16
     typ: MX--
     cir: 01
     coo: 2D
@@ -56,7 +57,8 @@ blocks:
       B: [ "+S MANUAL RESET" ]
       D: [ "+S CLOCK OFF" ]
 
-  - loc: 1A10
+  - gate: 01DA
+    loc: 1A10
     typ: CAB-
     cir: 01
     coo: 2E
@@ -64,7 +66,8 @@ blocks:
 # Here's an example of an input that connects to another block's output.
       A: [ 2F.CL ]
 
-  - loc: 1A10      
+  - gate: 01DA
+    loc: 1A10      
     typ: CAB-
     cir: 02
     coo: 2F
@@ -73,14 +76,16 @@ blocks:
       G: [ "-S I/O EXIT TR" ]
       H: [ "+S FILE OP" ]
 
-  - loc: 1J17
+  - gate: 01BA
+    loc: 1J17
     typ: MH--
     cir: 01
     coo: 3C
     inp:
       K: [ "-S PWR OFF RESET" ]
 
-  - loc: 1D16
+  - gate: 01BA
+    loc: 1D16
     typ: MH--
     cir: 04
     coo: 3D
@@ -89,35 +94,40 @@ blocks:
 # block outputs.  
       F: [ 2D.G, 2E.E ]
 
-  - loc: 1J17
+  - gate: 01BA
+    loc: 1J17
     typ: MH--
     cir: 02
     coo: 4D
     inp: 
       P: [ 3C.L, 3D.A ]
     
-  - loc: 1C16
+  - gate: 01BA
+    loc: 1C16
     typ: CEYB
     cir: 03
     coo: 5A
     inp: 
       F: [ 4D.D ]
 
-  - loc: 2D21
+  - gate: 01BA
+    loc: 2D21
     typ: MH--
     cir: 04
     coo: 5C
     inp: 
       F: [ 3C.L, 3D.A ]
 
-  - loc: 1F15
+  - gate: 01BA
+    loc: 1F15
     typ: CEYB
     cir: 03
     coo: 5E
     inp:
       F: [ 4D.D ]
 
-  - loc: 1D02 
+  - gate: 01BA
+    loc: 1D02 
     typ: MX--
     cir: 04 
     coo: 5G 
@@ -125,7 +135,8 @@ blocks:
       Q: [ 3C.L, 3D.A ]
       R: [ "-S RUN P1" ]
 
-  - loc: 1A13
+  - gate: 01DA
+    loc: 1A13
     typ: MX--
     cir: 01 
     coo: 5J

@@ -42,6 +42,10 @@ string dotToUnder(const string& r) {
     return data;
 }
 
+string safeVerilogIdentifier(const string& r) {
+    return "W" + dotToUnder(r);
+}
+
 unique_ptr<CardMeta> loadCardMeta(const string& baseDir, const string& code) {
     
     YAML::Node c = YAML::LoadFile(baseDir + "/sms-cards/" + code + "/" + code + ".yaml");
@@ -260,7 +264,7 @@ static void generateVerilog(const Machine& machine, const map<string, string>& p
 
     // Dump the wire names
     for (string w : wireNames) {
-        str << "    wire W_" << dotToUnder(w) << ";" << endl;
+        str << "    wire " << safeVerilogIdentifier(w) << ";" << endl;
     }
 
     // Dump the cards
@@ -290,7 +294,7 @@ static void generateVerilog(const Machine& machine, const map<string, string>& p
                     // It's OK to have a port connected to nothing
                 }
                 else {
-                    str << "W_" + dotToUnder(pinToWire.at(pin.getDesc()));
+                    str << safeVerilogIdentifier(dotToUnder(pinToWire.at(pin.getDesc())));
                 }
                 str << ")";
                 first = false;
@@ -314,6 +318,7 @@ int main(int, const char**) {
 
     string baseDir = "/home/bruce/IBM1620/hardware";
     string outDir = baseDir + "/sms-cards/tests";
+    string aldBaseDir = "../../model_1f_aetna_ald/pages";
 
     // Load the card metadata
     map<string, unique_ptr<CardMeta>> cardMeta;   
@@ -344,16 +349,22 @@ int main(int, const char**) {
     // Named signals
     map<string, Pin&> namedSignals;
 
+    // Build the list of filenames
     vector<string> fns;
-    //fns.push_back("../tests/01.06.01.1.yaml");
-    //fns.push_back("../tests/controls.yaml");
-    fns.push_back("../../model_1f_aetna_ald/pages/01.10.05.1.yaml");
-    fns.push_back("../../model_1f_aetna_ald/pages/01.10.06.1.yaml");
-    fns.push_back("../../model_1f_aetna_ald/pages/01.10.07.1.yaml");
-    fns.push_back("../../model_1f_aetna_ald/pages/01.10.08.1.yaml");
-    fns.push_back("../../model_1f_aetna_ald/pages/01.10.09.1.yaml");
-    fns.push_back("../../model_1f_aetna_ald/pages/01.10.10.1.yaml");
-    fns.push_back("../../model_1f_aetna_ald/pages/controls.yaml");
+    {
+        YAML::Node c = YAML::LoadFile(aldBaseDir + "/core-pages.yaml");
+        for (auto it = begin(c["pages"]); it != end(c["pages"]); it++) {
+            string id = it->as<string>();
+            fns.push_back(aldBaseDir + "/" + id + ".yaml");
+        }
+    }
+    //fns.push_back("../../model_1f_aetna_ald/pages/01.10.05.1.yaml");
+    //fns.push_back("../../model_1f_aetna_ald/pages/01.10.06.1.yaml");
+    //fns.push_back("../../model_1f_aetna_ald/pages/01.10.07.1.yaml");
+    //fns.push_back("../../model_1f_aetna_ald/pages/01.10.08.1.yaml");
+    //fns.push_back("../../model_1f_aetna_ald/pages/01.10.09.1.yaml");
+    //fns.push_back("../../model_1f_aetna_ald/pages/01.10.10.1.yaml");
+    //fns.push_back("../../model_1f_aetna_ald/pages/controls.yaml");
     vector<LogicDiagram::Page> pages = loadAldPages(fns);
 
     try {

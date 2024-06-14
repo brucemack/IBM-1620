@@ -9,32 +9,36 @@ page:
   pdf: 75
 
 blocks:
-  - loc: 2H17
+  - gate: 01BA
+    loc: 2H17
     typ: CEYB
     cir: 03
     coo: 4B
     inputs:
-      F: "-S MANUAL RESET P11"
+      F: [ "-S MANUAL RESET P11" ]
 
-  - loc: 2G05
+  - gate: 01BA
+    loc: 2G05
     typ: CEYB
     cir: 01
     coo: 4D
     inputs:
-      B: "-S MANUAL RESET P11"
+      B: [ "-S MANUAL RESET P11" ]
 
-  - loc: 1C16
+  - gate: 01BA
+    loc: 1C16
     typ: CEYB
     cir: 01
     coo: 4F
     inputs:
-      B: "-S MANUAL RESET P11"
+      B: [ "-S MANUAL RESET P11" ]
 
-outputs:
+aliases:
 
-  - net: "-S MANUAL RESET P4"
-    dri: 4B.H
-  - net: "-S MANUAL RESET P5"
-    dri: 4D.G
+  - name: "-S MANUAL RESET P4"
+    inp: [ 4B.H ]
+  - name: "-S MANUAL RESET P5"
+    inp: [ 4D.G ]
   - net: "-S MANUAL RESET P6"
-    dri: 4F.G
+    inp: [ 4F.G ]
+
