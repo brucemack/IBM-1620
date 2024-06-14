@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <map>
 #include <string>
 #include <span>
@@ -204,7 +205,6 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
     }
 }
 
-// SPICE GENERATION
 static void generateSpice(const Machine& machine, const map<string, string>& pinToWire) {
 
     // Create a spice line for each card
@@ -249,14 +249,21 @@ static void generateSpice(const Machine& machine, const map<string, string>& pin
 }
 
 static void generateVerilog(const Machine& machine, const map<string, string>& pinToWire,
-    const vector<string>& wireNames,
-    ostream& str) {
+    const vector<string>& wireNames, ostream& str) {
+
+    str << "// IBM 1620 Logic Reproduction Project" << endl;
+    str << "// Copyright (c) 2024 - Bruce MacKinnon" << endl;
+    str << "// MACHINE-GENERATED VERILOG" << endl;
+    str << endl;
+    str << "`timescale 1ns/1ns" << endl;
+    str << "module ibm1620_core;" << endl;
 
     // Dump the wire names
     for (string w : wireNames) {
         str << "    wire W_" << dotToUnder(w) << ";" << endl;
     }
 
+    // Dump the cards
     machine.visitAllCards([&pinToWire, &str](const Card& card) mutable {
 
         string moduleId = "X_" + card.getLocation().toString();
@@ -292,11 +299,21 @@ static void generateVerilog(const Machine& machine, const map<string, string>& p
 
         str << ");" << endl;
     });
+
+    str << endl;
+    str << "    initial begin" << endl;
+    str << "        $dumpfile(\"wave.vcd\");" << endl;
+    str << "        $dumpvars(0, ibm1620_core);" << endl;
+    str << "        #100000 $stop;" << endl;
+    str << "    end" << endl;
+    str << endl;
+    str << "endmodule;" << endl;
 }
 
 int main(int, const char**) {
 
     string baseDir = "/home/bruce/IBM1620/hardware";
+    string outDir = baseDir + "/sms-cards/tests";
 
     // Load the card metadata
     map<string, unique_ptr<CardMeta>> cardMeta;   
@@ -354,8 +371,10 @@ int main(int, const char**) {
     // Generate wires
     vector<Wire> wires = machine.generateWires();
     
+    // TODO: MOVE THIS INTO THE SPICE/VERILOG GENERATION BECAUSE
+    // THE PROCESS WILL DIFFER (EX: DOT ORs)
+
     // Setup the mapping between pins and wires
-    cout << "Wires" << endl;
     map<string, string> pinToWire;
     vector<string> wireNames;
     for (const Wire& w : wires) {
@@ -363,14 +382,14 @@ int main(int, const char**) {
         wireNames.push_back(wireName);
         for (const string& pin : w.pins) {
             pinToWire[pin] = wireName;
-            cout << pin << " -> " << wireName << endl;
         }
     }
 
     //generateSpice(machine, pinToWire);
 
     try {
-        generateVerilog(machine, pinToWire, wireNames, std::cout);
+        ofstream verilogFile(outDir + "/core.v",  std::ios::trunc);
+        generateVerilog(machine, pinToWire, wireNames, verilogFile);
     } catch (const string& ex) {
         cout << "Failed to generate Verilog: " << ex << endl;
     }
