@@ -6,6 +6,7 @@ using namespace std;
 namespace LogicDiagram {
 
 vector<string> PinNames { "A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N", "P", "Q", "R" };
+static char PinNames2[] = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R' };
 
 const Block& Page::getBlockByCoordinate(const string& coo) const {
     for (const LogicDiagram::Block& b : blocks) {
@@ -16,8 +17,14 @@ const Block& Page::getBlockByCoordinate(const string& coo) const {
 }
 
 bool validPinName(const string& pinName) {
-    return std::find(begin(PinNames), end(PinNames), pinName) 
-        != PinNames.end();
+    if (pinName.length() == 0 || pinName.length() > 2) 
+        return false;
+    if (std::find(begin(PinNames2), end(PinNames2), pinName[0]) == std::end(PinNames2))
+        return false;
+    if (pinName.length() == 2)
+        if (std::find(begin(PinNames2), end(PinNames2), pinName[1]) == std::end(PinNames2))
+            return false;
+    return true;
 }
 
 vector<BlockCooPin> parsePinRefs(const string& ref) {

@@ -9,7 +9,7 @@ import math
 import json
 import sys
 
-in_base_dir = "/home/bruce/host/IBM-1620/f_ald/png"
+in_base_dir = "/home/bruce/host/tmp"
 
 canvas = None
 tk_image = None
@@ -19,7 +19,7 @@ helv16 = None
 helv24 = None
 image_origin = (0, 0)
 canvas_size = (1800, 1000)
-scale = 0.7
+scale = 1.0
 rotation_tick = 0.1
 
 anchor_point = (0, 0)
@@ -27,41 +27,37 @@ press_1_state = False
 hair_point = (0, 0)
 tk_hair_objects = []
 mark_0 = (0,0)
+mark_1 = (0,0)
 tk_mark_objects = []
 
 image_type = 0
 image_name = None 
-image_rotation = 0
+image_rotation = -90
+
+key_points = []
+# 7 row points x 5 column points
+for r in range(0, 7):
+    row = []
+    for c in range(0, 5):
+        row.append((0, 0))
+    key_points.append(row)
+
+def estimate_key_point(dp):
+    if (mark_1[0] == mark_0[0] or mark_1[1] == mark_0[1]):
+        return (0,0)
+    adj_x = round((dp[0] - mark_0[0]) * (4 / (mark_1[0] - mark_0[0])))
+    adj_y = round((dp[1] - mark_0[1]) * (6 / (mark_1[1] - mark_0[1])))
+    return (adj_x, adj_y)
 
 def load_image(n):
     global in_fn, original_image, image_type, image_rotation, image_name, mark_0
     image_name = n
-    image_rotation = 0
     image_type = 0
     # Load image
-    original_image = Image.open(in_base_dir + "/" + image_name + ".png")
-
-    # Load metadata 
-    if os.path.exists(in_base_dir + "/" + image_name + ".json"):
-        with open(in_base_dir + "/" + image_name + ".json", "r") as f:
-            meta = json.load(f)
-            image_rotation = meta["image_rotation"]
-            image_type = meta["image_type"]
-            mark_0 = (meta["mark_0_x"], meta["mark_0_y"])
-
-def save_image_meta():
-    global image_name, image_type, image_rotation, in_base_dir, mark_0
-    # Save metadata 
-    meta = {
-        "image_name": image_name,
-        "image_type": image_type,
-        "image_rotation": image_rotation,
-        "mark_0_x": mark_0[0],
-        "mark_0_y": mark_0[1]
-    }
-    print("Saving ...")
-    with open(in_base_dir + "/" + image_name + ".json", "w+") as f:
-        json.dump(meta, f)
+    original_image = Image.open(in_base_dir + "/" + image_name + ".jpg")
+    # Scale and redraw
+    new_size = (int(original_image.size[0] * scale), int(original_image.size[1] * scale))
+    original_image = original_image.resize(new_size)
 
 def update_image():
     global scale, original_image, tk_transformed_image, image_origin, image_rotation
@@ -89,15 +85,35 @@ def design_to_screen(point):
     return (point[0] * scale + image_origin[0], point[1] * scale + image_origin[1])
 
 def redraw_marks():
-    global tk_mark_objects, canvas, canvas_size, mark_0
+    global tk_mark_objects, canvas, canvas_size, mark_0, mark_1, key_points
     # Undraw
     for o in tk_mark_objects:
         canvas.delete(o)
     tk_mark_objects = []
+
+    # Mark0/mark1
     s = design_to_screen(mark_0)
-    # Redraw
-    tk_mark_objects.append(canvas.create_line((0, round(s[1])), (canvas_size[0], round(s[1])), fill="red"))
-    tk_mark_objects.append(canvas.create_line((round(s[0]), 0), (round(s[0]), canvas_size[1]), fill="red"))
+    s = (round(s[0]), round(s[1]))
+    r = 30
+    x = s[0]
+    y = s[1]
+    tk_mark_objects.append(canvas.create_oval(x-r,y-r,x+r,y+r, outline="red"))
+    s = design_to_screen(mark_1)
+    s = (round(s[0]), round(s[1]))
+    r = 30
+    x = s[0]
+    y = s[1]
+    tk_mark_objects.append(canvas.create_oval(x-r,y-r,x+r,y+r, outline="red"))
+
+    # Key points
+    # 7 row points x 5 column points
+    for r in range(0, 7):
+        for c in range(0, 5):
+            rad = 5
+            p = design_to_screen(key_points[r][c])
+            x = p[0]
+            y = p[1]
+            tk_mark_objects.append(canvas.create_oval(x-rad,y-rad,x+rad,y+rad, outline="green"))
 
 def redraw_hair():
     global tk_hair_objects, canvas, canvas_size, image_type
@@ -111,7 +127,8 @@ def redraw_hair():
 
     # Text
     design_point = screen_to_design(hair_point)
-    cue = "[" + str(int(design_point[0])) + ", " + str(int(design_point[1])) + "] "
+    key_point = estimate_key_point(design_point)
+    cue = "[" + str(int(design_point[0])) + ", " + str(int(design_point[1])) + "] " + str(key_point[0]) + " " + str(key_point[1])
     tk_hair_objects.append(canvas.create_text(
         hair_point[0] + 20, hair_point[1] + 20, anchor=tk.NW, 
         text=cue, fill='#119999', font=helv16))
@@ -164,6 +181,28 @@ def on_pagedown(event):
     redraw_marks()
     redraw_hair()
 
+def on_up(event):
+    global hair_point
+    if hair_point[1] > 0:
+        hair_point = (hair_point[0], hair_point[1] - 1)
+    redraw_hair()
+
+def on_down(event):
+    global hair_point
+    hair_point = (hair_point[0], hair_point[1] + 1)
+    redraw_hair()
+
+def on_left(event):
+    global hair_point
+    if hair_point[0] > 0:
+        hair_point = (hair_point[0] - 1, hair_point[1])
+    redraw_hair()
+
+def on_right(event):
+    global hair_point
+    hair_point = (hair_point[0] + 1, hair_point[1])
+    redraw_hair()
+
 def on_key_q(event):
     global scale, image_rotation
     image_rotation = image_rotation + rotation_tick
@@ -185,48 +224,28 @@ def on_f1(event):
     mark_0 = screen_to_design(hair_point)
     redraw_marks()
     redraw_hair()
-    
-def on_shift_up(event):
-    global mark_0
-    if mark_0[1] > 0:
-        mark_0 = (mark_0[0], mark_0[1] - 1)
-    redraw_marks()
-    redraw_hair()
-
-def on_shift_down(event):
-    global mark_0
-    mark_0 = (mark_0[0], mark_0[1] + 1)
-    redraw_marks()
-    redraw_hair()
-
-def on_shift_left(event):
-    global mark_0
-    if mark_0[0] > 0:
-        mark_0 = (mark_0[0] - 1, mark_0[1])
-    redraw_marks()
-    redraw_hair()
-
-def on_shift_right(event):
-    global mark_0
-    mark_0 = (mark_0[0] + 1, mark_0[1])
-    redraw_marks()
-    redraw_hair()
 
 def on_f2(event):
-    global image_type 
-    if image_type == 0:
-        image_type = 1
-    elif image_type == 1:
-        image_type = 2
-    elif image_type == 2:
-        image_type = 0
-    redraw_hair()   
+    global mark_1
+    mark_1 = screen_to_design(hair_point)
+    redraw_marks()
+    redraw_hair()  
 
 def on_f3(event):
-    global image_type, rotation
-    # Save metadata 
-    save_image_meta()
-    quit()
+    global key_points, hair_point
+    # Figure out which point we are at
+    design_point = screen_to_design(hair_point)
+    key_point = estimate_key_point(design_point)
+    key_points[key_point[1]][key_point[0]] = design_point
+    redraw_marks()
+    redraw_hair()  
+
+    # Write
+    with open("./key_points.txt", "w+") as out:
+        for r in range(0, 7):
+            for c in range(0, 5):
+                s = str(r) + "," + str(c) + "," + str(key_points[r][c][1]) + "," + str(key_points[r][c][0])
+                out.write(s + "\n")
 
 def on_escape(event):
     quit()
@@ -250,13 +269,11 @@ root.bind("w", on_key_w)
 root.bind("<F1>", on_f1)
 root.bind("<F2>", on_f2)
 root.bind("<F3>", on_f3)
-root.bind("<Escape>", on_escape)
-root.bind("<Shift-Up>", on_shift_up)
-root.bind("<Shift-Down>", on_shift_down)
-root.bind("<Shift-Left>", on_shift_left)
-root.bind("<Shift-Right>", on_shift_right)
+root.bind("<Up>", on_up)
+root.bind("<Down>", on_down)
+root.bind("<Left>", on_left)
+root.bind("<Right>", on_right)
 
-#in_fn = "page_82"
 in_fn = sys.argv[1]
 load_image(in_fn)
 

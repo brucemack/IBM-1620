@@ -72,7 +72,7 @@ unique_ptr<CardMeta> loadCardMeta(const string& baseDir, const string& code) {
 vector<LogicDiagram::Page> loadAldPages(const vector<string> fns) {
     auto result = vector<LogicDiagram::Page>();
     for (auto fn : fns) {
-        cout << "Working on " << fn << endl;
+        cout << "Loading page " << fn << endl;
         YAML::Node c = YAML::LoadFile(fn);
         LogicDiagram::Page page = c.as<LogicDiagram::Page>();
         result.push_back(page);
@@ -341,14 +341,17 @@ int main(int, const char**) {
             fns.push_back(aldBaseDir + "/" + id + ".yaml");
         }
     }
-    vector<LogicDiagram::Page> pages = loadAldPages(fns);
+
+    cout << "Processing ALDs " << endl;
 
     try {
+        vector<LogicDiagram::Page> pages = loadAldPages(fns);
         processAlds(pages, cardMeta, machine, namedSignals);
         machine.dumpOn(cout);
     }
     catch (const string& ex) {
         cout << ex << endl;
+        return -1;
     }
 
     cout << "Named Signals:" << endl;

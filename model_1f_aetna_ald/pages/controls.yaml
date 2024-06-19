@@ -21,18 +21,3 @@ blocks:
     coo: 1C
     out:
       A: [ "-S MANUAL RESET" ]
-
-  - gate: ZZZZ
-    loc: 9000
-    typ: IND
-    cir: 01
-    coo: 1A
-    inp:
-      A: [ "+S CLOCK DR A"]
-  - gate: ZZZZ
-    loc: 9001
-    typ: IND
-    cir: 01
-    coo: 1A
-    inp:
-      A: [ "+S CLOCK DR B"]      
