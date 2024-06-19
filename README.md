@@ -11,3 +11,10 @@ This work is covered under the terms of the GNU Public License (V3). Please cons
 
 This work is being made available for non-commercial use. Redistribution, commercial use or sale of any part is prohibited.
 
+
+Commands
+========
+
+This command was used to create a shell with Python configured properly:
+
+        nix-shell -p 'python3.withPackages (ps: with ps; [ numpy matplotlib tk pytest])'

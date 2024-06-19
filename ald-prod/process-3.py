@@ -1,17 +1,15 @@
 import math
+import numpy as np 
+import matplotlib.pyplot as plt 
+from PIL import Image, ImageTk, ImageFilter, ImageOps
+
+import util
 
 PI = 3.1415926
-
-def pt_diff(a, b):
-    return (b[0] - a[0], b[1] - a[1])
-
-def line_length(a, b):
-    d_x = b[0] - a[0]
-    d_y = b[1] - a[1]
-    return math.sqrt(d_x ** 2 + d_y ** 2)
+in_base_dir = "/home/bruce/host/tmp"
 
 # Positive angle = CCW
-# +X is right, +Y is up
+# +X is right, -Y is up
 def trans(pt, center, angle_rad):
     pt2 = (pt[0] - center[0], pt[1] - center[1])
     x = pt2[0] * math.cos(angle_rad) - pt2[1] * math.sin(angle_rad)
@@ -39,41 +37,104 @@ with open("key_points.txt", "r") as pf:
 # Compute skew angle 
 center = key_points[3][2]
 top_center = key_points[0][2]
-len = line_length(center, top_center)
+len = util.line_length(center, top_center)
 # Factor that converts grid squares to design units
 scale = len / 3
-dx = center[0] - top_center[0]
-skew_angle = math.asin(dx / len)
-skew_angle_degrees = skew_angle * (360 / (2 * PI))
-#print(top_center, dx, scale, skew_angle_degrees)
+skew_angle = util.line_angle(center, top_center) - (PI / 2)
+skew_angle_degrees = math.degrees(skew_angle)
+print(top_center, scale, skew_angle_degrees)
 
-bottom_center = key_points[6][2]
-len2 = line_length(center, top_center)
-scale2 = len2 / 3
-dx2 = bottom_center[0] - center[0]
-skew_angle2 = math.asin(dx2 / len2)
-skew_angle_degrees2 = skew_angle2 * (360 / (2 * PI))
-#print(bottom_center, dx2, scale, skew_angle_degrees2)
+# Rotate the actual key points so that everything is square
+key_points_rotated = []
+for r in range(0, 7):
+    row = []
+    for c in range(0, 5):
+        row.append(trans(key_points[r][c], center, skew_angle))
+    key_points_rotated.append(row)
 
-# Compute deltas
+# Make a polar version of the actual key points, relative to the center
+key_points_polar = []
+for r in range(0, 7):
+    row = []
+    for c in range(0, 5):
+        row.append(util.cart_to_polar(key_points_rotated[r][c], center))
+    key_points_polar.append(row)
+
+# Calculate the expected locations of the key points, assuming no distortions
+key_points_expected = []
+for r in range(0, 7):
+    row = []
+    for c in range(0, 5):
+        expected_pt = (((c - 2) * scale) + center[0], ((r - 3) * scale) + center[1])
+        row.append(expected_pt)
+    key_points_expected.append(row)
+
+X = []
+Y = []
+U = []
+V = []
+
+# Compute errors
 for r in range(0, 7):
     row = ""
     for c in range(0, 5):
-        kp = key_points[r][c]
-        # Fix skew
-        kp2 = trans(kp, center, skew_angle)
-        # Compute expected location
-        expected_pt = (((c - 2) * scale) + center[0], ((r - 3) * scale) + center[1])
-        len = line_length(kp2, expected_pt)
-        #print("(" + str(c) + "," + str(r) + ")", kp2, expected_pt)
-        #print("(" + str(c) + "," + str(r) + ")", pt_diff(kp2, expected_pt))
-        #row = row + str(int(kp2[0] - expected_pt[0])) + "\t"
-        #row = row + str(int(kp2[1] - expected_pt[1])) + "\t"
-        row = row + str(int(len)) + "\t"
+        actual_pt = key_points_rotated[r][c]
+        expected_pt = key_points_expected[r][c]
+        error_len = util.line_length(expected_pt, actual_pt)
+        error_angle = math.degrees(util.line_angle(expected_pt, actual_pt))
+        row = row + str(int(error_angle)) + "\t"
+
+        X.append(expected_pt[0])
+        Y.append(expected_pt[1])
+        # Vector from expected to actual
+        U.append(actual_pt[0] - expected_pt[0])
+        V.append(actual_pt[1] - expected_pt[1])
 
     print(row)
 
+# Plot a vector field
+plt.quiver(X, Y, U, V, color='g', units='xy')
+plt.title("Scanner Lense Distortion Vector Field (Y-Reversed)")
+plt.xlim(400, 2700) 
+plt.ylim(400, 4200) 
+plt.grid()
+plt.show()
 
+center_pt = center
+range_x = (625, 2300)
+range_y = ( 900, 3500)
 
+# ----- Adjust An Image --------------------------------------------------------------------
 
+image_name = "IMG_1024"
+out_image_name = "IMG_1024_corr"
 
+image = Image.open(in_base_dir + "/" + image_name + ".jpg")
+# Address the rotation issue
+image = ImageOps.exif_transpose(image)
+
+# Translate to black and white
+image = image.convert("L")
+# Rotate the original
+#image = image.rotate(-skew_angle_degrees)
+
+# Make a new image 
+#new_w = range_x[1] - range_x[0]
+#new_h = range_y[1] - range_y[0]
+new_image = Image.new("L", image.size)
+print(key_points_expected[0][0])
+
+# Deform
+for y in range(0, image.size[1]):
+    for x in range(0, image.size[0]):
+        grid_pt = util.image_pt_to_grid((x, y), key_points_expected[0][0], scale)
+        #image_pt_polar = util.get_interpolated_value_2d(7, 5, key_points_polar, grid_pt)
+        image_pt = util.get_interpolated_value_2d(7, 5, key_points, grid_pt)
+        # Convert the interpolated polar coordinate back to cartesian
+        #image_pt = util.polar_to_cart(image_pt_polar, center_pt)
+        # Pull a pixel out of the original image 
+        p = image.getpixel(image_pt)
+        # Drop the pixel into the corrected location
+        new_image.putpixel((x, y), p)
+
+new_image.save(in_base_dir + "/" + out_image_name + ".jpg")

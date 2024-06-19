@@ -1,13 +1,13 @@
 # Copyright (c) 2024 Bruce MacKinnon
-import tkinter as tk
-import tkinter.font as TkFont
-from PIL import Image, ImageTk, ImageFilter
-from tkinter import simpledialog
 import os 
 import util 
 import math
 import json
 import sys
+import tkinter as tk
+import tkinter.font as TkFont
+from PIL import Image, ImageTk, ImageOps
+from tkinter import simpledialog
 
 in_base_dir = "/home/bruce/host/tmp"
 
@@ -32,7 +32,7 @@ tk_mark_objects = []
 
 image_type = 0
 image_name = None 
-image_rotation = -90
+image_rotation = 0
 
 key_points = []
 # 7 row points x 5 column points
@@ -55,17 +55,22 @@ def load_image(n):
     image_type = 0
     # Load image
     original_image = Image.open(in_base_dir + "/" + image_name + ".jpg")
+    # Address the rotation issue
+    original_image = ImageOps.exif_transpose(original_image)
+    print("Original image size", original_image.size)
+    print(original_image.format, original_image.size, original_image.mode)
     # Scale and redraw
-    new_size = (int(original_image.size[0] * scale), int(original_image.size[1] * scale))
-    original_image = original_image.resize(new_size)
+    if scale != 1.0:
+        new_size = (int(original_image.size[0] * scale), int(original_image.size[1] * scale))
+        original_image = original_image.resize(new_size)
 
 def update_image():
     global scale, original_image, tk_transformed_image, image_origin, image_rotation
-    new_size = (int(original_image.size[0] * scale), int(original_image.size[1] * scale))
-    transformed_image = original_image.resize(new_size)
-    transformed_image = transformed_image.rotate(angle=image_rotation)
+    #new_size = (int(original_image.size[0] * scale), int(original_image.size[1] * scale))
+    #transformed_image = original_image.resize(new_size)
+    #transformed_image = transformed_image.rotate(angle=image_rotation)
     # IMPORTANT: DON'T LET THIS GO OUT OF SCOPE!
-    tk_transformed_image = ImageTk.PhotoImage(transformed_image)
+    tk_transformed_image = ImageTk.PhotoImage(original_image)
 
 def redraw_image():
     global tk_image, tk_transformed_image, canvas
@@ -113,7 +118,7 @@ def redraw_marks():
             p = design_to_screen(key_points[r][c])
             x = p[0]
             y = p[1]
-            tk_mark_objects.append(canvas.create_oval(x-rad,y-rad,x+rad,y+rad, outline="green"))
+            tk_mark_objects.append(canvas.create_oval(x-rad,y-rad,x+rad,y+rad, outline="green", width=2))
 
 def redraw_hair():
     global tk_hair_objects, canvas, canvas_size, image_type
@@ -182,26 +187,44 @@ def on_pagedown(event):
     redraw_hair()
 
 def on_up(event):
-    global hair_point
-    if hair_point[1] > 0:
-        hair_point = (hair_point[0], hair_point[1] - 1)
-    redraw_hair()
+    global key_points, hair_point
+    design_point = screen_to_design(hair_point)
+    key_point = estimate_key_point(design_point)
+    a = key_points[key_point[1]][key_point[0]]
+    b = (a[0], a[1] - 1)
+    key_points[key_point[1]][key_point[0]] = b
+    redraw_marks()
+    redraw_hair()  
 
 def on_down(event):
-    global hair_point
-    hair_point = (hair_point[0], hair_point[1] + 1)
-    redraw_hair()
+    global key_points, hair_point
+    design_point = screen_to_design(hair_point)
+    key_point = estimate_key_point(design_point)
+    a = key_points[key_point[1]][key_point[0]]
+    b = (a[0], a[1] + 1)
+    key_points[key_point[1]][key_point[0]] = b
+    redraw_marks()
+    redraw_hair()  
 
 def on_left(event):
-    global hair_point
-    if hair_point[0] > 0:
-        hair_point = (hair_point[0] - 1, hair_point[1])
-    redraw_hair()
+    global key_points, hair_point
+    design_point = screen_to_design(hair_point)
+    key_point = estimate_key_point(design_point)
+    a = key_points[key_point[1]][key_point[0]]
+    b = (a[0] - 1, a[1])
+    key_points[key_point[1]][key_point[0]] = b
+    redraw_marks()
+    redraw_hair()  
 
 def on_right(event):
-    global hair_point
-    hair_point = (hair_point[0] + 1, hair_point[1])
-    redraw_hair()
+    global key_points, hair_point
+    design_point = screen_to_design(hair_point)
+    key_point = estimate_key_point(design_point)
+    a = key_points[key_point[1]][key_point[0]]
+    b = (a[0] + 1, a[1])
+    key_points[key_point[1]][key_point[0]] = b
+    redraw_marks()
+    redraw_hair()  
 
 def on_key_q(event):
     global scale, image_rotation
