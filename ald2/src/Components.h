@@ -13,12 +13,14 @@
 #include <string>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 #include <set>
 #include <iostream>
 #include <vector>
 
 #include "Pin.h"
 #include "PlugLocation.h"
+#include "PinLocation.h"
 
 enum PinType {
     UNKNOWN,
@@ -97,8 +99,11 @@ private:
     std::map<std::string, Pin> _pins;
 };
 
+/**
+ * A wire is a set of electrically connected pins.
+*/
 struct Wire {
-    std::vector<std::string> pins;
+    std::vector<PinLocation> pins;
 };
 
 class Machine {
@@ -108,12 +113,15 @@ public:
 
     Card& getOrCreateCard(const CardMeta& cardMeta, const PlugLocation& location);
 
+    Pin& getPin(const PinLocation& loc);
+
     void dumpOn(std::ostream& str) const;
 
     void visitAllCards(const std::function<void (const Card&)> c) const;
 
     /**
      * Generates all of the unique wires, given the current state of the machine.
+     * A wire is defined as a series of electrically connected pins.
      */
     std::vector<Wire> generateWires() const;
 

@@ -10,6 +10,7 @@
 #include "LogicDiagram.h"
 #include "Pin.h"
 #include "PlugLocation.h"
+#include "PinLocation.h"
 #include "Components.h"
 
 using namespace std;
@@ -18,7 +19,8 @@ int main(int, const char**) {
 
     {
         CardMeta cardMeta1;
-        PlugLocation loc1("0000");
+        PlugLocation loc1("01AA","0000");
+        PlugLocation loc2("01AA","0002");
         Card card1(cardMeta1, loc1);
         Pin& pina = card1.getPin("A");
         Pin& pinb = card1.getPin("B");
@@ -59,7 +61,7 @@ int main(int, const char**) {
         {
             int a = 0;
             pina.visitImmediateConnections([&a](const Pin& p) {
-                cout << p.getDesc() << endl;
+                cout << "Visiting " << p.getDesc() << endl;
             });
         }
 
@@ -69,6 +71,15 @@ int main(int, const char**) {
             assert(a[0].pinId == "C");;
             assert(a[1].coo == "0000");;
             assert(a[1].pinId == "L");;
+        }
+
+        // Pin location
+        {
+            PinLocation pinLocA1(loc1, "A");
+            PinLocation pinLocA2(loc2, "A");
+            PinLocation pinLocB(loc1, "A");
+            assert(!(pinLocA1 == pinLocA2));
+            assert(pinLocA1 == pinLocB);
         }
     }
 }

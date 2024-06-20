@@ -69,6 +69,14 @@ for r in range(0, 7):
         row.append(expected_pt)
     key_points_expected.append(row)
 
+# Calculate the error vectors
+key_points_error = []
+for r in range(0, 7):
+    row = []
+    for c in range(0, 5):
+        row.append(util.diff_vector(key_points_expected[r][c], key_points[r][c]))
+    key_points_error.append(row)
+
 X = []
 Y = []
 U = []
@@ -78,17 +86,23 @@ V = []
 for r in range(0, 7):
     row = ""
     for c in range(0, 5):
-        actual_pt = key_points_rotated[r][c]
+        #actual_pt = key_points_rotated[r][c]
         expected_pt = key_points_expected[r][c]
-        error_len = util.line_length(expected_pt, actual_pt)
-        error_angle = math.degrees(util.line_angle(expected_pt, actual_pt))
-        row = row + str(int(error_angle)) + "\t"
+        #error_len = util.line_length(expected_pt, actual_pt)
+        #error_angle = math.degrees(util.line_angle(expected_pt, actual_pt))
+        error_len = util.line_length((0,0), key_points_error[r][c])
+        error_angle = math.degrees(util.line_angle((0,0), key_points_error[r][c]))
+
+        #row = row + str(int(error_angle)) + "\t"
+        row = row + str(int(error_len)) + "\t"
 
         X.append(expected_pt[0])
         Y.append(expected_pt[1])
         # Vector from expected to actual
-        U.append(actual_pt[0] - expected_pt[0])
-        V.append(actual_pt[1] - expected_pt[1])
+        #U.append(actual_pt[0] - expected_pt[0])
+        #U.append(actual_pt[0] - expected_pt[0])
+        U.append(key_points_error[r][c][0])
+        V.append(key_points_error[r][c][1])
 
     print(row)
 
@@ -106,8 +120,8 @@ range_y = ( 900, 3500)
 
 # ----- Adjust An Image --------------------------------------------------------------------
 
-image_name = "IMG_1024"
-out_image_name = "IMG_1024_corr"
+image_name = "IMG_1027"
+out_image_name = image_name + "_corr"
 
 image = Image.open(in_base_dir + "/" + image_name + ".jpg")
 # Address the rotation issue
@@ -122,18 +136,27 @@ image = image.convert("L")
 #new_w = range_x[1] - range_x[0]
 #new_h = range_y[1] - range_y[0]
 new_image = Image.new("L", image.size)
-print(key_points_expected[0][0])
 
 # Deform
 for y in range(0, image.size[1]):
     for x in range(0, image.size[0]):
         grid_pt = util.image_pt_to_grid((x, y), key_points_expected[0][0], scale)
         #image_pt_polar = util.get_interpolated_value_2d(7, 5, key_points_polar, grid_pt)
-        image_pt = util.get_interpolated_value_2d(7, 5, key_points, grid_pt)
+        image_error = util.get_interpolated_value_2d(7, 5, key_points_error, grid_pt)
         # Convert the interpolated polar coordinate back to cartesian
         #image_pt = util.polar_to_cart(image_pt_polar, center_pt)
         # Pull a pixel out of the original image 
-        p = image.getpixel(image_pt)
+        adj_x = round(x + image_error[0])
+        adj_y = round(y + image_error[1])
+        if adj_x < 0:
+            adj_x = 0
+        elif adj_x >= image.size[0]:
+            adj_x = image.size[0] - 1
+        if adj_y < 0:
+            adj_y = 0
+        elif adj_y >= image.size[1]:
+            adj_y = image.size[1] - 1
+        p = image.getpixel((adj_x, adj_y))
         # Drop the pixel into the corrected location
         new_image.putpixel((x, y), p)
 

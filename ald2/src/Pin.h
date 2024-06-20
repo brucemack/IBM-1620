@@ -15,6 +15,8 @@
 #include <vector>
 #include <functional>
 
+#include "PinLocation.h"
+
 class Card;
 
 class Pin {
@@ -26,7 +28,7 @@ public:
 
     void connect(Pin& pin);
 
-    std::string getDesc() const;
+    PinLocation getLocation() const;
     
     /**
      * @returns A human-friendly list of the pins that this pin

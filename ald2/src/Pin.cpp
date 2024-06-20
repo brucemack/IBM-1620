@@ -22,17 +22,13 @@ Pin::Pin(Card& card, const string& id)
     _id(id) {        
 }
 
-string Pin::getDesc() const {
-    return _card.getLocation().toString() + "." + _id;
-}
-
 string Pin::getConnectionsDesc() const {
     string res;
     bool first = true;
     for (auto conn : _connections) {
         if (!first)
             res = res + ", ";
-        res = res + conn.get().getDesc();
+        res = res + conn.get().getLocation().toString();
         first = false;
     }
     return res;
@@ -56,6 +52,8 @@ bool Pin::operator== (const Pin& other) const {
     return this == std::addressof(other); 
 }
 
+PinLocation Pin::getLocation() const { return PinLocation(_card.getLocation(), _id); }
+
 size_t Pin::hash() const {
     return std::hash<std::string>{}(_id) + std::hash<PlugLocation>{}(_card.getLocation());
 }
@@ -71,7 +69,7 @@ void Pin::visitAllConnections(const std::function<void (const Pin&)> f) const {
         return;
     // In order to avoid duplicate visitation we keep a set of pins that have
     // already been processed.
-    unordered_set<string> alreadyVisited;
+    unordered_set<PinLocation> alreadyVisited;
     // A queue of pins that are waiting to be processed.
     queue<const Pin*> pendingVisitation;
     // Start the ball rolling by queuing the starting point
@@ -80,7 +78,7 @@ void Pin::visitAllConnections(const std::function<void (const Pin&)> f) const {
     while (!pendingVisitation.empty()) {
         const Pin* work = pendingVisitation.front();
         pendingVisitation.pop();
-        if (alreadyVisited.find(work->getDesc()) == alreadyVisited.end()) {
+        if (alreadyVisited.find(work->getLocation()) == alreadyVisited.end()) {
             // Fire the caller's function
             f(*work);
             // Look at everything that is connected to this pin
@@ -89,7 +87,7 @@ void Pin::visitAllConnections(const std::function<void (const Pin&)> f) const {
                 }
             );
             // Record this visitation to avoid duplicates
-            alreadyVisited.insert(work->getDesc());
+            alreadyVisited.insert(work->getLocation());
         }
     }
 }

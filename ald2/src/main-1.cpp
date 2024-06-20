@@ -140,16 +140,22 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
         }
     }
 
+    cout << "Linking" << endl;
+
     // PASS #2
-    // - Get the inputs connected
+    // Go through each block and look at each input pin. Establish the linkage 
+    // for each input.
     for (const LogicDiagram::Page& page : pages) {
         for (const LogicDiagram::Block& block : page.blocks) {
             try {
                 Card& card = machine.getCard({ block.gate, block.loc });
+                cout << "Working on card " << card.getLocation().toString() << endl;
                 // Get the inputs connected
-                for (auto [inputPinId, driverRefList] : block.inp) {            
+                for (auto [inputPinId, driverRefList] : block.inp) {  
+                    cout << "  Working on pin "<< inputPinId << endl;          
                     Pin& inputPin = card.getPin(inputPinId);
                     for (auto driverRef : driverRefList) {
+                        cout << "     Working on driver " << driverRef << endl; 
                         
                         // Trace back to what is driving this input.  There are two 
                         // cases:
@@ -192,7 +198,7 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
     }
 }
 
-static void generateSpice(const Machine& machine, const map<string, string>& pinToWire) {
+static void generateSpice(const Machine& machine, const unordered_map<PinLocation, string>& pinToWire) {
 
     // Create a spice line for each card
     int lineCounter = 1;
@@ -204,14 +210,14 @@ static void generateSpice(const Machine& machine, const map<string, string>& pin
             if (card.isPinUsed(pinName)) {
                 const Pin& pin = card.getPinConst(pinName);
                 // Figure out which wire 
-                if (pinToWire.find(pin.getDesc()) == pinToWire.end()) {
+                if (pinToWire.find(pin.getLocation()) == pinToWire.end()) {
                     //throw string("Pin " + pin.getDesc() + " not wired")
                     line = line + " ";
                     line = line + "?";
                 }
                 else {
                     line = line + " W_";
-                    line = line + pinToWire.at(pin.getDesc());
+                    line = line + pinToWire.at(pin.getLocation());
                 }
             } 
             else if (!card.getMeta().getDefaultNode(pinName).empty()) {
@@ -235,7 +241,7 @@ static void generateSpice(const Machine& machine, const map<string, string>& pin
     });
 }
 
-static void generateVerilog(const Machine& machine, const map<string, string>& pinToWire,
+static void generateVerilog(const Machine& machine, const unordered_map<PinLocation, string>& pinToWire,
     const vector<string>& wireNames, ostream& str) {
 
     str << "// IBM 1620 Logic Reproduction Project" << endl;
@@ -273,11 +279,11 @@ static void generateVerilog(const Machine& machine, const map<string, string>& p
                 const Pin& pin = card.getPinConst(pinName);
                 str << "." << toLower(pinName) << "(";
                 // Figure out which wire the pin is connected to
-                if (pinToWire.find(pin.getDesc()) == pinToWire.end()) {
+                if (pinToWire.find(pin.getLocation()) == pinToWire.end()) {
                     // It's OK to have a port connected to nothing
                 }
                 else {
-                    str << safeVerilogIdentifier(dotToUnder(pinToWire.at(pin.getDesc())));
+                    str << safeVerilogIdentifier(dotToUnder(pinToWire.at(pin.getLocation())));
                 }
                 str << ")";
                 first = false;
@@ -300,8 +306,11 @@ static void generateVerilog(const Machine& machine, const map<string, string>& p
 int main(int, const char**) {
 
     string baseDir = "/home/bruce/IBM1620/hardware";
-    string outDir = baseDir + "/sms-cards/tests";
-    string aldBaseDir = "../../model_1f_aetna_ald/pages";
+    //string outDir = baseDir + "/sms-cards/tests";
+    //string aldBaseDir = "../../model_1f_aetna_ald/pages";
+    string outDir = ".";
+    string aldBaseDir = "../tests";
+    string pages_file = "dot-or-test-1-pages.yaml";
 
     // Load the card metadata
     map<string, unique_ptr<CardMeta>> cardMeta;   
@@ -335,7 +344,7 @@ int main(int, const char**) {
     // Build the list of filenames
     vector<string> fns;
     {
-        YAML::Node c = YAML::LoadFile(aldBaseDir + "/core-pages.yaml");
+        YAML::Node c = YAML::LoadFile(aldBaseDir + "/" + pages_file);
         for (auto it = begin(c["pages"]); it != end(c["pages"]); it++) {
             string id = it->as<string>();
             fns.push_back(aldBaseDir + "/" + id + ".yaml");
@@ -356,7 +365,7 @@ int main(int, const char**) {
 
     cout << "Named Signals:" << endl;
     for (auto [key, value] : namedSignals)
-        cout << key << " : " << value.getDesc() << endl;
+        cout << key << " : " << value.getLocation().toString() << endl;
 
     // Generate wires
     vector<Wire> wires = machine.generateWires();
@@ -365,13 +374,14 @@ int main(int, const char**) {
     // THE PROCESS WILL DIFFER (EX: DOT ORs)
 
     // Setup the mapping between pins and wires
-    map<string, string> pinToWire;
+    unordered_map<PinLocation, string> pinToWire;
     vector<string> wireNames;
-    for (const Wire& w : wires) {
-        string wireName = w.pins.at(0);
-        wireNames.push_back(wireName);
-        for (const string& pin : w.pins) {
-            pinToWire[pin] = wireName;
+    for (const Wire& wire : wires) {
+        // The wire takes the name of the first pin in the wire (arbitrarily)
+        PinLocation firstPin = *(wire.pins.begin());
+        wireNames.push_back(firstPin.toString());
+        for (const PinLocation& pinLoc : wire.pins) {
+            pinToWire[pinLoc] = firstPin.toString();
         }
     }
 

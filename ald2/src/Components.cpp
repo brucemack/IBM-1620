@@ -123,6 +123,11 @@ Card& Machine::getOrCreateCard(const CardMeta& meta,const PlugLocation& loc)  {
     return _cards.at(loc);
 }
 
+Pin& Machine::getPin(const PinLocation& loc) {
+    Card& card = getCard(loc.getPlugLocation());
+    return card.getPin(loc.getPinId());
+}
+
 void Machine::dumpOn(std::ostream& str) const {
     str << "Cards:" << endl;
     visitAllCards([&str](const Card& card) {
@@ -138,21 +143,21 @@ void Machine::visitAllCards(const std::function<void (const Card&)> f) const {
         f(card);
 }
 
-std::vector<Wire> Machine::generateWires() const {
+vector<Wire> Machine::generateWires() const {
 
-    auto result = std::vector<Wire>();
-    unordered_set<string> pinsSeen;
+    vector<Wire> result;
+    unordered_set<PinLocation> pinsSeen;
 
     visitAllCards([&pinsSeen, &result](const Card& card) {
         card.visitAllPins([&pinsSeen, &result, &card](const string& pinId, const Pin& pin) {
-            if (pinsSeen.find(pin.getDesc()) == pinsSeen.end()) {
+            if (pinsSeen.find(pin.getLocation()) == pinsSeen.end()) {
                 // Here is where we accumulate the pins on the wire
-                vector<string> wirePins;
+                vector<PinLocation> wirePins;
                 // Visit all pins that connect to this pin
                 pin.visitAllConnections([&pinsSeen, &wirePins](const Pin& connectedPin) {                    
-                    wirePins.push_back(connectedPin.getDesc());
+                    wirePins.push_back(connectedPin.getLocation());
                     // Make sure not to hit this again.
-                    pinsSeen.insert(connectedPin.getDesc());                    
+                    pinsSeen.insert(connectedPin.getLocation());                    
                 });
                 if (!wirePins.empty()) 
                     result.push_back({ wirePins } );

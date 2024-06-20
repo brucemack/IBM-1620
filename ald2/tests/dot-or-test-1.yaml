@@ -1,0 +1,32 @@
+part: 2128940
+ec: 404750C
+title: UNIT TEST PAGE
+num: 00.00.00.00
+pdf: 00
+
+blocks:
+# Output G
+  - gate: 01BA
+    loc: 2H17
+    typ: CEYB
+    cir: 01
+    coo: 4B
+    inp:
+      B: [ "-S RESET A" ]
+# Output P
+  - gate: 01BA
+    loc: 2H17
+    typ: CEYB
+    cir: 02
+    coo: 4C
+    inp:
+      C: [ "-S RESET B" ]
+# Simple inverter.  Output pin is D.
+  - gate: 01BA
+    loc: 2H18
+    typ: TFC
+    cir: 01
+    coo: 4C
+    inp:
+      P: [ 4B.G, 4C.P ]
+

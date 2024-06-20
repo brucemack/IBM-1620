@@ -68,9 +68,12 @@ def update_image():
     global scale, original_image, tk_transformed_image, image_origin, image_rotation
     #new_size = (int(original_image.size[0] * scale), int(original_image.size[1] * scale))
     #transformed_image = original_image.resize(new_size)
-    #transformed_image = transformed_image.rotate(angle=image_rotation)
+    if image_rotation != 0:
+        transformed_image = original_image.rotate(angle=image_rotation)
+    else:
+        transformed_image = original_image
     # IMPORTANT: DON'T LET THIS GO OUT OF SCOPE!
-    tk_transformed_image = ImageTk.PhotoImage(original_image)
+    tk_transformed_image = ImageTk.PhotoImage(transformed_image)
 
 def redraw_image():
     global tk_image, tk_transformed_image, canvas

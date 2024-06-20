@@ -1,0 +1,31 @@
+part: 1
+title: "Test Controls"
+num: 00.00.00.0 
+pdf: None
+
+blocks:
+# Used to tie signals high
+  - gate: ZZZZ
+    loc: 9991
+    typ: ONE
+    cir: 01
+    coo: 1A
+    out: 
+      A: [ "-S RESET A" ]
+
+  - gate: ZZZZ
+    loc: 9992
+    typ: ONE
+    cir: 01
+    coo: 1B
+    out: 
+      A: [ "-S RESET B" ]
+
+# Used to tie signals to power-on reset
+  - gate: ZZZZ
+    loc: 9992
+    typ: RST
+    cir: 01
+    coo: 1C
+    out:
+      A: [ "-S MANUAL RESET" ]
