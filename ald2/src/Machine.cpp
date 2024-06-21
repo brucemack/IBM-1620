@@ -29,5 +29,8 @@ vector<VerilogWire> Machine::generateVerilogWires(const Machine& machine) {
         });
     });
 
+    
+
+
     return result;
 }

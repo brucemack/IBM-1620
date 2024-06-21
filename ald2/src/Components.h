@@ -21,18 +21,19 @@
 #include "Pin.h"
 #include "PlugLocation.h"
 #include "PinLocation.h"
+#include "CardMeta.h"
 
 class VerilogWire;
-class CardMeta;
 
 class Card {
 public:
 
+    Card(const Card&);
     Card(const CardMeta& meta, const PlugLocation& loc);
 
     const CardMeta& getMeta() const { return _meta; }
 
-    const PlugLocation& getLocation() const { return _loc; }
+    PlugLocation getLocation() const { return _loc; }
 
     Pin& getPin(const std::string& id);
 
@@ -56,7 +57,7 @@ public:
 
     Pin& getPin(const PinLocation& loc);
 
-    Card& createCard(const CardMeta& cardMeta, const PlugLocation& location);
+    Card& createCard(const CardMeta& cardMeta, const PlugLocation location);
 
     void dumpOn(std::ostream& str) const;
 

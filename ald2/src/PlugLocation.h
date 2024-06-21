@@ -20,8 +20,14 @@ class PlugLocation {
 public:
 
     PlugLocation() { }
-    PlugLocation(const std::string gateCode, const std::string& locCode) : _gate(gateCode), _loc(locCode) { }
-    PlugLocation(const PlugLocation& other) : _gate(other._gate), _loc(other._loc) { }
+
+    PlugLocation(const std::string& gateCode, const std::string& locCode) : 
+        _gate(gateCode), _loc(locCode) { }
+
+    PlugLocation(const PlugLocation& other) : 
+        _gate(other._gate), 
+        _loc(other._loc) {     
+    }
 
     std::string toString() const { return _gate + "_" + _loc; }
 

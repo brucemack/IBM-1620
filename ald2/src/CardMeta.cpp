@@ -15,7 +15,11 @@ CardMeta::CardMeta(const string& type, const string& desc,
     const map<string, PinMeta>& pinMeta)
 :   _type(type),
     _desc(desc) {    
-    _pinMeta.insert(begin(pinMeta), end(pinMeta));
+    std::for_each(begin(pinMeta), end(pinMeta),
+        [&](std::pair<const string&, const PinMeta&> p) {
+            _pinMeta.insert_or_assign(p.first, PinMeta(p.second));
+        }
+    );
 }
 
 // TODO: PREDICATE SUPPORT

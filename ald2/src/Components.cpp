@@ -38,9 +38,21 @@ PinType str2PinType(const string& str) {
 Card::Card(const CardMeta& meta, const PlugLocation& loc)
 :   _meta(meta),
     _loc(loc) {
+    // Create all of the pins that are defined in the metadata
     _meta.visitAllPinMeta([&](const PinMeta& pm) {
         _pins.emplace(pm.id, Pin(pm, *this));
     });
+}
+
+Card::Card(const Card& other) 
+:   _meta(other._meta),
+    _loc(other._loc) {
+    // Setup new pins that have the same metadata but are pointing to this card
+    std::for_each(begin(other._pins), end(other._pins),
+        [&](std::pair<const std::string, const Pin&> p) {
+            _pins.emplace(p.first, Pin(p.second.getMeta(), *this));
+        }
+    );
 }
 
 Pin& Card::getPin(const string& id) {
@@ -57,15 +69,16 @@ const Pin& Card::getPinConst(const string& id) const {
 
 void Card::dumpOn(std::ostream& str) const {
     str << "Pins:" << endl;
-    visitAllPins([&str, &meta = _meta](const string& pinId, const Pin& pin) {
-        PinType pt = meta.getPinType(pinId);
+    visitAllPins([&](const string& pinId, const Pin& pin) {
+        PinType pt = _meta.getPinType(pinId);
         str << pinId << " " << (int)pt << " -> " << pin.getConnectionsDesc() << endl;
     });
 }
 
 void Card::visitAllPins(const std::function<void (const string& id, const Pin&)> f) const {
-    for (auto [ pinId, pin] : _pins) 
-        f(pinId, pin);
+    std::for_each(_pins.begin(), _pins.end(),
+        [&f](std::pair<const string&, const Pin&> p) { f(p.first, p.second); }
+    );
 }
 
 Card& Machine::getCard(const PlugLocation& loc) {
@@ -74,7 +87,7 @@ Card& Machine::getCard(const PlugLocation& loc) {
     return _cards.at(loc);
 }
 
-Card& Machine::createCard(const CardMeta& meta,const PlugLocation& loc)  {
+Card& Machine::createCard(const CardMeta& meta,const PlugLocation loc)  {
     if (_cards.find(loc) != _cards.end()) {
         throw string("Card already plugged in at " + loc.toString());
     }
@@ -98,7 +111,8 @@ void Machine::dumpOn(std::ostream& str) const {
 }
 
 void Machine::visitAllCards(const std::function<void (const Card&)> f) const {
-    for (auto [loc, card] : _cards)
-        f(card);
+    std::for_each(_cards.begin(), _cards.end(),
+        [&f](std::pair<const PlugLocation&, const Card&> p) { f(p.second); }
+    );
 }
 

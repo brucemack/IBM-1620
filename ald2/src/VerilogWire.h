@@ -28,10 +28,16 @@ public:
     */
     bool empty() const { return _drivenPins.empty() && _drivingPins.empty(); }
 
+    bool isMultiDriver() const { return _drivingPins.size() > 1; }
+
     /**
      * Includes a pin in the list that are joined together by this wire.
     */
     void addConnection(const Pin& pin);
+
+    bool isConnectedToPin(const PinLocation& pl) const;
+
+    std::vector<PinLocation> getConnectedPins() const;
 
     /**
      * Synthesizes any Verilog statements that go with this wire.
@@ -51,6 +57,8 @@ public:
 
 private:
 
+    // Uniquely generated
+    const unsigned int _id;
     const Machine& _machine;
     std::vector<PinLocation> _drivenPins;
     std::vector<PinLocation> _drivingPins;

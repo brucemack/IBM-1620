@@ -98,13 +98,14 @@ int test_2() {
     Machine machine;
 
     // Make some metadata for a few cards
-    map<string, PinMeta> pins_aaaa = { 
-        { "O", PinMeta { "O", PinType:: OUTPUT } }
+    static map<string, PinMeta> pins_aaaa = { 
+        { string("O"), PinMeta(string("O"), PinType:: OUTPUT) },
+        { string("O2"), PinMeta(string("O2"), PinType:: OUTPUT) },
     };
     CardMeta cardMeta_aaaa("AAAA", "Card AAAA", pins_aaaa);
 
-    map<string, PinMeta> pins_bbbb = { 
-        { "I", PinMeta { "I", PinType:: INPUT } }
+    static map<string, PinMeta> pins_bbbb = { 
+        { string("I"), PinMeta(string("I"), PinType:: INPUT) }
     };
     CardMeta cardMeta_bbbb("BBBB", "Card BBBB", pins_bbbb);
 
@@ -112,24 +113,65 @@ int test_2() {
     machine.createCard(cardMeta_aaaa, PlugLocation("0000", "0000"));
     machine.createCard(cardMeta_aaaa, PlugLocation("0000", "0001"));
     machine.createCard(cardMeta_bbbb, PlugLocation("0000", "0002"));
+    machine.createCard(cardMeta_bbbb, PlugLocation("0000", "0003"));
 
     // Wire up
     Card& c0 = machine.getCard(PlugLocation("0000", "0000"));
     Card& c1 = machine.getCard(PlugLocation("0000", "0001"));
     Card& c2 = machine.getCard(PlugLocation("0000", "0002"));
+    Card& c3 = machine.getCard(PlugLocation("0000", "0003"));
 
+    // Here we create a situation where two cards drive the same pin
     c0.getPin("O").connect(c2.getPin("I"));
     c2.getPin("I").connect(c0.getPin("O"));
-
     c1.getPin("O").connect(c2.getPin("I"));
-    c2.getPin("I").connect(c1.getPin("O"));  
+    c2.getPin("I").connect(c1.getPin("O"));
+    // Regular 1->1 hookup
+    c0.getPin("O2").connect(c3.getPin("I"));
+    c3.getPin("I").connect(c0.getPin("O2"));
 
     // Make the Verilog wires
     vector<VerilogWire> wires = Machine::generateVerilogWires(machine);
     assert(wires.size() == 2);
+    assert(!wires.at(0).empty());
+    assert(!wires.at(1).empty());
 
+    cout << "// Wires" << endl;
     for (VerilogWire wire : wires) {
-        wire.dumpOn(cout);
+        wire.synthesizeVerilog(cout);
+    }
+
+    // Check the connections
+    // Grab the single-driven wire.  Both of the pins that are connected to this
+    // wire should be connecting to the same Verilog wire (output of driving device)
+    {
+        PinLocation pl0 = PinLocation(PlugLocation("0000", "0000"), "O2");
+        auto it0 = std::find_if(wires.begin(), wires.end(), [&pl0](const VerilogWire& w) -> bool {
+            return w.isConnectedToPin(pl0);
+        });
+        assert(it0 != wires.end());
+        assert(!it0->isMultiDriver());
+        // Test the driver pin
+        assert(it0->getVerilogPortBinding(c0.getPin("O2").getLocation()) == "W_0000_0000_O2");
+        assert(it0->getVerilogPortBinding(c3.getPin("I").getLocation()) == "W_0000_0000_O2");
+    }
+    // Grab the multi-driven wire. 
+    // Make sure that the driving pins have their own unique wire names and the driven pins
+    // are all connected back to the synthesized DOT-OR.
+    {
+        PinLocation pl0 = PinLocation(PlugLocation("0000", "0000"), "O");
+        auto it0 = std::find_if(wires.begin(), wires.end(), [&pl0](const VerilogWire& w) -> bool {
+            return w.isConnectedToPin(pl0);
+        });
+        assert(it0 != wires.end());
+        assert(it0->isMultiDriver());
+        // Test the driver pins
+        assert(it0->getVerilogPortBinding(c0.getPin("O").getLocation()) == "W_0000_0000_O");
+        assert(it0->getVerilogPortBinding(c1.getPin("O").getLocation()) == "W_0000_0001_O");
+        // Test the driven pins
+        assert(it0->getVerilogPortBinding(c2.getPin("I").getLocation()) == "W_DOT_2");
+        assert(it0->getVerilogPortBinding(c3.getPin("I").getLocation()) == "W_DOT_2");
+        assert(it0->getConnectedPins().size() == 3);
     }
 
     return 0;
@@ -137,4 +179,5 @@ int test_2() {
 
 int main(int, const char**) {
     test_1();
+    test_2();
 }
