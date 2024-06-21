@@ -12,7 +12,7 @@
 #include <queue>
 
 #include "Pin.h"
-#include "Components.h"
+#include "Card.h"
 #include "PlugLocation.h"
 #include "CardMeta.h"
 

@@ -14,33 +14,44 @@
 
 enum PinType {
     UNKNOWN,
+    PASSIVE,
     INPUT, 
     OUTPUT,
+    NC,
     GND,
     VP12,
     VN12
 };
 
+enum DriveType {
+    NONE,
+    S01,
+    S0Z,
+    S1Z,
+    S01Z
+};
+
 // TODO: static member - conversion operator??
 PinType str2PinType(const std::string& str);
+DriveType str2DriveType(const std::string& str);
 
 class PinMeta {
 public: 
 
-    PinMeta(const std::string& i, PinType t, bool canMultidrive = false) 
-        : _id(i), _type(t), _canMultidrive(canMultidrive) { }
+    PinMeta(const std::string& i, PinType t, DriveType dt = DriveType::S01) 
+        : _id(i), _type(t), _driveType(dt) { }
     PinMeta(const PinMeta& other) 
-        : _id(other._id), _type(other._type), _canMultidrive(other._canMultidrive) { }
+        : _id(other._id), _type(other._type), _driveType(other._driveType) { }
 
     std::string getId() const { return _id; }
 
     PinType getType() const { return _type; }
 
-    bool canMultidrive() const { return _canMultidrive; }
+    DriveType getDriveType() const { return _driveType; }
 
     /**
      * @returns Indication of whether this pin is used for logic signal, as opposed
-     * to power/ground/etc.
+     * to power/ground/passive/etc.
     */
     bool isLogicSignal() const { return _type == PinType::INPUT || _type == PinType::OUTPUT; }
 
@@ -48,7 +59,7 @@ private:
 
     std::string _id;
     PinType _type;
-    bool _canMultidrive;
+    DriveType _driveType;
 };
 
 #endif

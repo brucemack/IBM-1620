@@ -41,11 +41,14 @@ public:
 
     void visitAllPins(const std::function<void (const std::string& id, const Pin&)> f) const;
 
+    void addPageReference(const std::string& pageRef) { _pageRefs.push_back(pageRef); }
+
 private:
 
     const CardMeta& _meta;
     PlugLocation _loc;
     std::map<std::string, Pin> _pins;
+    std::vector<std::string> _pageRefs;
 };
 
 #endif

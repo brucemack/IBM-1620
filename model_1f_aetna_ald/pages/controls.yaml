@@ -11,7 +11,7 @@ blocks:
     cir: 01
     coo: 1A
     out: 
-      A: [ "TEST ONE" ]
+      A: [ "TEST ONE", "-S CE SW 10 REPEAT CYC", "-S DA TR" ]
 
 # Used to tie signals to power-on reset
   - gate: ZZZZ

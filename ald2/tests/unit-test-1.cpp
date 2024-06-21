@@ -11,7 +11,7 @@
 #include "Pin.h"
 #include "PlugLocation.h"
 #include "PinLocation.h"
-#include "Components.h"
+#include "Card.h"
 #include "VerilogWire.h"
 #include "CardMeta.h"
 #include "Machine.h"
@@ -21,8 +21,8 @@ using namespace std;
 int test_1() {
     {
         map<string, PinMeta> pins_aaaa = { 
-            { string("A"), PinMeta(string("A"), PinType:: OUTPUT, true) },
-            { string("B"), PinMeta(string("B"), PinType:: OUTPUT, false) }
+            { string("A"), PinMeta(string("A"), PinType:: OUTPUT) },
+            { string("B"), PinMeta(string("B"), PinType:: OUTPUT) }
         };
         CardMeta cardMeta1("AAAA", "Card AAAA", pins_aaaa);
         PlugLocation loc1("01AA","0000");
@@ -101,7 +101,7 @@ int test_2() {
     // Make some metadata for a few cards
     static map<string, PinMeta> pins_aaaa = { 
         // This pin is enabled for multi-driving
-        { string("O"), PinMeta(string("O"), PinType:: OUTPUT, true) },
+        { string("O"), PinMeta(string("O"), PinType:: OUTPUT, DriveType::S0Z) },
         { string("O2"), PinMeta(string("O2"), PinType:: OUTPUT) },
     };
     CardMeta cardMeta_aaaa("AAAA", "Card AAAA", pins_aaaa);
@@ -112,10 +112,10 @@ int test_2() {
     CardMeta cardMeta_bbbb("BBBB", "Card BBBB", pins_bbbb);
 
     // Populate some cards
-    machine.createCard(cardMeta_aaaa, PlugLocation("0000", "0000"));
-    machine.createCard(cardMeta_aaaa, PlugLocation("0000", "0001"));
-    machine.createCard(cardMeta_bbbb, PlugLocation("0000", "0002"));
-    machine.createCard(cardMeta_bbbb, PlugLocation("0000", "0003"));
+    machine.getOrCreateCard(cardMeta_aaaa, PlugLocation("0000", "0000"));
+    machine.getOrCreateCard(cardMeta_aaaa, PlugLocation("0000", "0001"));
+    machine.getOrCreateCard(cardMeta_bbbb, PlugLocation("0000", "0002"));
+    machine.getOrCreateCard(cardMeta_bbbb, PlugLocation("0000", "0003"));
 
     // Wire up
     Card& c0 = machine.getCard(PlugLocation("0000", "0000"));
@@ -152,7 +152,7 @@ int test_2() {
             return w.isConnectedToPin(pl0);
         });
         assert(it0 != wires.end());
-        assert(!it0->isMultiDriver());
+        assert(it0->isMultiDriver());
         // Test the driver pin
         assert(it0->getVerilogPortBinding(c0.getPin("O2").getLocation()) == "W_0000_0000_O2");
         assert(it0->getVerilogPortBinding(c3.getPin("I").getLocation()) == "W_0000_0000_O2");

@@ -13,27 +13,11 @@
 #include <string>
 
 #include "LogicDiagram.h"
-#include "Components.h"
+#include "Card.h"
 #include "CardMeta.h"
 
 using namespace std;
 
-PinType str2PinType(const string& str) {
-    if (str == "UNKNOWN") 
-        return PinType::UNKNOWN;
-    else if (str == "INPUT")
-        return PinType::INPUT;
-    else if (str == "OUTPUT")
-        return PinType::OUTPUT;
-    else if (str == "GND")
-        return PinType::GND;
-    else if (str == "VP12")
-        return PinType::VP12;
-    else if (str == "VN12")
-        return PinType::VN12;
-    else 
-        throw string("Unrecognized pin type: " + str);
-}
 
 Card::Card(const CardMeta& meta, const PlugLocation& loc)
 :   _meta(meta),
@@ -57,22 +41,27 @@ Card::Card(const Card& other)
 
 Pin& Card::getPin(const string& id) {
     if (_pins.find(id) == _pins.end())
-        throw string("Pin not defined: " + id);
+        throw string("Pin not defined: " + id + " on card " + _loc.toString());
     return _pins.at(id);
 }
 
 const Pin& Card::getPinConst(const string& id) const {
     if (_pins.find(id) == _pins.end())
-        throw string("Pin not defined: " + id);
+        throw string("Pin not defined: " + id + " on card " + _loc.toString());
     return _pins.at(id);
 }
 
 void Card::dumpOn(std::ostream& str) const {
+    str << "Card: " + _loc.toString() << endl;
     str << "Pins:" << endl;
     visitAllPins([&](const string& pinId, const Pin& pin) {
         PinType pt = _meta.getPinType(pinId);
         str << pinId << " " << (int)pt << " -> " << pin.getConnectionsDesc() << endl;
     });
+    str << "Page References:" << endl;
+    for (auto s : _pageRefs) 
+        str << s << " ";
+    str << endl;
 }
 
 void Card::visitAllPins(const std::function<void (const string& id, const Pin&)> f) const {

@@ -10,7 +10,7 @@
 #include <functional>
 #include <unordered_map>
 
-#include "Components.h"
+#include "Card.h"
 #include "VerilogWire.h"
 #include "Util.h"
 #include "Machine.h"
@@ -67,7 +67,7 @@ vector<VerilogWire> Machine::generateVerilogWires(const Machine& machine) {
             if (pinsSeen.find(workingPin.getLocation()) == pinsSeen.end()) {
                 // Here is where we accumulate the connections to the Wire
                 VerilogWire potentialWire(machine);
-                // Visit all pins that are electrically connect toed this pin
+                // Visit all pins that are electrically connect tied this pin
                 workingPin.visitAllConnections([&pinsSeen, &potentialWire](const Pin& connectedPin) {                    
                     // Connect 
                     potentialWire.addConnection(connectedPin);
@@ -84,9 +84,6 @@ vector<VerilogWire> Machine::generateVerilogWires(const Machine& machine) {
 }
 
 void Machine::generateVerilog(const Machine& machine, ostream& str) {
-
-    //const unordered_map<PinLocation, string>& pinToWire,
-    //const vector<string>& wireNames, 
 
     str << "// IBM 1620 Logic Reproduction Project" << endl;
     str << "// Copyright (c) 2024 - Bruce MacKinnon" << endl;

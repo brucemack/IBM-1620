@@ -12,7 +12,8 @@
 using namespace std;
 
 static map<string, PinMeta> Pins = { 
-    { "A", PinMeta { "A", PinType:: OUTPUT } }
+    { "A", PinMeta { "A", PinType:: OUTPUT } },
+    { "B", PinMeta { "B", PinType:: OUTPUT } }
 };
 
 CardRSTMeta::CardRSTMeta() 

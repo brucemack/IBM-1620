@@ -13,7 +13,7 @@
 #include <string>
 #include <iostream>
 
-#include "Components.h"
+#include "Card.h"
 #include "Pin.h"
 #include "PlugLocation.h"
 

@@ -59,11 +59,11 @@ unique_ptr<CardMeta> loadCardMeta(const string& baseDir, const string& code) {
         // Ignore not connected pins
         if (type == "NC")
             continue;
-        bool canMultidrive = false;
-        // Optional attribute
-        if (pin["multidrive"])
-            canMultidrive = pin["multidrive"].as<bool>();
-        pinMeta.insert_or_assign(pinId, PinMeta(pinId, str2PinType(type), canMultidrive));
+        // Default drive type
+        string driveType = "S01";
+        if (pin["drivetype"])
+            driveType = pin["drivetype"].as<std::string>();
+        pinMeta.insert_or_assign(pinId, PinMeta(pinId, str2PinType(type), str2DriveType(driveType)));
     }
     return make_unique<CardMeta>(code, c["description"].as<string>(), pinMeta);
 }
@@ -98,6 +98,8 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
             
             Card& card = machine.getOrCreateCard(*(cardMeta.at(block.typ).get()), 
                 { block.gate, block.loc });
+            // Keep track of which pages we see the card defined
+            card.addPageReference(page.num);
 
             // Register signal names for outputs
             for (auto [outputPinId, driverRefList] : block.out) {
@@ -133,6 +135,9 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                         // Determine the card/pin
                         Card& card = machine.getCard({ block.gate, block.loc});
                         Pin& pin = card.getPin(bp.pinId);
+                        // Don't make connections to pins marked as internally tied
+                        if (pin.getMeta().getType() == PinType::TIE)
+                            continue;
                         // Register the alias
                         namedSignals.emplace(alias.name, pin);
                     }
@@ -172,6 +177,9 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                                 Card& driverCard = machine.getCard({ driverBlock.gate, driverBlock.loc });
                                 // Get the pin
                                 Pin& driverPin = driverCard.getPin(driverBlockPin.pinId);
+                                // If the pin has an internal tie then ignore
+                                if (driverPin.getMeta().getType() == PinType::TIE)
+                                    continue;
                                 // Make the connection back to the driver
                                 inputPin.connect(driverPin);
                                 driverPin.connect(inputPin);
@@ -183,10 +191,6 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                                 throw string("Input reference to unknown signal: " + driverRef);
                             // Get the pin
                             Pin& driverPin = namedSignals.at(driverRef);
-                            //cout << "Connecting " << driverRef << endl;
-                            //cout << "  "  << driverPin.getDesc() << endl;
-                            //cout << "  "  << inputPin.getDesc() << endl;
-                            // Make the connection back to the driver
                             inputPin.connect(driverPin);
                             driverPin.connect(inputPin);
                         }
@@ -246,10 +250,11 @@ int main(int, const char**) {
 
     string baseDir = "/home/bruce/IBM1620/hardware";
     string outDir = baseDir + "/sms-cards/tests";
-    //string aldBaseDir = "../../model_1f_aetna_ald/pages";
+    string aldBaseDir = "../../daves-1f/pages";
+    string pagesFile = "core-pages.yaml";
     //string outDir = ".";
-    string aldBaseDir = "../tests";
-    string pages_file = "dot-or-test-1-pages.yaml";
+    //string aldBaseDir = "../tests";
+    //string pagesFile = "dot-or-test-1-pages.yaml";
 
     // Load the card metadata
     map<string, unique_ptr<CardMeta>> cardMeta;   
@@ -283,7 +288,7 @@ int main(int, const char**) {
     // Build the list of filenames
     vector<string> fns;
     {
-        YAML::Node c = YAML::LoadFile(aldBaseDir + "/" + pages_file);
+        YAML::Node c = YAML::LoadFile(aldBaseDir + "/" + pagesFile);
         for (auto it = begin(c["pages"]); it != end(c["pages"]); it++) {
             string id = it->as<string>();
             fns.push_back(aldBaseDir + "/" + id + ".yaml");

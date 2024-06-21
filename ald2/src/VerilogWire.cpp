@@ -10,7 +10,7 @@
 #include <string>
 
 #include "VerilogWire.h"
-#include "Components.h"
+#include "Card.h"
 #include "CardMeta.h"
 
 using namespace std;
