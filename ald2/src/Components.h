@@ -23,8 +23,6 @@
 #include "PinLocation.h"
 #include "CardMeta.h"
 
-class VerilogWire;
-
 class Card {
 public:
 
@@ -48,30 +46,6 @@ private:
     const CardMeta& _meta;
     PlugLocation _loc;
     std::map<std::string, Pin> _pins;
-};
-
-class Machine {
-public:
-
-    Card& getCard(const PlugLocation& location);
-
-    Pin& getPin(const PinLocation& loc);
-
-    Card& createCard(const CardMeta& cardMeta, const PlugLocation location);
-
-    void dumpOn(std::ostream& str) const;
-
-    void visitAllCards(const std::function<void (const Card&)> c) const;
-
-    /**
-     * A utility function that traverses the machine and generates all of the 
-     * VerilogWires needed to connect the cards.
-    */
-    static std::vector<VerilogWire> generateVerilogWires(const Machine& machine);
-
-private:
-
-    std::unordered_map<PlugLocation, Card> _cards;
 };
 
 #endif

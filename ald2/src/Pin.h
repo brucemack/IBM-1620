@@ -31,6 +31,8 @@ public:
 
     void connect(Pin& pin);
 
+    bool isConnected() const { return !_connections.empty(); }
+
     PinLocation getLocation() const;
     
     /**

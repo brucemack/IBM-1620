@@ -34,11 +34,11 @@ void VerilogWire::synthesizeVerilog(ostream& str) const {
    if (isMultiDriver()) {
       // Create a wire for each driving pin
       for (auto pl : _drivingPins) {
-         str << "wire W_" << pl.toString() << ";" << endl;
+         str << "    wire W_" << pl.toString() << ";" << endl;
       }
       // Create the or expression.
-      str << "// Automatically generated DOT-OR" << endl;
-      str << "wire W_DOT_" << to_string(_id) << " = ";
+      str << "    // Automatically generated DOT-OR" << endl;
+      str << "    wire W_DOT_" << to_string(_id) << " = ";
       bool first = true;
       str << "(";
       for (auto pl : _drivingPins) {
@@ -53,7 +53,7 @@ void VerilogWire::synthesizeVerilog(ostream& str) const {
    else {
       // The whole net is named by the output
       auto pl = _drivingPins.at(0);
-      str << "wire W_" << pl.toString() << ";" << endl;
+      str << "    wire W_" << pl.toString() << ";" << endl;
    }
 }
 

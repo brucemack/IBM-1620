@@ -14,6 +14,7 @@
 #include "Components.h"
 #include "VerilogWire.h"
 #include "CardMeta.h"
+#include "Machine.h"
 
 using namespace std;
 
@@ -172,6 +173,12 @@ int test_2() {
         assert(it0->getVerilogPortBinding(c2.getPin("I").getLocation()) == "W_DOT_2");
         assert(it0->getVerilogPortBinding(c3.getPin("I").getLocation()) == "W_DOT_2");
         assert(it0->getConnectedPins().size() == 3);
+    }
+
+    // Dump the entire machine
+    {
+        cout << "// Synthesis of Entire Machine" << endl;
+        Machine::generateVerilog(machine, cout);
     }
 
     return 0;

@@ -81,38 +81,3 @@ void Card::visitAllPins(const std::function<void (const string& id, const Pin&)>
     );
 }
 
-Card& Machine::getCard(const PlugLocation& loc) {
-    if (_cards.find(loc) == _cards.end()) 
-        throw string("No card defined at location " + loc.toString());
-    return _cards.at(loc);
-}
-
-Card& Machine::createCard(const CardMeta& meta,const PlugLocation loc)  {
-    if (_cards.find(loc) != _cards.end()) {
-        throw string("Card already plugged in at " + loc.toString());
-    }
-    _cards.emplace(loc, Card(meta, loc));
-    return _cards.at(loc);
-}
-
-Pin& Machine::getPin(const PinLocation& loc) {
-    Card& card = getCard(loc.getPlugLocation());
-    return card.getPin(loc.getPinId());
-}
-
-void Machine::dumpOn(std::ostream& str) const {
-    str << "Cards:" << endl;
-    visitAllCards([&str](const Card& card) {
-        cout << "====================" << endl;
-        cout << card.getLocation().toString() << " : " << card.getMeta().getType() << endl;
-        cout << card.getMeta().getPinNames().size() << endl;
-        card.dumpOn(str);
-    });
-}
-
-void Machine::visitAllCards(const std::function<void (const Card&)> f) const {
-    std::for_each(_cards.begin(), _cards.end(),
-        [&f](std::pair<const PlugLocation&, const Card&> p) { f(p.second); }
-    );
-}
-

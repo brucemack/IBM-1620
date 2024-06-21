@@ -12,6 +12,8 @@
 
 #include "LogicDiagram.h"
 #include "Components.h"
+#include "Machine.h"
+#include "Util.h"
 #include "cards/CardONE.h"
 #include "cards/CardZERO.h"
 #include "cards/CardHIZ.h"
@@ -26,13 +28,6 @@ static bool isPinRef(const string& ref) {
     } else {
         return false;
     }
-}
-
-string toLower(const string& r) {
-    string data = r;
-    std::transform(data.begin(), data.end(), data.begin(),
-        [](char c){ return std::tolower(c); });
-    return data;
 }
 
 string dotToUnder(const string& r) {
@@ -91,12 +86,13 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
     // - Record aliases for all named nets that are page outputs
     for (const LogicDiagram::Page& page : pages) {
         for (const LogicDiagram::Block& block : page.blocks) {
+
             // Register all of the cards mentioned on the pages
             if (cardMeta.find(block.typ) == cardMeta.end())
                 throw string("Invalid card type on page/block " + 
                     page.num + "/" + block.coo + " : " + block.typ);
             
-            Card& card = machine.getOrCreateCard(*(cardMeta.at(block.typ).get()), { block.gate, block.loc });
+            Card& card = machine.createCard(*(cardMeta.at(block.typ).get()), { block.gate, block.loc });
 
             // Register signal names for outputs
             for (auto [outputPinId, driverRefList] : block.out) {
@@ -207,8 +203,8 @@ static void generateSpice(const Machine& machine, const unordered_map<PinLocatio
         //line = line + std::to_string(lineCounter);
         // Pins
         for (string pinName : card.getMeta().getPinNames()) {
-            if (card.isPinUsed(pinName)) {
-                const Pin& pin = card.getPinConst(pinName);
+            const Pin& pin = card.getPinConst(pinName);
+            if (pin.isConnected()) {
                 // Figure out which wire 
                 if (pinToWire.find(pin.getLocation()) == pinToWire.end()) {
                     //throw string("Pin " + pin.getDesc() + " not wired")
@@ -239,68 +235,6 @@ static void generateSpice(const Machine& machine, const unordered_map<PinLocatio
         cout << line << endl;
         lineCounter++;
     });
-}
-
-static void generateVerilog(const Machine& machine, const unordered_map<PinLocation, string>& pinToWire,
-    const vector<string>& wireNames, ostream& str) {
-
-    str << "// IBM 1620 Logic Reproduction Project" << endl;
-    str << "// Copyright (c) 2024 - Bruce MacKinnon" << endl;
-    str << "// MACHINE-GENERATED VERILOG" << endl;
-    str << endl;
-    str << "`timescale 1ns/1ns" << endl;
-    str << "module ibm1620_core;" << endl;
-
-    // Dump the wire names
-    for (string w : wireNames) {
-        str << "    wire " << safeVerilogIdentifier(w) << ";" << endl;
-    }
-
-    // Dump the cards
-    machine.visitAllCards([&pinToWire, &str](const Card& card) mutable {
-
-        string moduleId = "X_" + card.getLocation().toString();
-
-        str << "    // Card " << card.getMeta().getType() + " at location " + card.getLocation().toString() 
-            + " - " + card.getMeta().getDesc() << endl;
-
-        str << "    SMS_CARD_";
-        str << card.getMeta().getType();
-        str << " ";
-        str << moduleId;
-        str << "(";
-
-        // Pins
-        bool first = true;
-        for (string pinName : card.getMeta().getSignalPinNames()) {
-            if (card.isPinUsed(pinName)) {
-                if (!first) 
-                    str << ", ";
-                const Pin& pin = card.getPinConst(pinName);
-                str << "." << toLower(pinName) << "(";
-                // Figure out which wire the pin is connected to
-                if (pinToWire.find(pin.getLocation()) == pinToWire.end()) {
-                    // It's OK to have a port connected to nothing
-                }
-                else {
-                    str << safeVerilogIdentifier(dotToUnder(pinToWire.at(pin.getLocation())));
-                }
-                str << ")";
-                first = false;
-            } 
-        }
-
-        str << ");" << endl;
-    });
-
-    str << endl;
-    str << "    initial begin" << endl;
-    str << "        $dumpfile(\"wave.vcd\");" << endl;
-    str << "        $dumpvars(0, ibm1620_core);" << endl;
-    str << "        #100000 $stop;" << endl;
-    str << "    end" << endl;
-    str << endl;
-    str << "endmodule;" << endl;
 }
 
 int main(int, const char**) {
@@ -367,29 +301,9 @@ int main(int, const char**) {
     for (auto [key, value] : namedSignals)
         cout << key << " : " << value.getLocation().toString() << endl;
 
-    // Generate wires
-    vector<Wire> wires = machine.generateWires();
-    
-    // TODO: MOVE THIS INTO THE SPICE/VERILOG GENERATION BECAUSE
-    // THE PROCESS WILL DIFFER (EX: DOT ORs)
-
-    // Setup the mapping between pins and wires
-    unordered_map<PinLocation, string> pinToWire;
-    vector<string> wireNames;
-    for (const Wire& wire : wires) {
-        // The wire takes the name of the first pin in the wire (arbitrarily)
-        PinLocation firstPin = *(wire.pins.begin());
-        wireNames.push_back(firstPin.toString());
-        for (const PinLocation& pinLoc : wire.pins) {
-            pinToWire[pinLoc] = firstPin.toString();
-        }
-    }
-
-    //generateSpice(machine, pinToWire);
-
     try {
         ofstream verilogFile(outDir + "/core.v",  std::ios::trunc);
-        generateVerilog(machine, pinToWire, wireNames, verilogFile);
+        generateVerilog(machine, verilogFile);
     } catch (const string& ex) {
         cout << "Failed to generate Verilog: " << ex << endl;
     }
