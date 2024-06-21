@@ -33,8 +33,7 @@ std::vector<std::string> CardMeta::getPinNames() const {
 std::vector<std::string> CardMeta::getSignalPinNames() const {
     std::vector<std::string> result;
     for (auto [n, v] : _pinMeta)
-        if (v.type == PinType::INPUT ||
-            v.type == PinType::OUTPUT)
+        if (v.isLogicSignal())
             result.push_back(n);
     return result;
 }
@@ -42,7 +41,7 @@ std::vector<std::string> CardMeta::getSignalPinNames() const {
 PinType CardMeta::getPinType(const string pinId) const {
     if (_pinMeta.find(pinId) == _pinMeta.end()) 
         throw string("Invalid pin ID : " + pinId);
-    return _pinMeta.at(pinId).type;
+    return _pinMeta.at(pinId).getType();
 }
 
 // TODO: Move to metadata

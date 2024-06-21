@@ -19,27 +19,7 @@
 #include <vector>
 #include <functional>
 
-enum PinType {
-    UNKNOWN,
-    INPUT, 
-    OUTPUT,
-    GND,
-    VP12,
-    VN12
-};
-
-// TODO: static member - conversion operator??
-PinType str2PinType(const std::string& str);
-
-class PinMeta {
-public: 
-
-    PinMeta(const std::string& i, PinType t) : id(i), type(t) { }
-    PinMeta(const PinMeta& other) : id(other.id), type(other.type) { }
-
-    std::string id;
-    PinType type;
-};
+#include "PinMeta.h"
 
 class CardMeta {
 public:

@@ -40,7 +40,7 @@ Card::Card(const CardMeta& meta, const PlugLocation& loc)
     _loc(loc) {
     // Create all of the pins that are defined in the metadata
     _meta.visitAllPinMeta([&](const PinMeta& pm) {
-        _pins.emplace(pm.id, Pin(pm, *this));
+        _pins.emplace(pm.getId(), Pin(pm, *this));
     });
 }
 

@@ -26,7 +26,7 @@ public:
 
     Pin& getPin(const PinLocation& loc);
 
-    Card& createCard(const CardMeta& cardMeta, const PlugLocation location);
+    Card& getOrCreateCard(const CardMeta& cardMeta, const PlugLocation location);
 
     void dumpOn(std::ostream& str) const;
 

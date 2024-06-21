@@ -14,6 +14,7 @@
 #include "Components.h"
 #include "Machine.h"
 #include "Util.h"
+
 #include "cards/CardONE.h"
 #include "cards/CardZERO.h"
 #include "cards/CardHIZ.h"
@@ -58,8 +59,11 @@ unique_ptr<CardMeta> loadCardMeta(const string& baseDir, const string& code) {
         // Ignore not connected pins
         if (type == "NC")
             continue;
-        PinMeta pm { pinId, str2PinType(type) };
-        pinMeta[pinId] = pm;
+        bool canMultidrive = false;
+        // Optional attribute
+        if (pin["multidrive"])
+            canMultidrive = pin["multidrive"].as<bool>();
+        pinMeta.insert_or_assign(pinId, PinMeta(pinId, str2PinType(type), canMultidrive));
     }
     return make_unique<CardMeta>(code, c["description"].as<string>(), pinMeta);
 }
@@ -92,7 +96,8 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                 throw string("Invalid card type on page/block " + 
                     page.num + "/" + block.coo + " : " + block.typ);
             
-            Card& card = machine.createCard(*(cardMeta.at(block.typ).get()), { block.gate, block.loc });
+            Card& card = machine.getOrCreateCard(*(cardMeta.at(block.typ).get()), 
+                { block.gate, block.loc });
 
             // Register signal names for outputs
             for (auto [outputPinId, driverRefList] : block.out) {
@@ -240,9 +245,9 @@ static void generateSpice(const Machine& machine, const unordered_map<PinLocatio
 int main(int, const char**) {
 
     string baseDir = "/home/bruce/IBM1620/hardware";
-    //string outDir = baseDir + "/sms-cards/tests";
+    string outDir = baseDir + "/sms-cards/tests";
     //string aldBaseDir = "../../model_1f_aetna_ald/pages";
-    string outDir = ".";
+    //string outDir = ".";
     string aldBaseDir = "../tests";
     string pages_file = "dot-or-test-1-pages.yaml";
 
@@ -303,8 +308,9 @@ int main(int, const char**) {
 
     try {
         ofstream verilogFile(outDir + "/core.v",  std::ios::trunc);
-        generateVerilog(machine, verilogFile);
+        Machine::generateVerilog(machine, verilogFile);
     } catch (const string& ex) {
         cout << "Failed to generate Verilog: " << ex << endl;
+        return -1;
     }
 }

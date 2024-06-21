@@ -21,8 +21,8 @@ using namespace std;
 int test_1() {
     {
         map<string, PinMeta> pins_aaaa = { 
-            { string("A"), PinMeta(string("A"), PinType:: OUTPUT) },
-            { string("B"), PinMeta(string("B"), PinType:: OUTPUT) }
+            { string("A"), PinMeta(string("A"), PinType:: OUTPUT, true) },
+            { string("B"), PinMeta(string("B"), PinType:: OUTPUT, false) }
         };
         CardMeta cardMeta1("AAAA", "Card AAAA", pins_aaaa);
         PlugLocation loc1("01AA","0000");
@@ -100,7 +100,8 @@ int test_2() {
 
     // Make some metadata for a few cards
     static map<string, PinMeta> pins_aaaa = { 
-        { string("O"), PinMeta(string("O"), PinType:: OUTPUT) },
+        // This pin is enabled for multi-driving
+        { string("O"), PinMeta(string("O"), PinType:: OUTPUT, true) },
         { string("O2"), PinMeta(string("O2"), PinType:: OUTPUT) },
     };
     CardMeta cardMeta_aaaa("AAAA", "Card AAAA", pins_aaaa);

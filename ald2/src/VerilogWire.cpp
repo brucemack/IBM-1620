@@ -21,10 +21,14 @@ VerilogWire::VerilogWire(const Machine& mach)
 :  _id(++idCounter), _machine(mach) { }
 
 void VerilogWire::addConnection(const Pin& pin) {
-   if (pin.getMeta().type == PinType::INPUT)
+   if (pin.getMeta().getType() == PinType::INPUT)
       _drivenPins.push_back(pin.getLocation());
-   else if (pin.getMeta().type == PinType::OUTPUT)
+   else if (pin.getMeta().getType() == PinType::OUTPUT) {
+      // Do a sanity check for multi-driving
+      if (_drivingPins.size() > 0 && !pin.getMeta().canMultidrive())
+         throw string("Not allowed to connect multiple outputs on pin " + pin.getLocation().toString());
       _drivingPins.push_back(pin.getLocation());
+   }
    else {
       throw string("addConnection() on invalid pin type " + pin.getLocation().toString());
    }

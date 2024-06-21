@@ -15,7 +15,7 @@ blocks:
 
   - gate: ZZZZ
     loc: 9992
-    typ: ONE
+    typ: ZERO
     cir: 01
     coo: 1B
     out: 
@@ -23,7 +23,7 @@ blocks:
 
 # Used to tie signals to power-on reset
   - gate: ZZZZ
-    loc: 9992
+    loc: 9993
     typ: RST
     cir: 01
     coo: 1C

@@ -23,12 +23,15 @@ Card& Machine::getCard(const PlugLocation& loc) {
     return _cards.at(loc);
 }
 
-Card& Machine::createCard(const CardMeta& meta,const PlugLocation loc)  {
-    if (_cards.find(loc) != _cards.end()) {
-        throw string("Card already plugged in at " + loc.toString());
-    }
-    _cards.emplace(loc, Card(meta, loc));
-    return _cards.at(loc);
+Card& Machine::getOrCreateCard(const CardMeta& meta, const PlugLocation loc)  {
+    // If the slot is open then create a card and plug it in
+    if (_cards.find(loc) == _cards.end()) 
+        _cards.emplace(loc, Card(meta, loc));
+    // Makes sure the card is compatible
+    Card& card = _cards.at(loc);
+    if (card.getMeta().getType() != meta.getType())
+        throw string("Different card already plugged in at " + loc.toString());
+    return card;
 }
 
 Pin& Machine::getPin(const PinLocation& loc) {

@@ -1,3 +1,7 @@
+# Test circuit that shows the DOT-OR behavior.
+# The output of the TFC will be high if either of the -S RESET A/B
+# signals goes low.
+
 part: 2128940
 ec: 404750C
 title: UNIT TEST PAGE
@@ -21,6 +25,7 @@ blocks:
     coo: 4C
     inp:
       C: [ "-S RESET B" ]
+
 # Simple inverter.  Output pin is D.
   - gate: 01BA
     loc: 2H18

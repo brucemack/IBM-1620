@@ -53,10 +53,10 @@ bool Pin::operator== (const Pin& other) const {
     return this == std::addressof(other); 
 }
 
-PinLocation Pin::getLocation() const { return PinLocation(_card.getLocation(), _meta.id); }
+PinLocation Pin::getLocation() const { return PinLocation(_card.getLocation(), _meta.getId()); }
 
 size_t Pin::hash() const {
-    return std::hash<std::string>{}(_meta.id) + std::hash<PlugLocation>{}(_card.getLocation());
+    return std::hash<std::string>{}(_meta.getId()) + std::hash<PlugLocation>{}(_card.getLocation());
 }
 
 void Pin::visitImmediateConnections(const std::function<void (const Pin&)> f) const {
