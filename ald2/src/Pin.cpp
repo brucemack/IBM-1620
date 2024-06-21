@@ -14,12 +14,13 @@
 #include "Pin.h"
 #include "Components.h"
 #include "PlugLocation.h"
+#include "CardMeta.h"
 
 using namespace std;
 
-Pin::Pin(Card& card, const string& id) 
-:   _card(card),
-    _id(id) {        
+Pin::Pin(const PinMeta& meta, Card& card) 
+:   _meta(meta),
+    _card(card) {        
 }
 
 string Pin::getConnectionsDesc() const {
@@ -52,10 +53,10 @@ bool Pin::operator== (const Pin& other) const {
     return this == std::addressof(other); 
 }
 
-PinLocation Pin::getLocation() const { return PinLocation(_card.getLocation(), _id); }
+PinLocation Pin::getLocation() const { return PinLocation(_card.getLocation(), _meta.id); }
 
 size_t Pin::hash() const {
-    return std::hash<std::string>{}(_id) + std::hash<PlugLocation>{}(_card.getLocation());
+    return std::hash<std::string>{}(_meta.id) + std::hash<PlugLocation>{}(_card.getLocation());
 }
 
 void Pin::visitImmediateConnections(const std::function<void (const Pin&)> f) const {

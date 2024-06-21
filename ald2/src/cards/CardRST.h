@@ -10,8 +10,7 @@
 #ifndef _CardRST_h
 #define _CardRST_h
 
-#include <cassert>
-#include "Components.h"
+#include "CardMeta.h"
 
 class CardRSTMeta : public CardMeta {
 public:

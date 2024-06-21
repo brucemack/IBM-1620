@@ -22,52 +22,8 @@
 #include "PlugLocation.h"
 #include "PinLocation.h"
 
-enum PinType {
-    UNKNOWN,
-    INPUT, 
-    OUTPUT,
-    GND,
-    VP12,
-    VN12
-};
-
-// TODO: static member - conversion operator??
-PinType str2PinType(const std::string& str);
-
-struct PinMeta {
-    std::string id;
-    PinType type;
-};
-
-class CardMeta {
-public:
-
-    CardMeta() { }
-    CardMeta(const std::string& type, const std::string& desc,
-        const std::map<std::string, PinMeta>& pinMeta);
-
-    std::string getType() const { return _type; }
-    std::string getDesc() const { return _desc; }
-
-    std::vector<std::string> getPinNames() const;
-
-    std::vector<std::string> getSignalPinNames() const;
-
-    // TODO: Add a way to get the pinmeta in its entirety
-    PinType getPinType(const std::string pinId) const;
-
-    /**
-     * Used when a pin is not explicitly connected in the ALD.
-     * This is helpful for ground/rail pins.
-     */
-    virtual std::string getDefaultNode(const std::string& pinName) const;
-
-private:
-
-    std::string _type;
-    std::string _desc;
-    std::unordered_map<std::string, PinMeta> _pinMeta;
-};
+class VerilogWire;
+class CardMeta;
 
 class Card {
 public:
@@ -78,12 +34,6 @@ public:
 
     const PlugLocation& getLocation() const { return _loc; }
 
-    bool isPinUsed(const std::string& id) const;
-
-    /**
-     * Gets the pin with the ID provided, creating one 
-     * if necessary.
-     */
     Pin& getPin(const std::string& id);
 
     const Pin& getPinConst(const std::string& id) const;
@@ -99,31 +49,24 @@ private:
     std::map<std::string, Pin> _pins;
 };
 
-/**
- * A wire is a set of electrically connected pins.
-*/
-struct Wire {
-    std::vector<PinLocation> pins;
-};
-
 class Machine {
 public:
 
     Card& getCard(const PlugLocation& location);
 
-    Card& getOrCreateCard(const CardMeta& cardMeta, const PlugLocation& location);
-
     Pin& getPin(const PinLocation& loc);
+
+    Card& createCard(const CardMeta& cardMeta, const PlugLocation& location);
 
     void dumpOn(std::ostream& str) const;
 
     void visitAllCards(const std::function<void (const Card&)> c) const;
 
     /**
-     * Generates all of the unique wires, given the current state of the machine.
-     * A wire is defined as a series of electrically connected pins.
-     */
-    std::vector<Wire> generateWires() const;
+     * A utility function that traverses the machine and generates all of the 
+     * VerilogWires needed to connect the cards.
+    */
+    static std::vector<VerilogWire> generateVerilogWires(const Machine& machine);
 
 private:
 

@@ -18,11 +18,14 @@
 #include "PinLocation.h"
 
 class Card;
+class PinMeta;
 
 class Pin {
 public:
 
-    Pin(Card& card, const std::string& id);
+    Pin(const PinMeta& meta, Card& card);
+
+    const PinMeta& getMeta() const { return _meta; }
 
     bool operator== (const Pin& other) const;
 
@@ -44,8 +47,8 @@ public:
 
 private:
 
+    const PinMeta& _meta;
     Card& _card;
-    std::string _id;
     std::vector<std::reference_wrapper<Pin>> _connections;
 };
 

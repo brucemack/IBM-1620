@@ -12,13 +12,18 @@
 #include "PlugLocation.h"
 #include "PinLocation.h"
 #include "Components.h"
+#include "VerilogWire.h"
+#include "CardMeta.h"
 
 using namespace std;
 
-int main(int, const char**) {
-
+int test_1() {
     {
-        CardMeta cardMeta1;
+        map<string, PinMeta> pins_aaaa = { 
+            { string("A"), PinMeta(string("A"), PinType:: OUTPUT) },
+            { string("B"), PinMeta(string("B"), PinType:: OUTPUT) }
+        };
+        CardMeta cardMeta1("AAAA", "Card AAAA", pins_aaaa);
         PlugLocation loc1("01AA","0000");
         PlugLocation loc2("01AA","0002");
         Card card1(cardMeta1, loc1);
@@ -61,7 +66,7 @@ int main(int, const char**) {
         {
             int a = 0;
             pina.visitImmediateConnections([&a](const Pin& p) {
-                cout << "Visiting " << p.getDesc() << endl;
+                cout << "Visiting " << p.getLocation().toString() << endl;
             });
         }
 
@@ -82,4 +87,54 @@ int main(int, const char**) {
             assert(pinLocA1 == pinLocB);
         }
     }
+
+    return 0;
+}
+
+// Testing the VerilogWire system
+
+int test_2() {
+    
+    Machine machine;
+
+    // Make some metadata for a few cards
+    map<string, PinMeta> pins_aaaa = { 
+        { "O", PinMeta { "O", PinType:: OUTPUT } }
+    };
+    CardMeta cardMeta_aaaa("AAAA", "Card AAAA", pins_aaaa);
+
+    map<string, PinMeta> pins_bbbb = { 
+        { "I", PinMeta { "I", PinType:: INPUT } }
+    };
+    CardMeta cardMeta_bbbb("BBBB", "Card BBBB", pins_bbbb);
+
+    // Populate some cards
+    machine.createCard(cardMeta_aaaa, PlugLocation("0000", "0000"));
+    machine.createCard(cardMeta_aaaa, PlugLocation("0000", "0001"));
+    machine.createCard(cardMeta_bbbb, PlugLocation("0000", "0002"));
+
+    // Wire up
+    Card& c0 = machine.getCard(PlugLocation("0000", "0000"));
+    Card& c1 = machine.getCard(PlugLocation("0000", "0001"));
+    Card& c2 = machine.getCard(PlugLocation("0000", "0002"));
+
+    c0.getPin("O").connect(c2.getPin("I"));
+    c2.getPin("I").connect(c0.getPin("O"));
+
+    c1.getPin("O").connect(c2.getPin("I"));
+    c2.getPin("I").connect(c1.getPin("O"));  
+
+    // Make the Verilog wires
+    vector<VerilogWire> wires = Machine::generateVerilogWires(machine);
+    assert(wires.size() == 2);
+
+    for (VerilogWire wire : wires) {
+        wire.dumpOn(cout);
+    }
+
+    return 0;
+}
+
+int main(int, const char**) {
+    test_1();
 }

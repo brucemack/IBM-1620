@@ -14,6 +14,7 @@
 
 #include "LogicDiagram.h"
 #include "Components.h"
+#include "CardMeta.h"
 
 using namespace std;
 
@@ -34,57 +35,17 @@ PinType str2PinType(const string& str) {
         throw string("Unrecognized pin type: " + str);
 }
 
-CardMeta::CardMeta(const string& type, const string& desc, 
-    const map<string, PinMeta>& pinMeta)
-:   _type(type),
-    _desc(desc) {    
-    _pinMeta.insert(begin(pinMeta), end(pinMeta));
-}
-
-// TODO: PREDICATE SUPPORT
-std::vector<std::string> CardMeta::getPinNames() const {
-    std::vector<std::string> result;
-    for (auto [n, v] : _pinMeta)
-        result.push_back(n);
-    return result;
-}
-
-std::vector<std::string> CardMeta::getSignalPinNames() const {
-    std::vector<std::string> result;
-    for (auto [n, v] : _pinMeta)
-        if (v.type == PinType::INPUT ||
-            v.type == PinType::OUTPUT)
-            result.push_back(n);
-    return result;
-}
-
-PinType CardMeta::getPinType(const string pinId) const {
-    if (_pinMeta.find(pinId) == _pinMeta.end()) 
-        throw string("Invalid pin ID : " + pinId);
-    return _pinMeta.at(pinId).type;
-}
-
-// TODO: Move to metadata
-std::string CardMeta::getDefaultNode(const std::string& pinName) const {
-    if (pinName == "J") {
-        return "gnd";
-    } else if (pinName == "N") {
-        return "vp12";
-    } else if (pinName == "M") {
-        return "vn12";
-    } else {
-        return string();
-    }
-}
-
 Card::Card(const CardMeta& meta, const PlugLocation& loc)
 :   _meta(meta),
     _loc(loc) {
+    _meta.visitAllPinMeta([&](const PinMeta& pm) {
+        _pins.emplace(pm.id, Pin(pm, *this));
+    });
 }
 
 Pin& Card::getPin(const string& id) {
     if (_pins.find(id) == _pins.end())
-        _pins.emplace(id, Pin(*this, id));
+        throw string("Pin not defined: " + id);
     return _pins.at(id);
 }
 
@@ -92,10 +53,6 @@ const Pin& Card::getPinConst(const string& id) const {
     if (_pins.find(id) == _pins.end())
         throw string("Pin not defined: " + id);
     return _pins.at(id);
-}
-
-bool Card::isPinUsed(const std::string& id) const {
-    return !(_pins.find(id) == _pins.end());
 }
 
 void Card::dumpOn(std::ostream& str) const {
@@ -117,9 +74,11 @@ Card& Machine::getCard(const PlugLocation& loc) {
     return _cards.at(loc);
 }
 
-Card& Machine::getOrCreateCard(const CardMeta& meta,const PlugLocation& loc)  {
-    if (_cards.find(loc) == _cards.end()) 
-        _cards.emplace(loc, Card(meta, loc));
+Card& Machine::createCard(const CardMeta& meta,const PlugLocation& loc)  {
+    if (_cards.find(loc) != _cards.end()) {
+        throw string("Card already plugged in at " + loc.toString());
+    }
+    _cards.emplace(loc, Card(meta, loc));
     return _cards.at(loc);
 }
 
@@ -143,27 +102,3 @@ void Machine::visitAllCards(const std::function<void (const Card&)> f) const {
         f(card);
 }
 
-vector<Wire> Machine::generateWires() const {
-
-    vector<Wire> result;
-    unordered_set<PinLocation> pinsSeen;
-
-    visitAllCards([&pinsSeen, &result](const Card& card) {
-        card.visitAllPins([&pinsSeen, &result, &card](const string& pinId, const Pin& pin) {
-            if (pinsSeen.find(pin.getLocation()) == pinsSeen.end()) {
-                // Here is where we accumulate the pins on the wire
-                vector<PinLocation> wirePins;
-                // Visit all pins that connect to this pin
-                pin.visitAllConnections([&pinsSeen, &wirePins](const Pin& connectedPin) {                    
-                    wirePins.push_back(connectedPin.getLocation());
-                    // Make sure not to hit this again.
-                    pinsSeen.insert(connectedPin.getLocation());                    
-                });
-                if (!wirePins.empty()) 
-                    result.push_back({ wirePins } );
-            }
-        });
-    });
-
-    return result;
-}

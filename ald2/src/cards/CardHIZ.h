@@ -10,8 +10,7 @@
 #ifndef _CardHIZ_h
 #define _CardHIZ_h
 
-#include <cassert>
-#include "Components.h"
+#include "CardMeta.h"
 
 class CardHIZMeta : public CardMeta {
 public:

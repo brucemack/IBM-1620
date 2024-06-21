@@ -33,6 +33,9 @@ add_executable(main-1
   src/PinLocation.cpp
   src/LogicDiagram.cpp
   src/Components.cpp
+  src/CardMeta.cpp
+  src/Machine.cpp
+  src/VerilogWire.cpp
   src/cards/CardHIZ.cpp
   src/cards/CardONE.cpp
   src/cards/CardZERO.cpp
@@ -50,6 +53,9 @@ add_executable(unit-test-1
   src/PlugLocation.cpp
   src/PinLocation.cpp
   src/Components.cpp
+  src/CardMeta.cpp
+  src/Machine.cpp
+  src/VerilogWire.cpp
   src/LogicDiagram.cpp
   src/cards/CardHIZ.cpp
   src/cards/CardONE.cpp

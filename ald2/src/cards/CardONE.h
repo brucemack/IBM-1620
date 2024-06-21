@@ -10,7 +10,7 @@
 #ifndef _CardONE_h
 #define _CardONE_h
 
-#include "Components.h"
+#include "CardMeta.h"
 
 class CardONEMeta : public CardMeta {
 public:
