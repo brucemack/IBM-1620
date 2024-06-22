@@ -60,7 +60,7 @@ unique_ptr<CardMeta> loadCardMeta(const string& baseDir, const string& code) {
         if (type == "NC")
             continue;
         // Default drive type
-        string driveType = "S01";
+        string driveType = "AH_PD";
         if (pin["drivetype"])
             driveType = pin["drivetype"].as<std::string>();
         pinMeta.insert_or_assign(pinId, PinMeta(pinId, str2PinType(type), str2DriveType(driveType)));
@@ -135,9 +135,6 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                         // Determine the card/pin
                         Card& card = machine.getCard({ block.gate, block.loc});
                         Pin& pin = card.getPin(bp.pinId);
-                        // Don't make connections to pins marked as internally tied
-                        if (pin.getMeta().getType() == PinType::TIE)
-                            continue;
                         // Register the alias
                         namedSignals.emplace(alias.name, pin);
                     }
@@ -177,9 +174,6 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                                 Card& driverCard = machine.getCard({ driverBlock.gate, driverBlock.loc });
                                 // Get the pin
                                 Pin& driverPin = driverCard.getPin(driverBlockPin.pinId);
-                                // If the pin has an internal tie then ignore
-                                if (driverPin.getMeta().getType() == PinType::TIE)
-                                    continue;
                                 // Make the connection back to the driver
                                 inputPin.connect(driverPin);
                                 driverPin.connect(inputPin);
@@ -249,12 +243,12 @@ static void generateSpice(const Machine& machine, const unordered_map<PinLocatio
 int main(int, const char**) {
 
     string baseDir = "/home/bruce/IBM1620/hardware";
-    string outDir = baseDir + "/sms-cards/tests";
-    string aldBaseDir = "../../daves-1f/pages";
-    string pagesFile = "core-pages.yaml";
-    //string outDir = ".";
-    //string aldBaseDir = "../tests";
-    //string pagesFile = "dot-or-test-1-pages.yaml";
+    //string outDir = baseDir + "/sms-cards/tests";
+    //string aldBaseDir = "../../daves-1f/pages";
+    ///string pagesFile = "core-pages.yaml";
+    string outDir = ".";
+    string aldBaseDir = "../tests";
+    string pagesFile = "dot-or-test-1-pages.yaml";
 
     // Load the card metadata
     map<string, unique_ptr<CardMeta>> cardMeta;   
@@ -271,7 +265,11 @@ int main(int, const char**) {
         YAML::Node c = YAML::LoadFile(baseDir + "/sms-cards/cards.yaml");
         for (auto it = begin(c["cards"]); it != end(c["cards"]); it++) {
             string id = it->as<string>();
-            cardMeta[id] = loadCardMeta(baseDir, id);
+            try {
+                cardMeta[id] = loadCardMeta(baseDir, id);
+            } catch (const string& str) {
+                throw string("Card " + id + " " + str);
+            }
         }
     }
     catch (const string& ex) {

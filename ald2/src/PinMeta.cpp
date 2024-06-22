@@ -28,7 +28,7 @@ DriveType str2DriveType(const string& str) {
         return DriveType::AH_PD;
     else if (str == "AL") 
         return DriveType::AL;
-    else if (str == "AL_PD") 
+    else if (str == "AL_PU") 
         return DriveType::AL_PU;
     else
         throw string("Unrecognized drive type " + str);

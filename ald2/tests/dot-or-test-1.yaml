@@ -9,6 +9,7 @@ num: 00.00.00.00
 pdf: 00
 
 blocks:
+# CEYB (emitter follower) 
 # Output G
   - gate: 01BA
     loc: 2H17
@@ -17,6 +18,7 @@ blocks:
     coo: 4B
     inp:
       B: [ "-S RESET A" ]
+# CEYB (emitter follower) 
 # Output P
   - gate: 01BA
     loc: 2H17
@@ -25,8 +27,7 @@ blocks:
     coo: 4C
     inp:
       C: [ "-S RESET B" ]
-
-# Simple inverter.  Output pin is D.
+# Simple inverter.  Output pin is D which we expect to be the OR of the two CEYBs
   - gate: 01BA
     loc: 2H18
     typ: TFC
@@ -34,4 +35,3 @@ blocks:
     coo: 4C
     inp:
       P: [ 4B.G, 4C.P ]
-
