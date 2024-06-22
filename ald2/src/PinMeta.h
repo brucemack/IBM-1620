@@ -25,10 +25,14 @@ enum PinType {
 
 enum DriveType {
     NONE,
-    S01,
-    S0Z,
-    S1Z,
-    S01Z
+    // Active high, no pull-down (open collector)
+    AH,
+    // Active high, pull-down
+    AH_PD,
+    // Active low, no pull-up (emmitter follower)
+    AL,
+    // Active low, pull-up
+    AL_PU
 };
 
 // TODO: static member - conversion operator??
@@ -38,7 +42,7 @@ DriveType str2DriveType(const std::string& str);
 class PinMeta {
 public: 
 
-    PinMeta(const std::string& i, PinType t, DriveType dt = DriveType::S01) 
+    PinMeta(const std::string& i, PinType t, DriveType dt = DriveType::AH_PD) 
         : _id(i), _type(t), _driveType(dt) { }
     PinMeta(const PinMeta& other) 
         : _id(other._id), _type(other._type), _driveType(other._driveType) { }

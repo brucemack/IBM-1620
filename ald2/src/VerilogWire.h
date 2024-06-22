@@ -62,6 +62,7 @@ private:
     const Machine& _machine;
     std::vector<PinLocation> _drivenPins;
     std::vector<PinLocation> _drivingPins;
+    std::vector<PinLocation> _passivePins;
 };
 
 #endif

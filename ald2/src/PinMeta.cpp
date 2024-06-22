@@ -20,3 +20,16 @@ PinType str2PinType(const string& str) {
     else 
         throw string("Unrecognized pin type: " + str);
 }
+
+DriveType str2DriveType(const string& str) {
+    if (str == "AH") 
+        return DriveType::AH;
+    else if (str == "AH_PD") 
+        return DriveType::AH_PD;
+    else if (str == "AL") 
+        return DriveType::AL;
+    else if (str == "AL_PD") 
+        return DriveType::AL_PU;
+    else
+        throw string("Unrecognized drive type " + str);
+}

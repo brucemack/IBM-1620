@@ -24,7 +24,11 @@ public:
 
     Card& getCard(const PlugLocation& location);
 
+    const Card& getCardConst(const PlugLocation& location) const;
+
     Pin& getPin(const PinLocation& loc);
+
+    const Pin& getPinConst(const PinLocation& loc) const;
 
     Card& getOrCreateCard(const CardMeta& cardMeta, const PlugLocation location);
 

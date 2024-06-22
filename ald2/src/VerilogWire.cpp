@@ -12,6 +12,7 @@
 #include "VerilogWire.h"
 #include "Card.h"
 #include "CardMeta.h"
+#include "Machine.h"
 
 using namespace std;
 
@@ -23,41 +24,102 @@ VerilogWire::VerilogWire(const Machine& mach)
 void VerilogWire::addConnection(const Pin& pin) {
    if (pin.getMeta().getType() == PinType::INPUT)
       _drivenPins.push_back(pin.getLocation());
-   else if (pin.getMeta().getType() == PinType::OUTPUT) {
-      // Do a sanity check for multi-driving
-      if (_drivingPins.size() > 0 && !pin.getMeta().canMultidrive())
-         throw string("Not allowed to connect multiple outputs on pin " + pin.getLocation().toString());
+   else if (pin.getMeta().getType() == PinType::OUTPUT)
       _drivingPins.push_back(pin.getLocation());
-   }
+   else if (pin.getMeta().getType() == PinType::PASSIVE)
+      _passivePins.push_back(pin.getLocation());
    else {
       throw string("addConnection() on invalid pin type " + pin.getLocation().toString());
    }
 }
 
 void VerilogWire::synthesizeVerilog(ostream& str) const {
-   if (isMultiDriver()) {
+   // No drivers is an error
+   if (_drivingPins.empty()) {
+      dumpOn(cout);
+      throw string("No driving pins on wire");
+   }
+   // If there's only one driver then things are easy
+   else if (_drivingPins.size() == 1) {
+      // The whole net is named by the output
+      auto pl = _drivingPins.at(0);
+      str << "    wire W_" << pl.toString() << ";" << endl;
+   }
+   // Multi-drivers
+   else {
       // Create a wire for each driving pin
       for (auto pl : _drivingPins) {
          str << "    wire W_" << pl.toString() << ";" << endl;
       }
-      // Create the or expression.
-      str << "    // Automatically generated DOT-OR" << endl;
-      str << "    wire W_DOT_" << to_string(_id) << " = ";
-      bool first = true;
-      str << "(";
-      for (auto pl : _drivingPins) {
-         if (!first)
-            str << " || ";
-         str << "W_" << pl.toString() << " === 0";
-         first = false;
+
+      const DriveType dt = _machine.getPinConst(_drivingPins.at(0)).getMeta().getDriveType();
+
+      // Look for the case where the drivers are active high
+      if (dt == DriveType::AH || dt == DriveType::AH_PD) {  
+         // Check compatibility, and determine if a pull down exists anywhere
+         // in the drivers.
+         bool hasPullDown = false;
+         for (const PinLocation& pl : _drivingPins) {
+            const DriveType dt  = _machine.getPinConst(pl).getMeta().getDriveType();
+            if (!(dt == DriveType::AH || dt == DriveType::AH_PD)) {
+               throw string("Driving pin compatibility problem: " + pl.toString());
+            }
+            if (dt == DriveType::AH_PD)
+               hasPullDown = true;
+         }
+         // Generate a suitable net. Any of the drivers can pull the net high with a 1.
+         // The default value depends on whether there is a pull down amongst the
+         // driving nets.
+         string defaultValue;
+         if (!hasPullDown) 
+            defaultValue = "1'bz";
+         else
+            defaultValue = "0";
+         str << "    // Automatically generated DOT-OR (active high)" << endl;
+         str << "    wire W_DOT_" << to_string(_id) << " = ";
+         bool first = true;
+         str << "(";
+         for (auto pl : _drivingPins) {
+            if (!first)
+               str << " || ";
+            str << "W_" << pl.toString() << " === 1";
+            first = false;
+         }
+         str << ") ? 1 : " << defaultValue << ";";
+         str << endl;
       }
-      str << ") ? 0 : 1'bz;";
-      str << endl;
-   } 
-   else {
-      // The whole net is named by the output
-      auto pl = _drivingPins.at(0);
-      str << "    wire W_" << pl.toString() << ";" << endl;
+      else if (dt == DriveType::AL || dt == DriveType::AL_PU) {
+         // Check compatibility, and determine if a pull up exists anywhere in the drivers.
+         bool hasPullUp = false;
+         for (const PinLocation& pl : _drivingPins) {
+            const DriveType dt  = _machine.getPinConst(pl).getMeta().getDriveType();
+            if (!(dt == DriveType::AL || dt == DriveType::AL_PU)) {
+               throw string("Driving pin compatibility problem: " + pl.toString());
+            }
+            if (dt == DriveType::AL_PU)
+               hasPullUp = true;
+         }
+         // Generate a suitable net. Any of the drivers can pull the net low with a 0.
+         // The default value depends on whether there is a pull up amongst the
+         // driving nets.
+         string defaultValue;
+         if (!hasPullUp) 
+            defaultValue = "1'bz";
+         else
+            defaultValue = "1";
+         str << "    // Automatically generated DOT-OR (active low)" << endl;
+         str << "    wire W_DOT_" << to_string(_id) << " = ";
+         bool first = true;
+         str << "(";
+         for (auto pl : _drivingPins) {
+            if (!first)
+               str << " || ";
+            str << "W_" << pl.toString() << " === 0";
+            first = false;
+         }
+         str << ") ? 0 : " << defaultValue << ";";
+         str << endl;
+      }
    }
 }
 
@@ -97,13 +159,20 @@ string VerilogWire::getVerilogPortBinding(const PinLocation& pin) const {
 }
 
 void VerilogWire::dumpOn(std::ostream& str) const {
-   str << "Driving Pins:" << endl;
+   str << "Verilog Wire:" << endl;
+   str << "  Driving Pins:" << endl;
    for (auto p : _drivingPins) {
-      cout << " " << p.toString() << endl;
+      cout << "    " << p.toString() << endl;
    }
-   str << "Driven Pins:" << endl;
+   str << "  Driven Pins:" << endl;
    for (auto p : _drivenPins) {
-      cout << " " << p.toString() << endl;
+      cout << "    " << p.toString() << endl;
+   }
+   if (!_passivePins.empty()) {
+      str << "  Passive Pins:" << endl;
+      for (auto p : _passivePins) {
+         cout << "    " << p.toString() << endl;
+      }
    }
 }
 

@@ -23,6 +23,12 @@ Card& Machine::getCard(const PlugLocation& loc) {
     return _cards.at(loc);
 }
 
+const Card& Machine::getCardConst(const PlugLocation& loc) const {
+    if (_cards.find(loc) == _cards.end()) 
+        throw string("No card defined at location " + loc.toString());
+    return _cards.at(loc);
+}
+
 Card& Machine::getOrCreateCard(const CardMeta& meta, const PlugLocation loc)  {
     // If the slot is open then create a card and plug it in
     if (_cards.find(loc) == _cards.end()) 
@@ -37,6 +43,11 @@ Card& Machine::getOrCreateCard(const CardMeta& meta, const PlugLocation loc)  {
 Pin& Machine::getPin(const PinLocation& loc) {
     Card& card = getCard(loc.getPlugLocation());
     return card.getPin(loc.getPinId());
+}
+
+const Pin& Machine::getPinConst(const PinLocation& loc) const {
+    const Card& card = getCardConst(loc.getPlugLocation());
+    return card.getPinConst(loc.getPinId());
 }
 
 void Machine::dumpOn(std::ostream& str) const {

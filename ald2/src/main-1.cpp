@@ -11,7 +11,7 @@
 #include "yaml-cpp/yaml.h"
 
 #include "LogicDiagram.h"
-#include "Components.h"
+#include "Card.h"
 #include "Machine.h"
 #include "Util.h"
 

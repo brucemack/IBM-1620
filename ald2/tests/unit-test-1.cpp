@@ -100,8 +100,8 @@ int test_2() {
 
     // Make some metadata for a few cards
     static map<string, PinMeta> pins_aaaa = { 
-        // This pin is enabled for multi-driving
-        { string("O"), PinMeta(string("O"), PinType:: OUTPUT, DriveType::S0Z) },
+        // This pin is enabled for multi-driving (active low, no pull up)
+        { string("O"), PinMeta(string("O"), PinType:: OUTPUT, DriveType::AL) },
         { string("O2"), PinMeta(string("O2"), PinType:: OUTPUT) },
     };
     CardMeta cardMeta_aaaa("AAAA", "Card AAAA", pins_aaaa);
@@ -152,7 +152,7 @@ int test_2() {
             return w.isConnectedToPin(pl0);
         });
         assert(it0 != wires.end());
-        assert(it0->isMultiDriver());
+        assert(!it0->isMultiDriver());
         // Test the driver pin
         assert(it0->getVerilogPortBinding(c0.getPin("O2").getLocation()) == "W_0000_0000_O2");
         assert(it0->getVerilogPortBinding(c3.getPin("I").getLocation()) == "W_0000_0000_O2");
