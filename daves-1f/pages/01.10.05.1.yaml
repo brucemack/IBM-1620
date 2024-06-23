@@ -1,0 +1,143 @@
+# IBM-1620 Logic Reproduction Project
+# COPYRIGHT (C) 2024 - Bruce MacKinnon
+
+part: 2128951
+title: "CLOCK OSC + CONTROL"
+num: 01.10.05.1 
+pdf: 86
+
+blocks:
+
+  - gate: 01BA
+    loc: 1B17
+    typ: TAG-
+    cir: 01
+    coo: 2C
+    inp:
+      B: [ "-S HOLD TR P1" ]
+      D: [ "+S RUN TR P1" ]
+  - gate: 01AA
+    loc: 1GB1
+    typ: AFR-
+    cir: 02
+    coo: 3C
+    inp:
+      E: [ 2C.G ]
+  - gate: 01BA
+    loc: 1B16
+    typ: TAH-
+    cir: 01
+    coo: 3E
+    inp:
+      A: [ 2C.G ]
+      B: [ "+S NOT C 3 P" ]
+      K: [ "+S C 4 P" ]
+  - gate: 01BA
+    loc: 1H07
+    typ: CD--
+    cir: 03
+    coo: 3H
+    inp:
+      P: [ "+S C 4 P" ]
+      Q: [ 2C.G ]
+      R: [ "+S NOT C 3 P" ]
+  - gate: 01BA
+    loc: 1B17
+    typ: TAG-
+    cir: 02 
+    coo: 4B
+    inp:
+      H: [ 5G.B ]
+  - gate: 01BA
+    loc: 1B17
+    typ: TAG-
+    cir: 03 
+    coo: 4D
+    inp:
+      F: [ 5F.P ]
+  - gate: 01BA
+    loc: 1G23
+    typ: DFD-
+    cir: 02
+    coo: 4E
+    inp:
+      P: [ 4B.PL ]
+      Q: [ 3E.E ]
+      L: [ "ZERO" ]
+    warn: "Pin L is tied to M=-12V.  This is strange, card being used as AND gate."
+
+  - gate: 01BA
+    loc: 1A15
+    typ: TAF-
+    cir: 01
+    coo: 4F
+    note: "Master oscillator (1 MHz)"
+
+  - gate: 01BA
+    loc: 1D02
+    typ: MX--
+    cir: 03
+    coo: 4H
+    inp:
+      E: [ 3H.D ]
+
+  - note: "Flip-flop for creating two phases of master clock"
+    gate: 01BA
+    loc: 1A16
+    typ: TAJ-
+    cir: 01
+    coo: 5F
+    inp:
+      R: [ 4E.C ]
+      Q: [ 4F.D, 4F.C ]
+      C: [ "-S MANUAL RESET P6" ]
+  - note: "Flip-flop for creating two phases of master clock"
+    gate: 01BA
+    loc: 1A16
+    typ: TAJ-
+    cir: 02
+    coo: 5G
+    inp:
+      A: [ 5G.B ]
+      D: [ 4F.D, 4F.C ]
+  - gate: 01DA
+    loc: 1B17
+    typ: MX--
+    cir: 01
+    coo: 5H
+    inp:
+      B: [ 4H.C ]
+      D: [ "-S RUN P1"]
+  - note: "Clock driver."
+    warn: "Ignored the G input"
+    gate: 01BA
+    loc: 1B15
+    typ: TFC-
+    cir: 01
+    coo: 6B
+    inp:
+      K: [ 4B.PL ]
+  - note: "Clock driver."
+    warn: "Ignored the H input"
+    gate: 01BA
+    loc: 1B15
+    typ: TFC-
+    cir: 04
+    coo: 6D
+    inp:
+      F: [ 4D.C ]
+
+aliases:
+  - name: "+S CLOCK DR A"
+    inp: [ 6B.LR ]
+  - name: "CE LAMP 1 CLOCK ON"
+    inp: [ 3C.F ]
+  - name: "+S CLOCK DR B"
+    inp: [ 6D.A ]
+  - name: "-S CLOCK OFF"
+    inp: [ 3E.E ]
+  - name: "+S CLOCK ON OR RUN"
+    inp: [ 5H.G ]
+  - name: "+S CLOCK OFF"
+    inp: [ 4H.C ]
+    

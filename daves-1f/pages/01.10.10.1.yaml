@@ -1,0 +1,82 @@
+# IBM-1620 Logic Reproduction Project
+# COPYRIGHT (C) 2024 - Bruce MacKinnon
+
+part: 2128956
+title: "CLOCK C9 C10"
+num: 01.10.10.1 
+ec: 404750C
+notes: "Part of cascading clock registers"
+
+blocks:
+
+  - note: "Input chained from C8"
+    gate: 01BA
+    loc: 1B14
+    typ: TAG-
+    cir: 01
+    coo: 3B
+    inp:
+      B: [ "+S C 8 P" ]
+      D: [ "+S CLOCK DR B" ]
+
+  - note: "Input chained from C8"
+    gate: 01BA
+    loc: 1B14
+    typ: TAG-
+    cir: 02
+    coo: 3C
+    inp:
+      A: [ "+S CLOCK DR B" ]
+      H: [ "+S NOT C 8 P" ]
+
+  - note: "Input chained from C9"
+    gate: 01BA
+    loc: 1B14
+    typ: TAG-
+    cir: 03
+    coo: 3F
+    inp:
+      E: [ 4B.E ]
+      F: [ "+S CLOCK DR A" ]
+
+  - note: "Input chained from C9"
+    gate: 01BA
+    loc: 1B14
+    typ: TAG-
+    cir: 04
+    coo: 3G
+    inp:
+      Q: [ "+S CLOCK DR A" ]
+      R: [ 4B.D ]
+
+  - note: "C9"
+    gate: 01BA
+    loc: 1A14
+    typ: TCZ-
+    cir: 02
+    coo: 4B
+    inp:
+      A: [ 3B.G ]
+      G: [ "-S MANUAL RESET P3" ]
+      H: [ 3C.PL ]
+
+  - note: "C10"
+    gate: 01BA
+    loc: 1A14
+    typ: TCZ-
+    cir: 01
+    coo: 4F
+    inp:
+      K: [ 3F.C ]
+      L: [ "-S MANUAL RESET P3" ]
+      Q: [ 3G.K ]
+
+aliases:
+  - name: "+S C 9 P"
+    inp: [ 4B.E ]
+  - name: "+S NOT C 9 P"
+    inp: [ 4B.D ]
+  - name: "+S C 10 P"
+    inp: [ 4F.B ]
+  - name: "+S NOT C 10 P"
+    inp: [ 4F.C ]

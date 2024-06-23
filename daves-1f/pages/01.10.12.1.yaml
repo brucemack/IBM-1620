@@ -1,0 +1,172 @@
+# IBM-1620 Logic Reproduction Project
+# COPYRIGHT (C) 2024 - Bruce MacKinnon
+
+part: 2153522
+title: "TIMING SAMPLE GENERATION A/B"
+num: 01.10.12.1 
+pdf: 91
+notes: "Part of cascading clock registers"
+capture: "By hand on 16-June-2024"
+
+blocks:
+
+  - gate: 01BA
+    loc: 1F22
+    typ: MX--
+    cir: 03
+    coo: 2B
+    inp:
+      E: [ "-S CE SW 10 REPEAT CYC" ]
+      F: [ "-S DA TR" ]
+
+  - gate: 01BA
+    loc: 1A18
+    typ: TAL-
+    cir: 01
+    coo: 2C
+    inp:
+      C: [ 3B.EC ]
+      B: [ "+S C 7 P" ]
+      E: [ "+S C 7 P" ]
+
+  - gate: 01BA
+    loc: 1A19
+    typ: TAJ-
+    cir: 01
+    coo: 2D
+    inp:
+      R: [ 2D.P ]
+      Q: [ 2C.D ]
+      C: [ "-S MANUAL RESET P6" ]
+
+  - gate: 01BA
+    loc: 1A19
+    typ: TAJ-
+    cir: 02
+    coo: 2E
+    inp:
+      A: [ 2E.B ]
+      D: [ 2C.D ]
+  
+  - gate: 01BA
+    loc: 1K01
+    typ: MH--
+    cir: 02
+    coo: 3B
+    inp:
+      P: [ 2B.C, "+S FREEZE A/B FILE EXTENDER" ]
+
+  - gate: 01BA
+    loc: 1K05
+    typ: TAG-
+    cir: 02
+    coo: 3D
+    inp: 
+      A: [ 2E.B ]      
+
+  - gate: 01BA
+    loc: 1C15
+    typ: TFC-
+    cir: 02
+    coo: 3E
+    inp: 
+      PQ: [ 2D.P ]
+
+  - gate: 01BA
+    loc: 1B19
+    typ: CEYB
+    cir: 03
+    coo: 4C
+    inp:
+      F: [ 4D.E ]
+
+  - gate: 01BA
+    loc: 1B20
+    typ: TAH-
+    cir: 01
+    coo: 4D
+    inp: 
+      A: [ 3D.PL ]
+      B: [ "+S NOT C 4 P" ]
+      K: [ "+S C 6 P" ]
+
+  - gate: 01BA
+    loc: 1B20
+    typ: TAH-
+    cir: 02
+    coo: 4F
+    inp:
+      F: [ "+S NOT C 4 P" ]
+      G: [ "+S C 6 P" ]
+      H: [ 3E.D ]      
+  
+  - gate: 01BA
+    loc: 1E20
+    typ: AFR-
+    cir: 04
+    coo: 4G
+    inp:
+      R: [ 3E.D ]
+
+  - gate: 01BA
+    loc: 1B19
+    typ: CEYB
+    cir: 01
+    coo: 4H
+    inp: 
+      B: [ 4F.CL ]      
+
+  - gate: 01BA
+    loc: 1B18
+    typ: TFC-
+    cir: 01
+    coo: 5A
+    inp:
+      KG: [ 4D.C ]
+
+  - gate: 01BA
+    loc: 1B18
+    typ: TFC-
+    cir: 02
+    coo: 5C
+    inp: 
+      PQ: [ 4C.H ]
+
+  - gate: 01BA
+    loc: 1B18
+    typ: TFC-
+    cir: 03
+    coo: 5F
+    inp: 
+      B: [ 4F.CL ]      
+
+  - gate: 01BA
+    loc: 1B18
+    typ: TFC-
+    cir: 04
+    coo: 5H
+    inp:
+      FH: [ 4H.G ]
+
+aliases:
+  - name: "+S A ADV W6 D2 P1"    
+    inp: [ 5A.LR ]
+  - name: "-S CYCLE REPEAT"
+    inp: [ "-S CE SW 10 REPEAT CYC" ]
+  - name: "+S A ADV W6 D2 P2"
+    inp: [ 5C.D ]
+  - name: "-S A ADV W6 D2 P2"
+    inp: [ 4C.H ]
+  - name: "+S B TRIG P"
+    inp: [ 3E.D ]
+  - name: "+S A TRIG P"
+    inp: [ 3D.PL ]
+  - name: "A ADV LAMP 18"
+    inp: [ 4G.K ]
+  - name: "+S B ADV W6 D2 P1"
+    inp: [ 5F.EC ]
+  - name: "-S B ADV W6 D2"
+    inp: [ 4H.G ]
+  - name: "+S B ADV W6 D2 P2"
+    inp: [ 5H.A ]
+

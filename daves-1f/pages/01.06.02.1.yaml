@@ -1,0 +1,42 @@
+# IBM-1620 Logic Reproduction Project
+# COPYRIGHT (C) 2024 - Bruce MacKinnon
+
+part: 2128940
+ec: 404750C
+title: CONSOLE CONTROL MANUAL RESET
+num: 01.06.02.1
+
+blocks:
+  - gate: 01BA
+    loc: 2H17
+    typ: CEYB
+    cir: 03
+    coo: 4B
+    inp:
+      F: [ "-S MANUAL RESET P11" ]
+
+  - gate: 01BA
+    loc: 2G05
+    typ: CEYB
+    cir: 01
+    coo: 4D
+    inp:
+      B: [ "-S MANUAL RESET P11" ]
+
+  - gate: 01BA
+    loc: 1C16
+    typ: CEYB
+    cir: 01
+    coo: 4F
+    inp:
+      B: [ "-S MANUAL RESET P11" ]
+
+aliases:
+
+  - name: "-S MANUAL RESET P4"
+    inp: [ 4B.H ]
+  - name: "-S MANUAL RESET P5"
+    inp: [ 4D.G ]
+  - name: "-S MANUAL RESET P6"
+    inp: [ 4F.G ]
+

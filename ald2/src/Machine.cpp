@@ -126,6 +126,11 @@ void Machine::generateVerilog(const Machine& machine, ostream& str) {
 
         str << "    // Card " << card.getMeta().getType() + " at location " + card.getLocation().toString() 
             + " - " + card.getMeta().getDesc() << endl;
+        // Display page numbers
+        str << "    // (ALD Pages: ";
+        for (string p : card.getPageReferences())
+            str << p << " ";
+        str << ")" << endl;
 
         str << "    SMS_CARD_";
         str << card.getMeta().getType();

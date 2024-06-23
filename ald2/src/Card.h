@@ -43,6 +43,8 @@ public:
 
     void addPageReference(const std::string& pageRef) { _pageRefs.push_back(pageRef); }
 
+    std::vector<std::string> getPageReferences() const { return _pageRefs; }
+
 private:
 
     const CardMeta& _meta;

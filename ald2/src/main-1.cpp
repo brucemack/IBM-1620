@@ -243,12 +243,12 @@ static void generateSpice(const Machine& machine, const unordered_map<PinLocatio
 int main(int, const char**) {
 
     string baseDir = "/home/bruce/IBM1620/hardware";
-    //string outDir = baseDir + "/sms-cards/tests";
-    //string aldBaseDir = "../../daves-1f/pages";
-    ///string pagesFile = "core-pages.yaml";
-    string outDir = ".";
-    string aldBaseDir = "../tests";
-    string pagesFile = "dot-or-test-1-pages.yaml";
+    string outDir = baseDir + "/sms-cards/tests";
+    string aldBaseDir = "../../daves-1f/pages";
+    string pagesFile = "core-pages.yaml";
+    //string outDir = ".";
+    //string aldBaseDir = "../tests";
+    //string pagesFile = "dot-or-test-1-pages.yaml";
 
     // Load the card metadata
     map<string, unique_ptr<CardMeta>> cardMeta;   
