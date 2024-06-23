@@ -17,7 +17,7 @@ blocks:
       B: [ "-S HOLD TR P1" ]
       D: [ "+S RUN TR P1" ]
   - gate: 01AA
-    loc: 1GB1
+    loc: 1G01
     typ: AFR-
     cir: 02
     coo: 3C

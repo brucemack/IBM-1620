@@ -22,25 +22,27 @@ blocks:
 
 # ------------------------------------------------------------------------------------------
 # Page 01.06.01.1
-  - gate: ZZZZ
-    loc: 9993
-    typ: ONE
-    cir: 01
-    coo: 1A
-    out: 
-      A: [ "-S PWR OFF RESET" ]
+#  - gate: ZZZZ
+#    loc: 9993
+#    typ: ONE
+#    cir: 01
+#    coo: 1A
+#    out: 
+#      A: [ "-S PWR OFF RESET" ]
   - gate: ZZZZ
     loc: 9994
     typ: ZERO
     cir: 01
     coo: 1A
     out: 
-      A: [ "+S CLOCK  OFF", "-S RUN P1" ]
+      A: [ "-S RUN P1" ]
   - gate: ZZZZ
     loc: 9992
     typ: RST
     cir: 01
     coo: 1C
     out:
+      # Active low pin
+      A: [ "-S PWR OFF RESET" ]
       # Active high pin
       B: [ "+S MANUAL RESET" ]

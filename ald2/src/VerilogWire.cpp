@@ -26,57 +26,100 @@ void VerilogWire::addConnection(const Pin& pin) {
       _drivenPins.push_back(pin.getLocation());
    else if (pin.getMeta().getType() == PinType::OUTPUT)
       _drivingPins.push_back(pin.getLocation());
-   else if (pin.getMeta().getType() == PinType::PASSIVE)
+   else if (pin.getMeta().getType() == PinType::PASSIVE) {
+      if (!_passivePins.empty())
+         throw string("addConnection() with multiple passive pins " + pin.getLocation().toString());
       _passivePins.push_back(pin.getLocation());
-   else {
+   } else {
       throw string("addConnection() on invalid pin type " + pin.getLocation().toString());
    }
 }
 
-void VerilogWire::synthesizeVerilog(ostream& str) const {
+void VerilogWire::synthesizeVerilog(ostream& str) {
+
    // No drivers is an error
-   if (_drivingPins.empty()) {
-      dumpOn(cout);
-      throw string("No driving pins on wire");
-   }
-   // If there's only one driver then things are easy
-   else if (_drivingPins.size() == 1) {
-      // The whole net is named by the output
+   if (_drivingPins.empty()) 
+      throw string("No driving pins on wire: " + getConnectedPinsString());
+
+   // If there's only one driver and no passives then things are easy:
+   // The whole net is named by the output
+   else if (_drivingPins.size() == 1 && _passivePins.size() == 0) {
       auto pl = _drivingPins.at(0);
-      str << "    wire W_" << pl.toString() << ";" << endl;
+      _drivenName = "W_" + pl.toString();
+      str << "    wire W_" << _drivenName << ";" << endl;
    }
-   // Multi-drivers
+   // Everything else is more complicated because it involves combinations
+   // of drivers and passives.
    else {
-      // Create a wire for each driving pin
+
+      // Figure out what we've got on the line
+      bool activePullUp = false;
+      bool activePullDown = false;
+      bool passivePullUp = false;
+      bool passivePullDown = false;
+
+      // Consider the drivers first
       for (auto pl : _drivingPins) {
+
+         // Create a wire for each driving pin
          str << "    wire W_" << pl.toString() << ";" << endl;
+
+         const DriveType dt = _machine.getPinConst(pl).getMeta().getDriveType();
+         if (dt == DriveType::AH || dt == DriveType::AH_PD) {
+            activePullUp = true;
+            if (dt == DriveType::AH_PD) {
+               passivePullDown = true;
+            }
+         }
+         if (dt == DriveType::AL || dt == DriveType::AL_PU) {
+            activePullDown = true;
+            if (dt == DriveType::AL_PU) {
+               passivePullUp = true;
+            }
+         }
       }
 
-      const DriveType dt = _machine.getPinConst(_drivingPins.at(0)).getMeta().getDriveType();
+      // Check to see what the passives are doing
+      for (auto pl : _passivePins) {
+         const TieType tt = _machine.getPinConst(pl).getMeta().getTieType();
+         //cout << "  Passive check on " << pl << " " << tt << endl;
+         if (tt == TieType::TIE_GND || tt == TieType::TIE_VP12)
+            passivePullUp = true;
+         else if (tt == TieType::TIE_VN12)
+            passivePullDown = true;
+      }
 
-      // Look for the case where the drivers are active high
-      if (dt == DriveType::AH || dt == DriveType::AH_PD) {  
-         // Check compatibility, and determine if a pull down exists anywhere
-         // in the drivers.
-         bool hasPullDown = false;
-         for (const PinLocation& pl : _drivingPins) {
-            const DriveType dt  = _machine.getPinConst(pl).getMeta().getDriveType();
-            if (!(dt == DriveType::AH || dt == DriveType::AH_PD)) {
-               throw string("Driving pin compatibility problem: " + pl.toString());
-            }
-            if (dt == DriveType::AH_PD)
-               hasPullDown = true;
-         }
+      // Look for problem combinations
+      if (activePullDown && activePullUp)
+         throw string("Conflicting drive types on wire: " + getConnectedPinsString());
+      if (activePullUp && passivePullUp)
+         throw string("Active and passive pull up on wire: " + getConnectedPinsString());
+      if (activePullDown && passivePullDown)
+         throw string("Active and passive pull down on wire: " + getConnectedPinsString());
+      // This case is a problem because there is nothing to pull down.
+      // In the oppose case (activePullDown) we have the benefit of the input pull up
+      if (activePullUp && !passivePullDown)
+         throw string("Active pull up with no pull down on wire: " + getConnectedPinsString());
+
+      // Synthesize a Verilog combination of the drivers/passives.
+
+      // The pull up case looks for any 1's driving the wire
+      if (activePullUp) {
          // Generate a suitable net. Any of the drivers can pull the net high with a 1.
          // The default value depends on whether there is a pull down amongst the
          // driving nets.
          string defaultValue;
-         if (!hasPullDown) 
+         string desc;
+         if (!passivePullDown) {
             defaultValue = "1'bz";
-         else
+            desc = "active high, no pull down";
+         } else {
             defaultValue = "0";
-         str << "    // Automatically generated DOT-OR (active high)" << endl;
-         str << "    wire W_DOT_" << to_string(_id) << " = ";
+            desc = "active high with pull down";
+         }
+         _drivenName = "W_DOT_" + to_string(_id);
+         str << "    // Automatically generated DOT-OR (" << desc << ")" << endl;
+         str << "    wire " << _drivenName << " = ";
          bool first = true;
          str << "(";
          for (auto pl : _drivingPins) {
@@ -88,26 +131,21 @@ void VerilogWire::synthesizeVerilog(ostream& str) const {
          str << ") ? 1 : " << defaultValue << ";";
          str << endl;
       }
-      else if (dt == DriveType::AL || dt == DriveType::AL_PU) {
-         // Check compatibility, and determine if a pull up exists anywhere in the drivers.
-         bool hasPullUp = false;
-         for (const PinLocation& pl : _drivingPins) {
-            const DriveType dt  = _machine.getPinConst(pl).getMeta().getDriveType();
-            if (!(dt == DriveType::AL || dt == DriveType::AL_PU)) {
-               throw string("Driving pin compatibility problem: " + pl.toString());
-            }
-            if (dt == DriveType::AL_PU)
-               hasPullUp = true;
-         }
+      else  {
          // Generate a suitable net. Any of the drivers can pull the net low with a 0.
          // The default value depends on whether there is a pull up amongst the
          // driving nets.
          string defaultValue;
-         if (!hasPullUp) 
+         string desc;
+         if (!passivePullUp) {
             defaultValue = "1'bz";
-         else
+            desc = "active low, no pull up";
+         } else {
             defaultValue = "1";
-         str << "    // Automatically generated DOT-OR (active low)" << endl;
+            desc = "active low with pull up";
+         }
+         _drivenName = "W_DOT_" + to_string(_id);
+         str << "    // Automatically generated DOT-OR (" << desc << ")" << endl;
          str << "    wire W_DOT_" << to_string(_id) << " = ";
          bool first = true;
          str << "(";
@@ -128,34 +166,34 @@ bool VerilogWire::isConnectedToPin(const PinLocation& pl) const {
       std::find(begin(_drivenPins), end(_drivenPins), pl) != end(_drivenPins);
 }
 
+string VerilogWire::getConnectedPinsString() const {
+   string result;
+   for (PinLocation pl : getConnectedPins()) {
+      if (!result.empty())
+         result = result + " ";
+      result = result + pl.toString();
+   }
+   return result;
+}
+
 vector<PinLocation> VerilogWire::getConnectedPins() const  {
    vector<PinLocation> result;
    result.insert(end(result), begin(_drivingPins), end(_drivingPins));
    result.insert(end(result), begin(_drivenPins), end(_drivenPins));
+   result.insert(end(result), begin(_passivePins), end(_passivePins));
    return result;
 }
 
 string VerilogWire::getVerilogPortBinding(const PinLocation& pin) const {
-   string result;
-
-   if (isMultiDriver()) {
-      // In the multi-driver situation we tell the driving pins to connect
-      // to the pin-specific wires
-      if (std::find(begin(_drivingPins), end(_drivingPins), pin) != end(_drivingPins)) {
-         return "W_" + pin.toString();
-      }
-      // Everything else connects to the synthesized DOT-OR net.
-      else {
-         return "W_DOT_" + to_string(_id);
-      }
+   // Driver pins always connect to their own wire
+   if (std::find(begin(_drivingPins), end(_drivingPins), pin) != end(_drivingPins)) {
+      return "W_" + pin.toString();
    }
+   // Driven pins connect to something that is a function of whether extra logic
+   // needed to be added to the net.
    else {
-      // In a single-driver situation everything on the wire is connected to 
-      // the same single driving pin
-      auto pl = _drivingPins.at(0);
-      return "W_" + pl.toString();
+      return _drivenName;
    }
-   return result;
 }
 
 void VerilogWire::dumpOn(std::ostream& str) const {

@@ -24,7 +24,7 @@ enum PinType {
 };
 
 enum DriveType {
-    NONE,
+    NO_DRIVE,
     // Active high, no pull-down (open collector)
     AH,
     // Active high, pull-down
@@ -35,23 +35,35 @@ enum DriveType {
     AL_PU
 };
 
+enum TieType {
+    TIE_NONE,
+    TIE_GND,
+    TIE_VP12,
+    TIE_VN12
+};
+
 // TODO: static member - conversion operator??
 PinType str2PinType(const std::string& str);
 DriveType str2DriveType(const std::string& str);
+TieType str2TieType(const std::string& str);
 
 class PinMeta {
 public: 
 
-    PinMeta(const std::string& i, PinType t, DriveType dt = DriveType::AH_PD) 
-        : _id(i), _type(t), _driveType(dt) { }
+    PinMeta(const std::string& i, PinType t, 
+        DriveType dt = DriveType::AH_PD, TieType tt = TieType::TIE_NONE) 
+        : _id(i), _type(t), _driveType(dt), _tieType(tt) { }
     PinMeta(const PinMeta& other) 
-        : _id(other._id), _type(other._type), _driveType(other._driveType) { }
+        : _id(other._id), _type(other._type), 
+          _driveType(other._driveType), _tieType(other._tieType) { }
 
     std::string getId() const { return _id; }
 
     PinType getType() const { return _type; }
 
     DriveType getDriveType() const { return _driveType; }
+
+    TieType getTieType() const { return _tieType; }
 
     /**
      * @returns Indication of whether this pin is used for logic signal, as opposed
@@ -64,6 +76,7 @@ private:
     std::string _id;
     PinType _type;
     DriveType _driveType;
+    TieType _tieType;
 };
 
 #endif

@@ -63,7 +63,13 @@ unique_ptr<CardMeta> loadCardMeta(const string& baseDir, const string& code) {
         string driveType = "AH_PD";
         if (pin["drivetype"])
             driveType = pin["drivetype"].as<std::string>();
-        pinMeta.insert_or_assign(pinId, PinMeta(pinId, str2PinType(type), str2DriveType(driveType)));
+        // Default tie
+        string tieType = "NONE";
+        if (type == "PASSIVE" && pin["tie"])
+            tieType = pin["tie"].as<std::string>();
+        pinMeta.insert_or_assign(pinId, PinMeta(pinId, 
+            str2PinType(type), str2DriveType(driveType), str2TieType(tieType)));
+
     }
     return make_unique<CardMeta>(code, c["description"].as<string>(), pinMeta);
 }

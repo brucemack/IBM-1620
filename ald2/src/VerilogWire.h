@@ -39,10 +39,12 @@ public:
 
     std::vector<PinLocation> getConnectedPins() const;
 
+    std::string getConnectedPinsString() const;
+
     /**
      * Synthesizes any Verilog statements that go with this wire.
     */
-    void synthesizeVerilog(std::ostream& str) const;
+    void synthesizeVerilog(std::ostream& str);
 
     /**
      * Returns the string representation of what the designated
@@ -63,6 +65,11 @@ private:
     std::vector<PinLocation> _drivenPins;
     std::vector<PinLocation> _drivingPins;
     std::vector<PinLocation> _passivePins;
+    // This is the name of the wire that all of the DRIVEN pins 
+    // should be connected to.  This depends on whether any 
+    // special logical adjustments are made due to multi-drivers
+    // and/or passives on the wire.
+    std::string _drivenName;
 };
 
 #endif

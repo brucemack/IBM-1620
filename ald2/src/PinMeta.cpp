@@ -33,3 +33,16 @@ DriveType str2DriveType(const string& str) {
     else
         throw string("Unrecognized drive type " + str);
 }
+
+TieType str2TieType(const string& str) {
+    if (str == "NONE") 
+        return TieType::TIE_NONE;
+    else if (str == "GND") 
+        return TieType::TIE_GND;
+    else if (str == "VP12") 
+        return TieType::TIE_VP12;
+    else if (str == "VN12") 
+        return TieType::TIE_VN12;
+    else
+        throw string("Unrecognized tie type " + str);
+}

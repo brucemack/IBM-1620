@@ -106,7 +106,7 @@ void Machine::generateVerilog(const Machine& machine, ostream& str) {
     // Generate all Verilog wires
     vector<VerilogWire> wires = Machine::generateVerilogWires(machine);
     // Dump the wires
-    for (const VerilogWire& wire : wires)
+    for (VerilogWire& wire : wires)
         wire.synthesizeVerilog(str);
     
     // Make a map from pin location to wire to accelerate the cross-connect process
