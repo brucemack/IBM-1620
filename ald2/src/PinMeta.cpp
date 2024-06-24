@@ -17,6 +17,8 @@ PinType str2PinType(const string& str) {
         return PinType::VP12;
     else if (str == "VN12")
         return PinType::VN12;
+    else if (str == "SYSCLOCK")
+        return PinType::SYSCLOCK;
     else 
         throw string("Unrecognized pin type: " + str);
 }

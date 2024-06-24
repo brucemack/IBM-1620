@@ -1,0 +1,28 @@
+part: 1
+title: "Test Controls"
+num: 00.00.00.0 
+pdf: None
+
+blocks:
+  - gate: ZZZZ
+    loc: 9991
+    typ: ONE
+    cir: 01
+    coo: 1A
+    out: 
+      A: [ "-S HOLD TR P1", "+S RUN TR P1" ]
+  - gate: ZZZZ
+    loc: 9992
+    typ: HIZ
+    cir: 01
+    coo: 1A
+    out: 
+      A: [ "-S MANUAL RESET P6" ]
+  - gate: ZZZZ
+    loc: 9990
+    typ: ZERO
+    cir: 01
+    coo: 1A
+    out: 
+      A: [ "+S NOT C 3 P", "+S C 4 P", "-S RUN P1", "ZERO" ]
+

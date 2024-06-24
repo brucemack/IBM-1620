@@ -100,8 +100,13 @@ void Machine::generateVerilog(const Machine& machine, ostream& str) {
     str << "// Copyright (c) 2024 - Bruce MacKinnon" << endl;
     str << "// MACHINE-GENERATED VERILOG" << endl;
     str << endl;
-    str << "`timescale 1ns/1ns" << endl;
+    //str << "`timescale 1ns/1ns" << endl;
     str << "module ibm1620_core;" << endl;
+    str << "  reg SYSCLOCK;" << endl;
+    str << "  always begin" << endl;
+    str << "    #1; SYSCLOCK <= ~SYSCLOCK;" << endl;
+    str << "  end" << endl;
+    str << endl;
 
     // Generate all Verilog wires
     vector<VerilogWire> wires = Machine::generateVerilogWires(machine);
@@ -142,7 +147,13 @@ void Machine::generateVerilog(const Machine& machine, ostream& str) {
         bool first = true;
         for (string pinName : card.getMeta().getSignalPinNames()) {
             const Pin& pin = card.getPinConst(pinName);
-            if (pin.isConnected()) {
+            if (pin.getMeta().getType() == PinType::SYSCLOCK) {
+                if (!first) 
+                    str << ", ";
+                str << "." << toLower(pinName) << "(SYSCLOCK)";
+                first = false;
+            }
+            else if (pin.isConnected()) {
                 if (!first) 
                     str << ", ";
                 str << "." << toLower(pinName) << "(";
@@ -163,9 +174,10 @@ void Machine::generateVerilog(const Machine& machine, ostream& str) {
 
     str << endl;
     str << "    initial begin" << endl;
+    str << "        SYSCLOCK <= 1;" << endl;
     str << "        $dumpfile(\"wave.vcd\");" << endl;
     str << "        $dumpvars(0, ibm1620_core);" << endl;
-    str << "        #100000 $stop;" << endl;
+    str << "        #500 $stop;" << endl;
     str << "    end" << endl;
     str << endl;
     str << "endmodule;" << endl;

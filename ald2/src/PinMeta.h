@@ -20,7 +20,8 @@ enum PinType {
     NC,
     GND,
     VP12,
-    VN12
+    VN12,
+    SYSCLOCK
 };
 
 enum DriveType {
@@ -69,7 +70,8 @@ public:
      * @returns Indication of whether this pin is used for logic signal, as opposed
      * to power/ground/passive/etc.
     */
-    bool isLogicSignal() const { return _type == PinType::INPUT || _type == PinType::OUTPUT; }
+    bool isLogicSignal() const { return _type == PinType::INPUT || _type == PinType::OUTPUT || 
+        _type == PinType::SYSCLOCK; }
 
 private:
 
