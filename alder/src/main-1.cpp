@@ -85,29 +85,63 @@ vector<LogicDiagram::Page> loadAldPages(const vector<string> fns) {
     return result;
 }
 
+enum AliasTargetType {
+    PIN,
+    REFERENCE
+};
+
+class AliasTarget {
+public:
+    AliasTargetType type;
+    PinLocation loc;
+    string refName;
+};
+
+static vector<PinLocation> resolveNamedSignalToPins(const map<string, vector<AliasTarget>>& namedSignals,
+    const string& startingSignal) {
+    vector<PinLocation> result;
+    if (namedSignals.count(startingSignal) == 0)
+        throw string("Signal name not defined: " + startingSignal);
+    for (const AliasTarget& target : namedSignals.at(startingSignal))
+        // If the target is a pin then add to the result list
+        if (target.type == AliasTargetType::PIN) 
+            result.push_back(target.loc);
+        // If the target is itself a reference then recurse to resolve 
+        else if (target.type == AliasTargetType::REFERENCE)
+            for (const PinLocation& pl : resolveNamedSignalToPins(namedSignals, target.refName))
+                result.push_back(pl);
+        else
+            throw string("Unrecognized alias type");
+    return result;
+}
+
 void processAlds(const vector<LogicDiagram::Page>& pages, 
     const map<string, unique_ptr<CardMeta>>& cardMeta, 
-    Machine& machine, 
-    map<string, Pin&>& namedSignals) {
+    Machine& machine) {
+
+    // These maps are used to manage signal naming and cross-sheet references
+    map<string, vector<AliasTarget>> namedSignals;
 
     // PASS #1
     // - Register all cards
     // - Record aliases for all output pins 
     // - Record aliases for all named nets that are page outputs
     for (const LogicDiagram::Page& page : pages) {
+        // Process each logic block on the page
         for (const LogicDiagram::Block& block : page.blocks) {
 
-            // Register all of the cards mentioned on the pages
             if (cardMeta.find(block.typ) == cardMeta.end())
                 throw string("Invalid card type on page/block " + 
                     page.num + "/" + block.coo + " : " + block.typ);
             
             Card& card = machine.getOrCreateCard(*(cardMeta.at(block.typ).get()), 
                 { block.gate, block.loc });
+
             // Keep track of which pages we see the card defined
             card.addPageReference(page.num);
 
-            // Register signal names for outputs
+            // Register signal names for outputs for use in resolving 
+            // cross-references
             for (auto [outputPinId, driverRefList] : block.out) {
                 // Resolve the Pin
                 Pin& pin = card.getPin(outputPinId);
@@ -115,41 +149,51 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                 for (auto driverRef : driverRefList) {
                     // Only pay attention to outputs that use signal names
                     if (!isPinRef(driverRef)) {
-                        // Check for conflict
-                        if (namedSignals.find(driverRef) != namedSignals.end()) {
-                            if (!(namedSignals.at(driverRef) == pin)) {
-                                throw string("Conflicting signal name on page " + 
-                                    page.num + " :  " + driverRef);
-                            }
-                        } 
-                        // Register named signal
-                        else {
-                            namedSignals.emplace(driverRef, pin);
-                        }
+                        if (namedSignals.find(driverRef) == namedSignals.end()) 
+                            namedSignals.insert_or_assign(driverRef, vector<AliasTarget>());
+                        // Add this pin to the list of pins that are referenced
+                        namedSignals.at(driverRef).push_back(
+                            { AliasTargetType::PIN, pin.getLocation(), string() });
                     }
                 }
             }
         }
-        // Register all of the cross-page net aliases
+
+        // Register all of the cross-page net aliases for future use in cross-linking
         for (const LogicDiagram::Alias& alias : page.aliases) {
             for (auto driverRef : alias.inp) {                
                 if (isPinRef(driverRef)) {
-                    // REMEMBER: It's possible to mention multiple pins in one reference.
-                    for (LogicDiagram::BlockCooPin bp : LogicDiagram::parsePinRefs(driverRef)) {
-                        // Resolve the local block on this page
-                        const LogicDiagram::Block& block = page.getBlockByCoordinate(bp.coo);
-                        // Determine the card/pin
-                        Card& card = machine.getCard({ block.gate, block.loc});
-                        Pin& pin = card.getPin(bp.pinId);
-                        // Register the alias
-                        namedSignals.emplace(alias.name, pin);
+                    // REMEMBER: A signal alias can point to a combination of 
+                    // output pins and other signal aliases
+                    if (isPinRef(driverRef)) {
+                        // REMEMBER: It's possible to mention multiple pins in one reference.
+                        for (LogicDiagram::BlockCooPin bp : LogicDiagram::parsePinRefs(driverRef)) {
+                            // Resolve the local block on this page
+                            const LogicDiagram::Block& block = page.getBlockByCoordinate(bp.coo);
+                            // Determine the card/pin
+                            Card& card = machine.getCard({ block.gate, block.loc});
+                            Pin& pin = card.getPin(bp.pinId);
+                            if (namedSignals.find(driverRef) == namedSignals.end()) 
+                                namedSignals.insert_or_assign(driverRef, vector<AliasTarget>());
+                            // Add this pin to the list of pins that are referenced
+                            namedSignals.at(alias.name).push_back(
+                                { AliasTargetType::PIN, pin.getLocation(), string() });
+                        }
+                    }
+                    // This is the case where the alias points to another alias
+                    else {
+                        if (namedSignals.find(driverRef) == namedSignals.end()) 
+                            namedSignals.insert_or_assign(driverRef, vector<AliasTarget>());
+                        // Add this reference to the list of that are referenced
+                        namedSignals.at(alias.name).push_back(
+                            { AliasTargetType::REFERENCE, PinLocation(), driverRef });
                     }
                 }
             }
         }
     }
 
-    cout << "Linking" << endl;
+    cout << "Cross-Linking ..." << endl;
 
     // PASS #2
     // Go through each block and look at each input pin. Establish the linkage 
@@ -178,21 +222,20 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
                                     page.getBlockByCoordinate(driverBlockPin.coo);
                                 // Map the block to the card
                                 Card& driverCard = machine.getCard({ driverBlock.gate, driverBlock.loc });
-                                // Get the pin
+                                // Get the pin and connect it back to the driver
                                 Pin& driverPin = driverCard.getPin(driverBlockPin.pinId);
-                                // Make the connection back to the driver
                                 inputPin.connect(driverPin);
                                 driverPin.connect(inputPin);
                             }
                         }
                         else {
-                            // Find what block/pin the signal name points to
-                            if (namedSignals.find(driverRef) == namedSignals.end()) 
-                                throw string("Input reference to unknown signal: " + driverRef);
-                            // Get the pin
-                            Pin& driverPin = namedSignals.at(driverRef);
-                            inputPin.connect(driverPin);
-                            driverPin.connect(inputPin);
+                            // Find what block/pin the signal name points to, link each
+                            // pin.
+                            for (const PinLocation &pl : resolveNamedSignalToPins(namedSignals, driverRef)) {
+                                Pin& driverPin = machine.getPin(pl);
+                                inputPin.connect(driverPin);
+                                driverPin.connect(inputPin);
+                            }
                         }
                     }
                 }
@@ -286,9 +329,6 @@ int main(int, const char**) {
     // Read ALD and popular machine
     Machine machine;
 
-    // Named signals
-    map<string, Pin&> namedSignals;
-
     // Build the list of filenames
     vector<string> fns;
     {
@@ -303,17 +343,13 @@ int main(int, const char**) {
 
     try {
         vector<LogicDiagram::Page> pages = loadAldPages(fns);
-        processAlds(pages, cardMeta, machine, namedSignals);
+        processAlds(pages, cardMeta, machine);
         machine.dumpOn(cout);
     }
     catch (const string& ex) {
         cout << ex << endl;
         return -1;
     }
-
-    cout << "Named Signals:" << endl;
-    for (auto [key, value] : namedSignals)
-        cout << key << " : " << value.getLocation().toString() << endl;
 
     try {
         ofstream verilogFile(outDir + "/core.v",  std::ios::trunc);

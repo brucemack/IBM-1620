@@ -24,9 +24,9 @@ if (NOT yaml-cpp_POPULATED)
   add_subdirectory(${yaml-cpp_SOURCE_DIR} ${yaml-cpp_BINARY_DIR})
 endif()
 
-# ------ main-1 ---------------------------------------------------------------
+# ------ alder ---------------------------------------------------------------
 #
-add_executable(main-1
+add_executable(alder
   src/main-1.cpp
   src/Pin.cpp 
   src/PinMeta.cpp 
@@ -45,7 +45,7 @@ add_executable(main-1
   src/cards/CardRST.cpp
 )
 
-target_link_libraries(main-1 PUBLIC yaml-cpp::yaml-cpp) 
+target_link_libraries(alder PUBLIC yaml-cpp::yaml-cpp) 
 
 # ------ unit-test-1 -----------------------------------------------------------
 #

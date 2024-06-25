@@ -1,11 +1,10 @@
 # IBM-1620 Logic Reproduction Project
 # COPYRIGHT (C) 2024 - Bruce MacKinnon
 
-part: 2153522
+part: 2128957
 title: "TIMING SAMPLE GENERATION A/B"
+ec: 404750c
 num: 01.10.12.1 
-pdf: 91
-notes: "Part of cascading clock registers"
 capture: "By hand on 16-June-2024"
 
 blocks:
@@ -27,7 +26,6 @@ blocks:
     inp:
       C: [ 3B.EC ]
       B: [ "+S C 7 P" ]
-      E: [ "+S C 7 P" ]
 
   - gate: 01BA
     loc: 1A19
@@ -47,30 +45,58 @@ blocks:
     inp:
       A: [ 2E.B ]
       D: [ 2C.D ]
+
+  - gate: 01BA
+    loc: 1B19
+    typ: CEYB
+    cir: 04
+    coo: 2G
+    inp:
+      L: [ 2E.B ]
   
   - gate: 01BA
-    loc: 1K01
+    loc: 1B22
     typ: MH--
-    cir: 02
+    cir: 03
     coo: 3B
     inp:
-      P: [ 2B.C, "+S FREEZE A/B FILE EXTENDER" ]
+      B: [ 2B.C ]
 
   - gate: 01BA
-    loc: 1K05
-    typ: TAG-
+    loc: 1B19
+    typ: CEYB
     cir: 02
+    coo: 3C
+    inp:
+      C: [ 2D.P ]
+
+  - gate: 01BA
+    loc: 1B20
+    typ: TAH-
+    cir: 01
     coo: 3D
     inp: 
-      A: [ 2E.B ]      
+      A: [ 3C.PK ]      
+      B: [ "+S NOT C 4 P"]
+      K: [ "+S C 6 P" ]
 
   - gate: 01BA
-    loc: 1C15
-    typ: TFC-
+    loc: 1B20
+    typ: TAH-
     cir: 02
-    coo: 3E
+    coo: 3F
     inp: 
-      PQ: [ 2D.P ]
+      F: [ "+S NOT C 4 P" ]
+      G: [ "+S C 6 P" ]
+      H: [ 2G.E ]
+
+  - gate: 01BA
+    loc: 1E20
+    typ: AFR-
+    cir: 04
+    coo: 3G
+    inp: 
+      R: [ 2G.E ]
 
   - gate: 01BA
     loc: 1B19
@@ -78,35 +104,7 @@ blocks:
     cir: 03
     coo: 4C
     inp:
-      F: [ 4D.E ]
-
-  - gate: 01BA
-    loc: 1B20
-    typ: TAH-
-    cir: 01
-    coo: 4D
-    inp: 
-      A: [ 3D.PL ]
-      B: [ "+S NOT C 4 P" ]
-      K: [ "+S C 6 P" ]
-
-  - gate: 01BA
-    loc: 1B20
-    typ: TAH-
-    cir: 02
-    coo: 4F
-    inp:
-      F: [ "+S NOT C 4 P" ]
-      G: [ "+S C 6 P" ]
-      H: [ 3E.D ]      
-  
-  - gate: 01BA
-    loc: 1E20
-    typ: AFR-
-    cir: 04
-    coo: 4G
-    inp:
-      R: [ 3E.D ]
+      F: [ 3D.E ]
 
   - gate: 01BA
     loc: 1B19
@@ -114,7 +112,7 @@ blocks:
     cir: 01
     coo: 4H
     inp: 
-      B: [ 4F.CL ]      
+      B: [ 3F.CL ]      
 
   - gate: 01BA
     loc: 1B18
@@ -122,7 +120,7 @@ blocks:
     cir: 01
     coo: 5A
     inp:
-      KG: [ 4D.C ]
+      KG: [ 3D.E ]
 
   - gate: 01BA
     loc: 1B18
@@ -138,7 +136,7 @@ blocks:
     cir: 03
     coo: 5F
     inp: 
-      B: [ 4F.CL ]      
+      B: [ 3F.CL ]      
 
   - gate: 01BA
     loc: 1B18
@@ -157,16 +155,13 @@ aliases:
     inp: [ 5C.D ]
   - name: "-S A ADV W6 D2 P2"
     inp: [ 4C.H ]
-  - name: "+S B TRIG P"
-    inp: [ 3E.D ]
   - name: "+S A TRIG P"
-    inp: [ 3D.PL ]
-  - name: "A ADV LAMP 18"
-    inp: [ 4G.K ]
+    inp: [ 3C.PK ]
   - name: "+S B ADV W6 D2 P1"
     inp: [ 5F.EC ]
+  - name: "A ADV LAMP 18"
+    inp: [ 3G.K ]
   - name: "-S B ADV W6 D2"
     inp: [ 4H.G ]
   - name: "+S B ADV W6 D2 P2"
     inp: [ 5H.A ]
-

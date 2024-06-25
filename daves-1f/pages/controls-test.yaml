@@ -10,7 +10,7 @@ blocks:
     cir: 01
     coo: 1A
     out: 
-      A: [ "-S HOLD TR P1", "+S RUN TR P1" ]
+      A: [ "-S HOLD TR P1", "+S RUN TR P1", "-S CE SW 10 REPEAT CYC" ]
   - gate: ZZZZ
     loc: 9990
     typ: ZERO
@@ -26,3 +26,11 @@ blocks:
     out: 
       A: [ "-S PWR OFF RESET" ]
       
+# ----- For Page 01.10.12.1
+  - gate: ZZZZ
+    loc: 9994
+    typ: ONE
+    cir: 01
+    coo: 1A
+    out: 
+      A: [ "-S DA TR" ]
