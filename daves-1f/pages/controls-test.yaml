@@ -34,3 +34,17 @@ blocks:
     coo: 1A
     out: 
       A: [ "-S DA TR" ]
+  - gate: ZZZZ
+    loc: 9995
+    typ: IND
+    cir: 01
+    coo: 1A
+    inp:
+      A: [ "+S A ADV W6 D2 P2"]
+  - gate: ZZZZ
+    loc: 9996
+    typ: IND
+    cir: 01
+    coo: 1A
+    inp:
+      A: [ "+S B ADV W6 D2 P2"]

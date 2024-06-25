@@ -46,7 +46,7 @@ void VerilogWire::synthesizeVerilog(ostream& str) {
    else if (_drivingPins.size() == 1 && _passivePins.size() == 0) {
       auto pl = _drivingPins.at(0);
       _drivenName = "W_" + pl.toString();
-      str << "    wire W_" << _drivenName << ";" << endl;
+      str << "    wire " << _drivenName << ";" << endl;
    }
    // Everything else is more complicated because it involves combinations
    // of drivers and passives.

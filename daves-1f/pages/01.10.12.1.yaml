@@ -119,16 +119,18 @@ blocks:
     typ: TFC-
     cir: 01
     coo: 5A
+    warn: "Pin G connection is missing (speedup cap)"
     inp:
-      KG: [ 3D.E ]
+      K: [ 3D.E ]
 
   - gate: 01BA
     loc: 1B18
     typ: TFC-
     cir: 02
     coo: 5C
+    warn: "Pin Q connection is missing (speedup cap)"
     inp: 
-      PQ: [ 4C.H ]
+      P: [ 4C.H ]
 
   - gate: 01BA
     loc: 1B18
@@ -143,8 +145,9 @@ blocks:
     typ: TFC-
     cir: 04
     coo: 5H
+    warn: "Pin H connection is missing (speedup cap)"
     inp:
-      FH: [ 4H.G ]
+      F: [ 4H.G ]
 
 aliases:
   - name: "+S A ADV W6 D2 P1"    

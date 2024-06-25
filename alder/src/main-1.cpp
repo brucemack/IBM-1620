@@ -161,33 +161,31 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
 
         // Register all of the cross-page net aliases for future use in cross-linking
         for (const LogicDiagram::Alias& alias : page.aliases) {
+            if (namedSignals.find(alias.name) == namedSignals.end()) 
+                namedSignals.insert_or_assign(alias.name, vector<AliasTarget>());
             for (auto driverRef : alias.inp) {                
+                // REMEMBER: A signal alias can point to a combination of 
+                // output pins and other signal aliases
                 if (isPinRef(driverRef)) {
-                    // REMEMBER: A signal alias can point to a combination of 
-                    // output pins and other signal aliases
-                    if (isPinRef(driverRef)) {
-                        // REMEMBER: It's possible to mention multiple pins in one reference.
-                        for (LogicDiagram::BlockCooPin bp : LogicDiagram::parsePinRefs(driverRef)) {
-                            // Resolve the local block on this page
-                            const LogicDiagram::Block& block = page.getBlockByCoordinate(bp.coo);
-                            // Determine the card/pin
-                            Card& card = machine.getCard({ block.gate, block.loc});
-                            Pin& pin = card.getPin(bp.pinId);
-                            if (namedSignals.find(driverRef) == namedSignals.end()) 
-                                namedSignals.insert_or_assign(driverRef, vector<AliasTarget>());
-                            // Add this pin to the list of pins that are referenced
-                            namedSignals.at(alias.name).push_back(
-                                { AliasTargetType::PIN, pin.getLocation(), string() });
-                        }
-                    }
-                    // This is the case where the alias points to another alias
-                    else {
-                        if (namedSignals.find(driverRef) == namedSignals.end()) 
-                            namedSignals.insert_or_assign(driverRef, vector<AliasTarget>());
-                        // Add this reference to the list of that are referenced
+                    // REMEMBER: It's possible to mention multiple pins in one reference.
+                    for (LogicDiagram::BlockCooPin bp : LogicDiagram::parsePinRefs(driverRef)) {
+                        // Resolve the local block on this page
+                        const LogicDiagram::Block& block = page.getBlockByCoordinate(bp.coo);
+                        // Determine the card/pin
+                        Card& card = machine.getCard({ block.gate, block.loc});
+                        Pin& pin = card.getPin(bp.pinId);
+                        // Add this pin to the list of pins that are referenced
                         namedSignals.at(alias.name).push_back(
-                            { AliasTargetType::REFERENCE, PinLocation(), driverRef });
+                            { AliasTargetType::PIN, pin.getLocation(), string() });
                     }
+                }
+                // This is the case where the alias points to another alias
+                else {
+                    if (namedSignals.find(driverRef) == namedSignals.end()) 
+                        namedSignals.insert_or_assign(driverRef, vector<AliasTarget>());
+                    // Add this reference to the list of that are referenced
+                    namedSignals.at(alias.name).push_back(
+                        { AliasTargetType::REFERENCE, PinLocation(), driverRef });
                 }
             }
         }
@@ -202,14 +200,10 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
         for (const LogicDiagram::Block& block : page.blocks) {
             try {
                 Card& card = machine.getCard({ block.gate, block.loc });
-                cout << "Working on card " << card.getLocation().toString() << endl;
                 // Get the inputs connected
                 for (auto [inputPinId, driverRefList] : block.inp) {  
-                    cout << "  Working on pin "<< inputPinId << endl;          
                     Pin& inputPin = card.getPin(inputPinId);
-                    for (auto driverRef : driverRefList) {
-                        cout << "     Working on driver " << driverRef << endl; 
-                        
+                    for (auto driverRef : driverRefList) {                        
                         // Trace back to what is driving this input.  There are two 
                         // cases:
                         // 1. A block.pin(s) reference on the same page.
@@ -244,6 +238,21 @@ void processAlds(const vector<LogicDiagram::Page>& pages,
             }
         }
     }
+
+    // Generate a report for the named signals
+    cout << "Summary of named signals" << endl;
+    for (auto it = namedSignals.begin(); it != namedSignals.end(); it++) {
+        cout << it->first << " -> ";
+        for (const AliasTarget& t : it->second) {
+            if (t.type == AliasTargetType::PIN) 
+                cout << t.loc.toString() << " ";
+            else 
+                cout << t.refName << " ";
+        }
+        cout << endl;
+    }
+
+
 }
 
 static void generateSpice(const Machine& machine, const unordered_map<PinLocation, string>& pinToWire) {
