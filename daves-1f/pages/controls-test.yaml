@@ -12,17 +12,17 @@ blocks:
     out: 
       A: [ "-S HOLD TR P1", "+S RUN TR P1" ]
   - gate: ZZZZ
-    loc: 9992
-    typ: HIZ
-    cir: 01
-    coo: 1A
-    out: 
-      A: [ "-S MANUAL RESET P6" ]
-  - gate: ZZZZ
     loc: 9990
     typ: ZERO
     cir: 01
     coo: 1A
     out: 
-      A: [ "+S NOT C 3 P", "+S C 4 P", "-S RUN P1", "ZERO" ]
-
+      A: [ "-S RUN P1", "ZERO", "+S MANUAL RESET" ]
+  - gate: ZZZZ
+    loc: 9993
+    typ: RST
+    cir: 01
+    coo: 1A
+    out: 
+      A: [ "-S PWR OFF RESET" ]
+      
