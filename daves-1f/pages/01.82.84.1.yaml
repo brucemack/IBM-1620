@@ -1,0 +1,114 @@
+type: circuit
+part: 2129200
+title: "TYPEWRITER KEY MAGNETS"
+ec: 404650c
+num: 01.82.84.1
+capture: "By hand on 28-June-2024"
+
+devices:
+  - name: r22
+    type: relay
+    pins:
+      11c: r28.8nc
+      11nc: r45.1nc
+      11no: r42.3nc
+  - name: r28
+    type: relay
+    pins:
+      8c: r50.8nc
+      8nc: r22.11c
+      8no: r22.12c
+  - name: ps_s
+    type: solenoid
+    pins: 
+      a: "PRINT MAGNET COMMON"
+      b: r22.12nc
+  - name: r22 
+    type: relay
+    pins:
+      12c: r28.8no
+      12nc: ps_s.a
+      12no: ps_b.a
+  - name: ps_b
+    type: solenoid 
+    pins:
+      a: r22.12no
+      b: "PRINT MAGNET COMMON"
+  - name: r50
+    type: relay
+    pins:
+      8c: r46.11nc
+      8nc: r28.8c
+      8no: r21.1c
+  - name:  ps_ne
+    type: solenoid 
+    pins: 
+      a: r25.1nc
+      b: "PRINT MAGNET COMMON"
+
+  - name: r25
+    type: relay
+    pins:
+      1c: r21.1nc
+      1nc: ps_ne.a 
+      1no: [ r21.1no, r46.3no ]
+
+  - name: r21
+    type: relay 
+    pins:
+      1c: r50.8no
+      1nc: r25.1c
+      1no: [ r25.1no, r46.3no ]
+
+  - name: r46
+    type: relay
+    pins:
+      11c: r45.2no
+      11nc: r50.8c
+      11no: r50.9c
+
+  - name: r25
+    type: relay 
+    pins:
+      2c: r28.10nc
+      2nc: r42.8no
+      2no: r42.2no
+
+  - name: r50
+    type: relay
+    pins:
+      9c: r46.11no
+      9nc: r28.10c
+      9no: [ r46.9no, ps_invalidchar.a ]
+
+  - name: r28 
+    type: relay
+    pins: 
+      10c: r50.9nc
+      10nc: r25.2c
+      10no: r25.3c
+
+  - name: ps_w
+    type: solenoid
+    pins: 
+      a: r25.3nc
+      b: "PRINT MAGNET COMMON"
+
+  - name: r25
+    type: relay
+    pins:
+      3c: r28.10no
+      3nc: ps_w.a
+      3no: ps_f.a
+
+  - name: ps_f
+    type: solendoid
+    pins:
+      a: r25.3no
+      b: "PRINT MAGNET COMMON"
+
+  - name: ps_invalidchar
+    type: solendoid
+    pins:
+      a: [ r50.9no, r46.9no ]
+      b: "PRINT MAGNET COMMON"
