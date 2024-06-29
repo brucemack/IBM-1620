@@ -21,8 +21,8 @@ devices:
   - name: ps_s
     type: solenoid
     pins: 
-      a: "PRINT MAGNET COMMON"
-      b: r22.12nc
+      a: r22.12nc
+      b: "PRINT MAGNET COMMON"
   - name: r22 
     type: relay
     pins:
@@ -102,13 +102,13 @@ devices:
       3no: ps_f.a
 
   - name: ps_f
-    type: solendoid
+    type: solenoid
     pins:
       a: r25.3no
       b: "PRINT MAGNET COMMON"
 
   - name: ps_invalidchar
-    type: solendoid
+    type: solenoid
     pins:
       a: [ r50.9no, r46.9no ]
       b: "PRINT MAGNET COMMON"
