@@ -1,0 +1,25 @@
+type: circuit
+part: 2129201
+title: "TYPEWRITER KEY MAGNETS"
+ec: 404650c
+num: 01.82.86.1
+capture: "By hand on 28-June-2024"
+
+# NOT COMPLETE
+# NOT COMPLETE
+# NOT COMPLETE
+# NOT COMPLETE
+
+devices:
+  - name: r45
+    type: relay
+    pins:
+      1c: r22.11nc
+      1nc: ps_21.a
+      1no: r42.4nc
+  - name: ps_21
+    type: solenoid
+    pins: 
+      a: r45.1nc
+      b: "PRINT MAGNET COMMON"
+

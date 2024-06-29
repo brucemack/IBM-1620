@@ -1,0 +1,19 @@
+type: circuit
+part: 2129197
+title: "TYPEWRITER BIT RELAYS"
+ec: 404750c
+num: 01.82.86.1
+capture: "By hand on 28-June-2024"
+
+# NOT COMPLETE
+# NOT COMPLETE
+# NOT COMPLETE
+# NOT COMPLETE
+
+devices:
+  - name: r28
+    type: relay
+    pins:
+      pa: VP48
+      pb: GND
+
