@@ -1,0 +1,210 @@
+type: circuit
+part: 2129199
+title: "TYPEWRITER KEY MAGNETS"
+ec: 404650c
+num: 01.82.82.1
+capture: "By hand on 28-June-2024"
+
+devices:
+
+  - name: r6
+    type: relay
+    pins:
+      1c: r19.4c
+      1nc: r8.4nc
+      1no: VP48
+
+  - name: r19
+    type: relay
+    pins:
+      4n: r6.1c
+      4nc: sp_space.a
+      4no: "tb78-2a"     
+
+  - name: sp_space
+    type: solenoid
+    pins:
+      a: r16.4nc
+      b: "SOLENOID COMMON"
+
+  - name: r22
+    type: relay
+    pins:
+      3c: r28.4nc
+      3nc: r8.4c
+      3no: sp_dash.a
+
+  - name: sp_dash
+    type: solenoid
+    pins:
+      a: r22.cno
+      b: "PRINT MAGNET COMMON"
+
+  - name: r28      
+    type: relay 
+    pins:
+      4c: r50.6nc
+      4nc: r22.3c
+      4no: r22.4c
+
+  - name: r8
+    type: relay
+    pins: 
+      4c: r22.3nc
+      4nc: r6.1nc
+      4no: [ r22.4nc, sp_0.a ]
+
+  - name: sp_0
+    type: solenoid
+    pins: 
+      a: r22.4nc
+      b: "PRINT MAGNET COMMON"
+
+  - name: r22
+    type: relay
+    pins:
+      4c: r28.4no
+      4nc: [ r8.4no, sp_0.a ]
+      4no: sp_plus.a
+
+  - name: sp_plus
+    type: solenoid
+    pins: 
+      a: r22.4no
+      b: "PRINT MAGNET COMMON"
+
+  - name: r50
+    type: relay
+    pins: 
+      6c: r46.10nc
+      6nc: r28.4c
+      6no: r28.5c
+
+  - name: r22
+    type: relay 
+    pins:
+      5c: r28.5nc
+      5nc: r42.7no
+      5no: sp_q.a 
+
+  - name: r28 
+    type: relay 
+    pins:
+      5c: r50.6no
+      5nc: r22.5c
+      5no: r22.6c
+
+  - name: sp_y
+    type: solenoid 
+    pins: 
+      a: r22.6nc
+      b: "PRINT MAGNET COMMON"
+
+  - name: r22
+    type: relay
+    pins:
+      6c: r28.5no
+      6nc: sp_y.a
+      6no: sp_h.a
+
+  - name: sp_h
+    type: solenoid 
+    pins: 
+      a: r22.6no
+      b: "PRINT MAGNET COMMON"
+
+  - name: r46
+    type: relay
+    pins:
+      10c: r45.2nc
+      10nc: r50.6c
+      10no: r50.7c
+
+  - name: r22
+    type: relay
+    pins:
+      7c: r28.6nc
+      7nc: r42.8nc
+      7no: r42.3no
+
+  - name: r28
+    type: relay
+    pins:
+      6c: r50.7nc
+      6nc: r22.7c
+      6no: r22.8c
+
+  - name: r22
+    type: relay
+    pins:
+      8c: r28.6no
+      8nc: r42.2nc
+      8no: sp_d.a
+
+  - name: sp_d
+    type: solenoid 
+    pins: 
+      a: r22.8no
+      b: "PRINT MAGNET COMMON"
+
+  - name: r45
+    type: relay
+    pins:
+      2c: r41.2nc
+      2nc: r46.10c
+      2no: r46.11c
+
+  - name: r50
+    type: relay
+    pins:
+      7c: r46.10no
+      7nc: r28.6c
+      7no: r28.7c
+
+  - name: sp_at
+    type: solenoid
+    pins:
+      a: r22.9nc
+      b: "PRINT MAGNET COMMON"
+
+  - name: r22 
+    type: relay 
+    pins:
+      9c: r28.7nc
+      9nc: sp_at.a
+      9no: sp_star.a
+
+  - name: sp_star
+    type: solenoid
+    pins:
+      a: r22.9no
+      b: "PRINT MAGNET COMMON"
+
+  - name: r28
+    type: solenoid
+    pins:
+      7c: r50.7no
+      7nc: r22.9c
+      7no: r22.10c
+
+  - name: sp_lparen
+    type: solenoid
+    pins:
+      a: r22.10nc
+      b: "PRINT MAGNET COMMON"
+
+  - name: r22 
+    type: relay
+    pins: 
+      10c: r28.7no
+      10nc: sp_lparen.a
+      10no: sp_rparen.a
+
+  - name: sp_rparen
+    type: solenoid
+    pins:
+      a: r22.10no
+      b: "PRINT MAGNET COMMON"
+
+
+

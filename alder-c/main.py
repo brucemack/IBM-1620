@@ -73,16 +73,28 @@ class Edge:
     def get_device(self):
         return self.device
     
-    # Added to allow the graph traversal code to work
+    def is_conductive(self):
+        return True
+    
+    # Added to allow the graph traversal code to work.  Note
+    # that the connection is only good if this edge is 
+    # currently conductive.
     def get_neighbors(self):
-        return [ self.to_node ]
+        if self.is_conductive():
+            return [ self.to_node ]
+        else:
+            return [ ]
 
     def tick(self):
         self.last_current = self.current
         self.current = False
 
+    def get_last_current(self):
+        return self.last_current
+
     def set_current(self): 
         self.current = True
+
 
 class ShortEdge(Edge):
 
@@ -104,6 +116,48 @@ class SolenoidEdge(Edge):
         super().set_current()
         print("Current in", self.get_device().get_name())
 
+class NormallyOpenEdge(Edge):
+
+    def __init__(self, device: Device, to_node: Node, coil0: Edge, coil1: Edge):
+        super().__init__(device, to_node)
+        self.coil0 = coil0
+        self.coil1 = coil1
+
+    def __str__(self):
+        return "NormallyOpen " + self.device.get_name()
+
+    def set_current(self): 
+        super().set_current()
+        print("Current in (NO)", self.get_device().get_name())
+
+    def is_conductive(self):
+        if self.coil0 != None and self.coil0.get_last_current():
+            return True
+        if self.coil1 != None and self.coil1.get_last_current():
+            return True
+        return False
+
+class NormallyClosedEdge(Edge):
+
+    def __init__(self, device: Device, to_node: Node, coil0: Edge, coil1: Edge):
+        super().__init__(device, to_node)
+        self.coil0 = coil0
+        self.coil1 = coil1
+
+    def __str__(self):
+        return "NormallyClosed " + self.device.get_name()
+
+    def set_current(self): 
+        super().set_current()
+        print("Current in (NC)", self.get_device().get_name())
+
+    def is_conductive(self):
+        if self.coil0 != None and self.coil0.get_last_current():
+            return False
+        if self.coil1 != None and self.coil1.get_last_current():
+            return False
+        return True
+
 # First phase: Create the universe of devices and pins, including
 # all cross-connections.
 def load_page_1a(p, devices, pins):
@@ -117,6 +171,8 @@ def load_page_1a(p, devices, pins):
             for pin_name, _ in device["pins"].items():
                 local_pin_name = device_name + "." + pin_name.upper()
                 local_pin = Pin(local_pin_name, False)
+                if local_pin_name in pins:
+                    raise Exception("Duplicate definition of pin " + local_pin_name)
                 pins[local_pin_name] = local_pin
 
 # Second pass: Creates connections
@@ -227,6 +283,7 @@ pins["VP48"] = Pin("VP48", True)
 
 infiles = [
     "01.82.75.1.yaml",
+    "01.82.82.1.yaml",
     "01.82.84.1.yaml",
     "01.82.86.1.yaml",
     "controls-2.yaml"
@@ -242,27 +299,39 @@ for infile in infiles:
 # Setup edges
 for device_name, device in devices.items():
     if device.get_type() == "relay":
-        # Normal contacts
-        for i in range(1, 12):
-            a = get_conn(pins, device, str(i) + "C")
-            b = get_conn(pins, device, str(i) + "NC")
-            if a != None and b != None:
-                edge = ShortEdge(device, b)
-                a.add_edge(edge)
-                edges.append(edge)
-                edge = ShortEdge(device, a)
-                b.add_edge(edge)
-                edges.append(edge)
+        
         # Pick coil
         a = get_conn(pins, device, "PA")
         b = get_conn(pins, device, "PB")
+        pick_coil = None
         if a != None and b != None:
-            edge = SolenoidEdge(device, b)
-            a.add_edge(edge)
-            edges.append(edge)
-            edge = SolenoidEdge(device, a)
-            b.add_edge(edge)
-            edges.append(edge)
+            # NOTICE: Edge only goes in one direction
+            pick_coil = SolenoidEdge(device, b) 
+            a.add_edge(pick_coil)
+            edges.append(pick_coil)
+
+        # Contacts
+        for i in range(1, 12):
+            a = get_conn(pins, device, str(i) + "C")            
+
+            b = get_conn(pins, device, str(i) + "NC")
+            if a != None and b != None:
+                edge = NormallyClosedEdge(device, b, pick_coil, None)
+                a.add_edge(edge)
+                edges.append(edge)
+                edge = NormallyClosedEdge(device, a, pick_coil, None)
+                b.add_edge(edge)
+
+                edges.append(edge)
+
+            b = get_conn(pins, device, str(i) + "NO")
+            if a != None and b != None:
+                edge = NormallyOpenEdge(device, b, pick_coil, None)
+                a.add_edge(edge)
+                edges.append(edge)
+                edge = NormallyOpenEdge(device, a, pick_coil, None)
+                b.add_edge(edge)
+                edges.append(edge)
                                
     elif device.get_type() == "pass":
         a = get_conn(pins, device, "A")
@@ -284,13 +353,17 @@ for device_name, device in devices.items():
             edge = SolenoidEdge(device, a)
             b.add_edge(edge)
             edges.append(edge)
+    else:
+        raise Exception("Device has unrecognized type " + device.get_name() + " " + device.get_type())
 
+"""
 # Diag
 for _, node in nodes.items():
     print("Node", node.get_name())
     # Edges
     for edge in node.get_edges():
         print("    Edge " + edge.get_device().get_name() + " to ", edge.get_neighbors()[0])        
+"""
 
 start = nodes["VP48"]
 end = nodes["GND"]
@@ -302,8 +375,8 @@ def visit1(node, path):
         s = ""
         for m in path:
             m.set_current()
-            s = s + str(m) + " "
-        print(s)
+            #s = s + str(m) + " "
+        #print(s)
         return False
     else:
         return True
@@ -317,7 +390,7 @@ for t in range(0, 2):
         edge.tick()
 
     # Do a traversal from the supply
-    util.traverse_graph([ start ], visit1)
+    util.traverse_graph([ start ], visit1, False)
 
 
 

@@ -5,21 +5,163 @@ ec: 404650c
 num: 01.82.86.1
 capture: "By hand on 28-June-2024"
 
-# NOT COMPLETE
-# NOT COMPLETE
-# NOT COMPLETE
-# NOT COMPLETE
-
 devices:
-  - name: r45
+
+  - name: ps_4j
+    type: solenoid
+    pins: 
+      a: r42.8nc
+      b: "PRINT MAGNET COMMON"
+
+  - name: r42
+    type: relay 
+    pins:
+      8c: r46.5nc
+      8nc: [ ps_4j.a, r22.7c ]
+      8no: [ ps_6l.a, r25.2nc ]
+
+  - name: ps_6l
+    type: solenoid
+    pins: 
+      a: r42.8no
+      b: "PRINT MAGNET COMMON"
+
+  - name: r46
     type: relay
     pins:
-      1c: r22.11nc
-      1nc: ps_21.a
-      1no: r42.4nc
+      5c: r50.4nc
+      5nc: r42.8c
+      5no: r42.9c
+
+  - name: ps_n
+    type: solenoid
+    pins: 
+      a: r42.9nc
+      b: "PRINT MAGNET COMMON"
+
+  - name: r50
+    type: relay
+    pins:
+      4c: r28.3nc
+      4nc: r46.5c
+      4no: r46.7c
+
+  - name: r42
+    type: relay
+    pins:
+      9c: r46.5no
+      9nc: ps_n.a
+      9no: ps_p.a
+
+  - name: ps_p
+    type: solenoid
+    pins: 
+      a: r42.9no
+      b: "PRINT MAGNET COMMON"
+
+  - name: r46
+    type: relay
+    pins: 
+      7c: r50.4no
+      7nc: r42.10c
+      7no: [ r46.5no, r46.9no, r50.9no ]
+
+  - name: ps_r
+    type: solenoid
+    pins: 
+      a: r42.10nc
+      b: "PRINT MAGNET COMMON"
+
+  - name: r42
+    type: relay
+    pins:
+      10c: r46.7nc
+      10nc: ps_r.a
+      10no: ps_dollar.a
+
+
+  - name: ps_dollar
+    type: solenoid
+    pins: 
+      a: r42.10no
+      b: "PRINT MAGNET COMMON"
+
+  - name: r28
+    type: relay 
+    pins:
+      3c: r22.2no
+      3nc: r50.4c
+      3no: r50.5c
+
+  - name: ps_a
+    type: solenoid
+    pins: 
+      a: r42.11nc
+      b: "PRINT MAGNET COMMON"
+
+  - name: r42
+    type: relay
+    pins:
+      11c: r46.8nc
+      11nc: ps_a.a
+      11no: ps_c.a
+
+  - name: ps_c
+    type: solenoid
+    pins: 
+      a: r42.11no
+      b: "PRINT MAGNET COMMON"
+
+  - name: r46
+    type: solenoid
+    pins:
+      8c: r50.5nc
+      8nc: r42.11c
+      8no: r42.12c
+
+  - name: ps_e
+    type: solenoid
+    pins: 
+      a: r42.12nc
+      b: "PRINT MAGNET COMMON"
+
+  - name: r50
+    type: relay
+    pins:
+      5c: r28.3no
+      5nc: r46.8c
+      5no: r46.9c
+
+  - name: r42
+    type: relay 
+    pins: 
+      12c: r46.8no
+      12nc: ps_e.a
+      12no: ps_g.a
+
+  - name: ps_g
+    type: solenoid
+    pins: 
+      a: r42.12no
+      b: "PRINT MAGNET COMMON"
+ 
+  - name: r46
+    type: relay
+    pins:
+      9c: r50.5no
+      9nc: [ r45.1nc, r22.11nc ]
+      9no: [ r50.9no, r46.5no, r46.7no ]
+
   - name: ps_21
     type: solenoid
     pins: 
-      a: r45.1nc
+      a: [ r45.1nc, r22.11nc ]
       b: "PRINT MAGNET COMMON"
+
+  - name: r45
+    type: relay
+    pins:
+      1c: r46.9nc
+      1nc: [ ps_21.a, r22.11nc ]
+      1no: r42.4nc
 

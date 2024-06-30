@@ -5,13 +5,6 @@ num: 00.00.00.00
 
 devices:
 
-  - name: r45
-    type: relay
-    pins:
-      1c: 
-      1nc: 
-      1no: 
-
   - name: r42
     type: relay
     pins:
@@ -26,34 +19,12 @@ devices:
       3nc: r22.11no
       3no: 
 
-# NOTE: Here is a temporary connection to the supply
-  - name: r45
-    type: relay
-    pins:
-      2c:
-      2nc: 
-      2no: [ r46.11c, VP48 ]
-
-  - name: r46
-    type: relay
-    pins:
-      9c: 
-      9nc: 
-      9no: [ r50.9no, ps_invalidchar.a ]
-
   - name: r46
     type: relay
     pins:
       3c: 
       3nc: 
       3no: 
-
-  - name: r42
-    type: relay
-    pins:
-      8c: 
-      8nc: 
-      8no: 
 
   - name: r42
     type: relay
