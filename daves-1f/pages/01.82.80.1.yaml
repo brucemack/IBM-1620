@@ -11,7 +11,7 @@ devices:
 # TODO: CLEANUP  
     type: crcb
     pins: 
-      a: vp48
+      c: vp48
       # m220,b300
       out5: r1.3c
 
@@ -36,7 +36,7 @@ devices:
       1nc: r38.4c
 
   - name: r7
-    type: relay 
+    type: relaylatching
     pins:
       2c: r38.4no
       2nc: r38.2c

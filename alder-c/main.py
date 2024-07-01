@@ -167,7 +167,12 @@ def load_page_1a(p, devices, pins):
         for device in p["devices"]:
             device_name = device["name"].upper()
             device_type = device["type"]
-            devices[device_name] = Device(device_name, device_type)
+            if not device_name in devices:
+                devices[device_name] = Device(device_name, device_type)
+            else:
+                # Check for type consistency
+                if devices[device_name].get_type() != device_type:
+                    raise Exception("Device type consistency error " + device_name + " " + device_type)
             for pin_name, _ in device["pins"].items():
                 local_pin_name = device_name + "." + pin_name.upper()
                 local_pin = Pin(local_pin_name, False)
@@ -283,6 +288,7 @@ pins["VP48"] = Pin("VP48", True)
 
 infiles = [
     "01.82.75.1.yaml",
+    "01.82.80.1.yaml",
     "01.82.82.1.yaml",
     "01.82.84.1.yaml",
     "01.82.86.1.yaml",

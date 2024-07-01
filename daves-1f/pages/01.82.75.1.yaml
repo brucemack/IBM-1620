@@ -3,7 +3,7 @@ part: 2129197
 title: "TYPEWRITER BIT RELAYS"
 ec: 404750c
 num: 01.82.86.1
-capture: "By hand on 28-June-2024"
+capture: "By hand on 1-July-2024"
 
 # NOT COMPLETE
 # NOT COMPLETE
@@ -11,9 +11,150 @@ capture: "By hand on 28-June-2024"
 # NOT COMPLETE
 
 devices:
-  - name: r28
+
+  - name: crcb
+    type: crcb
+    warn: "Typo on destination to r16.1c (shows r16.10c)"
+    pins: 
+      # CRCB3 - M99,B309
+      out3: [ r1.2c, r16.1c ]
+
+  - name: r1 
     type: relay
     pins:
-      pa: VP48
+      2c: [ crcb.out3, r16.1c ]
+      2nc: 
+      2no: [ r8.2c, "WR STATUS", r28.pa, r31.pa, r41.pa, r42.pa, r45.pa, r46.pa, r49.pa, r50.pa, r21.pa, r8.1c, r8.3c ]
+
+  - name: r8
+    type: relay
+    pins:
+      # Relying on this connection to bridge to all other pins
+      2c: [ r1.2no ]
+      2nc: [ r22.pa, r25.pa ]
+      2no:
+
+  - name: r22
+    type: relay
+    pins:
+      pa: [ r8.2nc, r25.pa ]
+      pb: "X BIT THY DR"
+
+  - name: r25
+    type: relay
+    pins:
+      pa: [ r8.2nc, r25.pa ]
+      pb: "X BIT THY DR"
+
+  - name: r26
+    type: relay 
+    pins:
+      # Relying on this connection to bridge to all other pins
+      pa: [ r1.2no ]
+      pb: "0 BIT THY DR"
+
+  - name: r31
+    type: relay 
+    pins:
+      # Relying on this connection to bridge to all other pins
+      pa: [ r1.2no ]
+      pb: "0 BIT THY DR"
+
+  - name: r41
+    type: relay 
+    pins:
+      # Relying on this connection to bridge to all other pins
+      pa: [ r1.2no ]
+      pb: "1 BIT THY DR"
+
+  - name: r42
+    type: relay 
+    pins:
+      # Relying on this connection to bridge to all other pins
+      pa: [ r1.2no ]
+      pb: "2 BIT THY DR"
+
+  - name: r45
+    type: relay 
+    pins:
+      # Relying on this connection to bridge to all other pins
+      pa: [ r1.2no ]
+      pb: "2 BIT THY DR"
+
+  - name: r46
+    type: relay 
+    pins:
+      # Relying on this connection to bridge to all other pins
+      pa: [ r1.2no ]
+      pb: "4 BIT THY DR"
+
+  - name: r49
+    type: relay 
+    pins:
+      # Relying on this connection to bridge to all other pins
+      pa: [ r1.2no ]
+      pb: "4 BIT THY DR"
+
+  - name: r50
+    type: relay 
+    pins:
+      # Relying on this connection to bridge to all other pins
+      pa: [ r1.2no ]
+      pb: "8 BIT THY DR"
+
+  - name: r21
+    type: relay 
+    pins:
+      # Relying on this connection to bridge to all other pins
+      pa: [ r1.2no ]
+      pb: "C BIT THY DR"
+
+  - name: r8
+    type: relay 
+    pins:
+      ha: r8.1no
+      hb: GND
+
+  - name: r8 
+    type: relay 
+    pins:
+      # Relying on this connection to bridge to all other pins
+      1c: [ r1.2no ]
+      1no: [ r8.ha, r9.pa ]
+
+  - name: r9
+    type: relay 
+    pins:
+      pa: r8.1no
       pb: GND
 
+  - name: r39
+    type: relay 
+    pins:
+      2c: crcb.out6
+      2no: [ r7.lta, r8.3no ]
+
+  - name: r7
+    type: relaylatching
+    pins:
+      lta: [ r39.2no, r8.3no ]
+      ltb: GND
+
+  - name: r8
+    type: relay
+    pins: 
+      # Relying on this connection to bridge to all other pins
+      3c: [ r1.2no ]
+      3no: [ r39.2no, r7.lta ]
+
+  - name: r20
+    type: relay
+    pins:
+      4c: [ crcb.out2, r15.1c ]
+      4nc: r7.1c
+
+  - name: r7
+    type: relaylatching
+    pins: 
+      1c: r20.4nc
+      1no: r8.pa

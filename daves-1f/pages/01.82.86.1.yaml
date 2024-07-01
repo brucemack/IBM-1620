@@ -16,7 +16,7 @@ devices:
   - name: r42
     type: relay 
     pins:
-      8c: r46.5nc
+      8c: r46.6nc
       8nc: [ ps_4j.a, r22.7c ]
       8no: [ ps_6l.a, r25.2nc ]
 
@@ -28,10 +28,11 @@ devices:
 
   - name: r46
     type: relay
+    warn: "Scratchy print - looks like a 5 but is actually a 6"
     pins:
-      5c: r50.4nc
-      5nc: r42.8c
-      5no: r42.9c
+      6c: r50.4nc
+      6nc: r42.8c
+      6no: r42.9c
 
   - name: ps_n
     type: solenoid
@@ -43,13 +44,13 @@ devices:
     type: relay
     pins:
       4c: r28.3nc
-      4nc: r46.5c
+      4nc: r46.6c
       4no: r46.7c
 
   - name: r42
     type: relay
     pins:
-      9c: r46.5no
+      9c: r46.6no
       9nc: ps_n.a
       9no: ps_p.a
 
@@ -113,7 +114,7 @@ devices:
       b: "PRINT MAGNET COMMON"
 
   - name: r46
-    type: solenoid
+    type: relay
     pins:
       8c: r50.5nc
       8nc: r42.11c

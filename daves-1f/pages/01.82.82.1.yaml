@@ -181,7 +181,7 @@ devices:
       b: "PRINT MAGNET COMMON"
 
   - name: r28
-    type: solenoid
+    type: relay
     pins:
       7c: r50.7no
       7nc: r22.9c
