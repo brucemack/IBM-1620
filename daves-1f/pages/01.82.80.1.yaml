@@ -1,0 +1,239 @@
+type: circuit
+part: 2129198
+title: "TYPEWRITER KEY MAGNETS"
+ec: 404750c
+num: 01.82.80.1
+capture: "By hand on 1-July-2024"
+
+devices:
+
+  - name: crcb
+# TODO: CLEANUP  
+    type: crcb
+    pins: 
+      a: vp48
+      # m220,b300
+      out5: r1.3c
+
+  - name: r1
+    type: relay
+    pins: 
+      3c: crcb.out5
+      3no: r11.2c
+
+  - name: r11
+    type: relay
+    pins:
+      2c: r1.3c
+      2nc: r20.1c
+      # Relay 11 hold
+      2no: r11.ha
+
+  - name: r20
+    type: relay
+    pins: 
+      1c: r11.2nc
+      1nc: r38.4c
+
+  - name: r7
+    type: relay 
+    pins:
+      2c: r38.4no
+      2nc: r38.2c
+      2no: ps_overscore.a
+      
+  - name: ps_overscore
+    type: solenoid
+    pins:
+      a: r7.2no
+      b: "SOLENOID COMMON"
+
+  - name: r38
+    type: relay
+    pins: 
+      4c: r20.1nc
+      4nc: [ ps_centerscore.a, tb86.7a ]
+      4no: r7.2c
+
+  - name: ps_centerscore
+    type: solenoid
+    pins:
+      a: [ r38.4nc, tb86.7a ]
+      b: "SOLENOID COMMON"
+
+  - name: ps_1u
+    type: solenoid
+    pins:
+      a: [ r42.2nc, r22.8nc ]
+      b: "SOLENOID COMMON"
+
+  - name: r42
+    type: relay 
+    pins: 
+      2c: r46.2nc
+      2nc: [ ps_1u.a, r22.8nc ]
+      2no: [ ps_3o.a, r25.2no ]
+
+  - name: ps_3o
+    type: solenoid
+    pins:
+      a: [ r42.2no, r25.2no ]
+      b: "SOLENOID COMMON"
+
+  - name: r46
+    type: relay
+    pins:
+      2c: r50.2nc
+      2nc: r42.2c
+      2no: r42.3c 
+
+  - name: ps_5k
+    type: solenoid
+    pins:
+      a: [ r42.3nc, r22.11no ]
+      b: "SOLENOID COMMON"
+
+  - name: r42
+    type: relay
+    pins: 
+      3c: r46.2no
+      3nc: [ ps_5k.a, r22.11no ]
+      3no: [ ps_7m.a, r22.7no ]
+
+  - name: ps_7m
+    type: solenoid
+    pins:
+      a: [ r42.3no, r22.7no ]
+      b: "SOLENOID COMMON"
+
+  - name: r50
+    type: relay
+    pins:
+      2c: r28.2nc
+      2nc: r46.2c
+      2no: r26.3c
+
+  - name: ps_9period
+    type: solenoid
+    pins:
+      a: [ r42.4nc, r45.1no ]
+      b: "SOLENOID COMMON"
+
+  - name: r41
+    type: relay
+    pins:
+      2c: [ r7.2nc, r54.4nc ]
+      2nc: r45.2c
+      2no: r22.2c
+
+  - name: r42
+    type: relay
+    pins:
+      4c: r46.3nc
+      4nc: [ ps_9period.a, r45.1no ]
+      4no: ps_dash.a
+
+  - name: ps_dash
+    type: solenoid
+    pins:
+      a: r42.4no
+      b: "SOLENOID COMMON"
+
+  - name: r46
+    type: relay 
+    pins:
+      3c: r50.2no
+      3nc: r42.4c
+      3no: [ r25.1no, r46.5no, r46.7no ]
+
+  - name: ps_slash
+    type: solenoid
+    pins:
+      a: r42.5nc
+      b: "SOLENOID COMMON"
+
+  - name: r28
+    type: relay
+    pins:
+      2c: r22.2nc
+      2nc: r50.2c
+      2no: r50.3c
+
+  - name: r42
+    type: relay
+    pins:
+      5c: r46.4nc
+      5nc: ps_slash.a
+      5no: ps_t.a
+
+  - name: ps_t
+    type: solenoid
+    pins:
+      a: r42.5no
+      b: "SOLENOID COMMON"
+
+  - name: r46
+    type: relay
+    pins:
+      4c: r50.3nc
+      4nc: r42.5c
+      4no: r42.6c
+      
+  - name: ps_v
+    type: solenoid
+    pins:
+      a: r42.6nc
+      b: "SOLENOID COMMON"
+
+  - name: r22
+    type: relay 
+    pins:
+      2c: r41.2no
+      2nc: r28.2c
+      2no: r28.3c
+
+  - name: r50
+    type: relay 
+    pins:
+      3c: r28.2no
+      3nc: r46.4c
+      3no: r46.5c
+
+  - name: r42
+    type: relay
+    pins:
+      6c: r46.4no
+      6nc: ps_v.a
+      6no: ps_x.a     
+
+  - name: ps_x
+    type: solenoid
+    pins:
+      a: r42.6no
+      b: "SOLENOID COMMON"
+
+  - name: r46
+    type: relay
+    pins:
+      5c: r50.3no
+      5nc: [ r46.7no, r46.3no, r25.1no ]
+      5no: r42.7c
+
+  - name: ps_z
+    type: solenoid
+    pins:
+      a: r42.7nc
+      b: "SOLENOID COMMON"
+
+  - name: r42
+    type: relay
+    pins:
+      7c: r46.5no
+      7nc: ps_z.a
+      7no: [ ps_8comma.a, r22.5nc ]
+
+  - name: ps_8comma
+    type: solenoid
+    pins:
+      a: [ r42.7no, r22.5nc ]
+      b: "SOLENOID COMMON"
