@@ -5,6 +5,12 @@ num: 00.00.00.00
 
 devices:
 
+  # Common feed for crcb
+  - name: crcb
+    type: crcb
+    pins: 
+      c: VP48
+
   # Dummy - defined on 01.81.55.1
   - name: r38
     type: relay
@@ -85,6 +91,15 @@ devices:
 #   pins: 
 #      a: "NOT WR STATUS DR"
 #      b: GND
+
+# SPACE TEST
+
+  - name: pass8
+    type: pass
+    pins: 
+      a: "CTRL SPACE DR"
+      b: GND
+
 
 
 

@@ -64,9 +64,10 @@ class Node:
 
 class Edge:
 
-    def __init__(self, device: Device, to_node: Node):
+    def __init__(self, device: Device, to_node: Node, desc: str = None):
         self.device = device
         self.to_node = to_node
+        self.desc = desc
         self.current = False
         self.last_current = False
         self.tick_count = 0
@@ -97,9 +98,15 @@ class Edge:
     def set_current(self): 
         self.current = True
 
+    def __str__(self):
+        if self.desc is None:
+            return "Edge " + self.device.get_name()
+        else:
+            return self.desc
+
 class CRCBEdge(Edge):
 
-    def __init__(self, to_node: Node, make_angle: int, break_angle: int):
+    def __init__(self, device: Device, to_node: Node, make_angle: int, break_angle: int):
         super().__init__(device, to_node)
         self.make_angle = make_angle
         self.break_angle = break_angle
@@ -124,15 +131,12 @@ class ShortEdge(Edge):
 
 class SolenoidEdge(Edge):
 
-    def __init__(self, device: Device, to_node: Node):
-        super().__init__(device, to_node)
-
-    def __str__(self):
-        return "SolenoidEdge " + self.device.get_name()
+    def __init__(self, device: Device, to_node: Node, desc: str = None):
+        super().__init__(device, to_node, desc)
 
     def set_current(self): 
         super().set_current()
-        print("Current in", self.get_device().get_name())
+        print("Current in", self.desc)
 
 class NormallyOpenLatchingEdge(Edge):
 
@@ -357,7 +361,7 @@ def load_page_from_file_2(infile: str, devices, pins, nodes):
     load_page_2(p, devices, pins, nodes)
    
 def get_conn(pins, device, pin_name):
-    full_pin_name = device.get_name() + "." + pin_name
+    full_pin_name = device.get_name().upper() + "." + pin_name.upper()
     if not (full_pin_name in pins):
         return None
     return pins[full_pin_name].get_node()
@@ -407,7 +411,7 @@ for device_name, device in devices.items():
         pick_coil = None
         if a != None and b != None:
             # NOTICE: Edge only goes in one direction
-            pick_coil = SolenoidEdge(device, b) 
+            pick_coil = SolenoidEdge(device, b, "Relay " + device.get_name() + " pick coil") 
             a.add_edge(pick_coil)
             edges.append(pick_coil)
         else:
@@ -419,7 +423,7 @@ for device_name, device in devices.items():
         hold_coil = None
         if a != None and b != None:
             # NOTICE: Edge only goes in one direction
-            hold_coil = SolenoidEdge(device, b) 
+            hold_coil = SolenoidEdge(device, b,  "Relay " + device.get_name() + " hold coil")
             a.add_edge(hold_coil)
             edges.append(hold_coil)
 
@@ -454,7 +458,7 @@ for device_name, device in devices.items():
         pick_coil = None
         if a != None and b != None:
             # NOTICE: Edge only goes in one direction
-            pick_coil = SolenoidEdge(device, b) 
+            pick_coil = SolenoidEdge(device, b, "Relay " + device.get_name() + " pick coil") 
             a.add_edge(pick_coil)
             edges.append(pick_coil)
         else:
@@ -466,7 +470,7 @@ for device_name, device in devices.items():
         trip_coil = None
         if a != None and b != None:
             # NOTICE: Edge only goes in one direction
-            trip_coil = SolenoidEdge(device, b) 
+            trip_coil = SolenoidEdge(device, b, "Relay " + device.get_name() + " trip coil") 
             a.add_edge(trip_coil)
             edges.append(trip_coil)
         else:
@@ -603,11 +607,13 @@ for device_name, device in devices.items():
         raise Exception("Device has unrecognized type " + device.get_name() + " " + device.get_type())
 
 # Diag
+"""    
 for _, node in nodes.items():
     print(node.get_name())
     # Edges
-    #for edge in node.get_edges():
-    #    print("    Edge " + edge.get_device().get_name() + " to ", edge.get_neighbors()[0])        
+    for edge in node.get_edges():
+        print("    Edge " + str(edge))        
+"""
 
 start = nodes["VP48"]
 end = nodes["GND"]
@@ -624,8 +630,6 @@ def visit1(node, path):
         return False
     else:
         return True
-
-quit()
 
 for t in range(0, 72):
 

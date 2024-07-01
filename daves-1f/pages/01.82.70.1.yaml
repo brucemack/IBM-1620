@@ -164,9 +164,10 @@ devices:
 
   - name: r6
     type: relay
+    warn: "Typo on ALD (CRTL)"
     pins:
       pa: [ crcb.out6 ]      
-      pb: [ "CRTL SPACE DR" ]
+      pb: [ "CTRL SPACE DR" ]
 
   - name: r54
     type: relaylatching

@@ -11,7 +11,6 @@ devices:
 # TODO: CLEANUP  
     type: crcb
     pins: 
-      c: vp48
       # m220,b300
       out5: r1.3c
 
