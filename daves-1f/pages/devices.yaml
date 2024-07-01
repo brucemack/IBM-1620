@@ -1,0 +1,43 @@
+devices:
+  - name: r1
+    type: relaylatching
+    desc: "Write Status"
+  - name: r3
+    type: relaylatching
+    desc: "Write Number"
+  - name: r7
+    type: relaylatching
+    desc: "Flag"
+  - name: r10
+    type: relaylatching
+    desc: "Shift"
+  - name: r11
+    type: relay
+    desc: "Shift Delay"
+  - name: r15
+    type: relay
+    desc: "Manual Shift"
+  - name: r16
+    type: relay
+    desc: "Manual Shift Delay"
+  - name: r20
+    type: relaylatching
+    desc: "Write Test"
+  - name: r25
+    type: relay
+    desc: "X Bit"
+  - name: r39
+    type: relaylatching
+    desc: "Error 1"
+  - name: r40
+    type: relaylatching
+    desc: "Error 2"
+  - name: r54
+    type: relaylatching
+    desc: "Store"
+  - name: tb78
+    type: tb78
+  - name: tb74
+    type: tb74    
+  - name: d29
+    type: diode

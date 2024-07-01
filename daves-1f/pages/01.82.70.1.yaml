@@ -1,0 +1,248 @@
+type: circuit
+part: 2129197
+title: "TYPEWRITER CONTROLS"
+ec: 404750c
+num: 01.82.70.1
+capture: "By hand on 1-July-2024"
+
+devices:
+
+  - name: sw_tab_intlk_contact
+    type: switch
+    pins: 
+      c: VP48
+      "no": [ r6.3no, r19.pa ]
+
+  - name: r6
+    type: relay 
+    pins:
+      3c: [ "SPACE INTLK CONT", r54.4no ]
+      3no: [ sw_tab_intlk_contact. no, r19.pa ]
+
+  - name: r4
+    type: relay
+    pins:
+      1c: [ r5.1c, r19.1nc, d7b74.7b, r6.4c, tb78.2a ]
+      1no: r4.ha
+
+  - name: r4
+    type: relay
+    pins:
+      ha: r4.1no
+      hb: gnd
+
+  - name: r19
+    type: relay
+    pins:
+      1c: vp48
+      1nc: [ r5.1c, r4.1c, r6.4c, tb74.7b ]
+
+
+  - name: sw_carr_rtn_intlk_contact 
+    type: switch
+    pins:
+      c: vp48
+      "no": [ r19.pa, tb74.7a, r6.3no, sw_tab_intlk_contact.no ]
+
+  - name: r5
+    type: relay
+    pins: 
+      1c: [ r19.1nc, r4.1c, r6.4c, tb74.7b ]
+      1no: r5.ha
+
+  - name: r6
+    type: relay
+    pins:
+      ha: r6.4no
+      hb: gnd
+
+  - name: r19
+    type: relay
+    pins:
+      # AND OTHERS
+      pa: r6.3no
+      pb: gnd
+
+  - name: r5
+    type: relay
+    pins: 
+      ha: r5.1no
+      hb: gnd
+
+  - name: tb78
+    type: tb78
+    warn: "Check 2a connection?"
+    pins:
+      # AND OTHERS
+      2a: r6.4c
+      2b: r16.1c
+
+  - name: r6
+    type: relay
+    pins: 
+      # And others
+      4c: [ tb78.2a, r4.1c, r5.1c, r19.1nc ]
+      4no: r6.ha
+
+  - name: tb74
+    type: tb74
+    pins:
+      7a: r19.pa
+      7b: r19.1nc
+
+
+  - name: sw_last_col_contact
+    type: switch
+    warn: "Need to connect!"
+    pins:
+      c: [ "SHIFT CONT", sw_carr_rtn_intlk_contact.c, sw_tab_intlk_contact.c ]
+
+  - name: crcb
+    type: crcb
+    pins:
+      out1: r1.lta
+
+  - name: r1
+    type: relaylatching
+    pins:
+      lta: [ crcb.out1, r39.1c, r3.lta ]
+      ltb: [ "NOT WR STATUS DR", tb98.5a ]
+
+  - name: r3
+    type: relaylatching
+    pins:
+      lta: [ crcb.out1, r39.1c, r1.lta ]
+      ltb: "NOT WR NUM DR"
+
+  - name: r54
+    type: relaylatching 
+    pins:
+      lta: r39.1c
+      ltb: "NOT STORE DR"
+
+  - name: crcb
+    type: crcb
+    pins:
+      out6: [ r39.2c, r20.c3, r1.lpa ]
+
+  - name: r1
+    type: relaylatching
+    pins:
+      lpa: [ crcb.out6, r39.2c, r20.3c ]
+      lpb: r15.2c
+
+  - name: r15
+    type: relay
+    pins:
+      2c: r1.lpb
+      2nc: "WR STATUS DR"
+
+  - name: r4
+    type: relay 
+    pins:
+      pa: [ r1.lpa, r5.pa, r6.pa, r54.lpa ]
+      pb: "CTRL TAB DR"
+
+  - name: r5
+    type: relay
+    pins:
+      pa: [ r4.pa, r6.pa, r54.lpa ]
+      pb: r39.3nc
+
+  - name: r39
+    type: relaylatching
+    pins: 
+      3c: r7.4c
+      3nc: r5.pb
+
+  - name: r7
+    type: relaylatching
+    pins:
+      4c: r39.3c
+      4nc: "CTRL CARR RTN DR"
+
+  - name: r6
+    type: relay
+    pins:
+      pa: [ crcb.out6 ]      
+      pb: [ "CRTL SPACE DR" ]
+
+  - name: r54
+    type: relaylatching
+    pins:
+      lpa: [ crcb.out6, r6.pa ]      
+      lpb: "STORE DR"
+
+  - name: r19
+    type: relay
+    pins:
+      ha: [ r19.2no, r19.3no, tb78.1a ]      
+      hb: gnd
+
+  - name: r4
+    type: relay
+    pins:
+      2c: vp48
+      2no: r19.3c
+
+  - name: r19
+    type: relay
+    pins: 
+      2c: r4.2no
+      2nc: ps_tab.a
+
+  - name: ps_tab
+    type: solenoid 
+    pins:
+      a: r19.2nc
+      b: "SOLENOID COMMON"
+
+  - name: tb78
+    type: tb78 
+    pins: 
+      1a: [ r19.ha, r19.2no, r19.3no ]
+      1b: [ r19.4no ]
+
+  - name: r5
+    type: relay
+    pins:
+      2c: vp48
+      2no: r19.3c
+
+  - name: r19
+    type: relay
+    pins:
+      3c: r5.2no
+      3nc: ps_carr_rtn.a
+      3no: [ r19.ha, r19.2no, tb78.1a ]
+
+  - name: ps_carr_rtn
+    type: solenoid
+    pins:
+      a: r19.3nc
+      b: "SOLENOID COMMON"
+
+  - name: r10
+    type: relaylatching
+    pins:
+      10c: vp48
+      10no: ps_shift.a
+
+  - name: ps_shift
+    type: solenoid
+    pins: 
+      a: r10.1no
+      b: "SOLENOID COMMON"
+
+  - name: crcb
+    type: crcb
+    pins:
+      out2: [ r20.4c, r3.lpa ]      
+
+  - name: r3
+    type: relaylatching
+    pins:
+      lpa: crcb.out2
+      lpb: "WR NUM DR"
+
+      

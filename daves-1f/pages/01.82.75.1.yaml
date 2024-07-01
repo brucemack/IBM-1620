@@ -2,13 +2,8 @@ type: circuit
 part: 2129197
 title: "TYPEWRITER BIT RELAYS"
 ec: 404750c
-num: 01.82.86.1
+num: 01.82.75.1
 capture: "By hand on 1-July-2024"
-
-# NOT COMPLETE
-# NOT COMPLETE
-# NOT COMPLETE
-# NOT COMPLETE
 
 devices:
 
@@ -20,7 +15,7 @@ devices:
       out3: [ r1.2c, r16.1c ]
 
   - name: r1 
-    type: relay
+    type: relaylatching
     pins:
       2c: [ crcb.out3, r16.1c ]
       2nc: 
@@ -46,7 +41,7 @@ devices:
       pa: [ r8.2nc, r25.pa ]
       pb: "X BIT THY DR"
 
-  - name: r26
+  - name: r28
     type: relay 
     pins:
       # Relying on this connection to bridge to all other pins
@@ -129,7 +124,7 @@ devices:
       pb: GND
 
   - name: r39
-    type: relay 
+    type: relaylatching
     pins:
       2c: crcb.out6
       2no: [ r7.lta, r8.3no ]
@@ -148,7 +143,7 @@ devices:
       3no: [ r39.2no, r7.lta ]
 
   - name: r20
-    type: relay
+    type: relaylatching
     pins:
       4c: [ crcb.out2, r15.1c ]
       4nc: r7.1c
@@ -158,3 +153,9 @@ devices:
     pins: 
       1c: r20.4nc
       1no: r8.pa
+
+  - name: r8
+    type: relay
+    pins: 
+      pa: r7.1no
+      pb: gnd

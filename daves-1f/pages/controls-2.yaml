@@ -5,11 +5,89 @@ num: 00.00.00.00
 
 devices:
 
+  # Dummy - defined on 01.81.55.1
+  - name: r38
+    type: relay
+    pins:
+      pa: gnd
+      pb: gnd
+
+  # Dummy - defined on 01.81.55.1
+  - name: r39
+    type: relaylatching
+    pins:
+      lpa: gnd
+      lpb: gnd
+
   - name: pass1
     type: pass
     pins: 
       a: "PRINT MAGNET COMMON"
       b: GND
 
+  - name: pass0
+    type: pass
+    pins: 
+      a: "X BIT THY DR"
+      b: GND
+
+#  - name: pass2
+#    type: pass
+#    pins: 
+#      a: "0 BIT THY DR"
+#      b: GND
+
+#  - name: pass2
+#    type: pass
+#    pins: 
+#      a: "1 BIT THY DR"
+#      b: GND
+
+#  - name: pass3
+#    type: pass
+#    pins: 
+#      a: "2 BIT THY DR"
+#      b: GND
+
+#  - name: pass4
+#    type: pass
+#    pins: 
+#      a: "4 BIT THY DR"
+#      b: GND
+
+#  - name: pass5
+#    type: pass
+#    pins: 
+#      a: "8 BIT THY DR"
+#      b: GND
+
+#  - name: pass6
+#    type: pass
+#    pins: 
+#      a: "C BIT THY DR"
+#      b: GND
+
+  - name: pass7
+    type: pass
+    pins: 
+      a: "WR STATUS DR"
+      b: GND
+
+# NEGATIVE OF ABOVE
+#  - name: pass8
+#    type: pass
+#   pins: 
+#      a: "NOT WR STATUS DR"
+#      b: GND
+
+  - name: sw_shiftcontact
+    type: switch
+    pins:
+      c: "LAST COL CONTACT"
+      "no": [ r15.pa, r12.pa ]
+
 wires:
   - "PRINT MAGNET COMMON"      
+
+
+

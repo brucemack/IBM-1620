@@ -1,0 +1,270 @@
+type: circuit
+part: 2129196
+title: "TYPEWRITER CONTROLS"
+ec: 404750c
+num: 01.82.72.1
+capture: "By hand on 1-July-2024"
+
+devices:
+
+  - name: tb74
+    type: tb74
+    pins:
+      4b: r54.2nc
+      4a: [ r25.12no, r16.3c, r32.1no, r3.4nc ]
+
+  - name: r10
+    type: relaylatching
+    pins:
+      lta: [ r16.3no, d29.a ]
+      ltb: gnd
+
+  - name: r25
+    type: relay
+    pins:
+      12c: [ r3.2nc, r50.1no, r46.1no, r42.1no, r41.1no ]
+      12no: [ r16.3c, r31.1no, r3.4nc, tb74.4a ]
+
+  - name: r16
+    type: relay
+    pins:
+      3c: [ r25.12no, r31.1no, r3.4nc, d29.a ]
+      3no: [ r10.lta, d29.a ]
+
+  - name: crcb
+    type: crcb
+    pins:
+      out4: r20.3c
+
+  # Not showing all connections
+
+  - name: r41
+    type: relay
+    pins:
+      1c: r3.2nc
+      1no: r31.1c
+
+  - name: r42
+    type: relay
+    pins:
+      1c: r3.2nc
+      1no: r31.1c
+
+  - name: r46
+    type: relay
+    pins:
+      1c: r3.2nc
+      1no: r31.1c
+
+  - name: r50
+    type: relay
+    pins:
+      1c: r3.2nc
+      1no: r31.1c
+
+  - name: r31
+    type: relay
+    pins:
+      1c: r50.1c
+      1nc: r25.11c
+      1no: [ r16.3c, r25.12no ]
+
+  - name: r11
+    type: relay
+    pins:
+      pa: [ r5.4no, d29.b, d30.b ]
+      pb: gnd
+  
+  - name: r25
+    type: relay
+    pins:
+      11c: r31.1nc
+      11nc: [ r16.2c, r3.2no, r3.4no ]
+
+  - name: d30
+    type: diode
+    pins:
+      a: [ r10.lpa, r16.2nc ]
+
+  - name: r5
+    type: relay
+    pins:
+      4c: r20.3nc
+      4nc: r1.1c
+      4no: [ r11.pa, d29.b, d30.b ]
+
+  - name: r54
+    type: relaylatching
+    pins:
+      2c: r1.1nc
+      2nc: [ tb74.4b, "+S CRCB4 DISCONN" ]
+      2no: r3.4c
+
+  - name: r3
+    type: relaylatching
+    pins:
+      4c: r54.2no
+      4nc: [ r31.1no, r16.3c, r25.12no, tb74.4a ]
+      4no: [ r3.2no, r116.2c, r25.11nc ]
+
+  - name: r10
+    type: relaylatching 
+    pins:
+      lpa: [ d30.a, r16.2nc ]
+      lpb: gnd
+
+  - name: r1
+    type: relaylatching
+    pins:
+      1c: r5.4nc 
+      1nc: r54.2c
+      1no: [ r54.3c, "WR STATUS" ]
+        
+  - name: r54
+    type: relaylatching 
+    pins:
+      3c: [ r1.1no, "WR STATUS" ]
+      3nc: r3.2c
+
+  - name: r3
+    type: relaylatching
+    pins:
+      2c: r54.3nc
+      2nc: [ r25.12c, r50.1no ]
+      2no: [ r3.4no, r25.11nc ]
+
+  - name: r16
+    type: relay
+    pins:
+      2c: [ r3.2no, r25.11nc ]
+      2nc: [ r10.lpa, d30.a ]
+      2no: [ r25.10c ]
+
+  - name: r25
+    type: relay
+    pins:
+      10c: r16.2no
+      10no: r7.lpa
+
+  - name: r7
+    type: relaylatching
+    pins:
+      lpa: r25.10no
+      lpb: gnd
+
+  - name: r20
+    type: relaylatching
+    warn: "Needs work"
+    pins: 
+      2c: vp48
+      2no: "+S TEST INTLK"
+    
+  - name: r11
+    type: relay
+    pins:
+      ha: [ r11.2no, d28.a ]
+      hb: gnd
+
+  - name: d28
+    type: diode
+    pins: 
+      a: [ r11.ha, r11.2no ]
+      b: [ r39.lta, r40.2no ]
+
+  - name: r39
+    type: relaylatching
+    pins: 
+      lta: [ d28.b, r40.2no ]        
+      ltb: gnd
+
+  - name: r40
+    type: relaylatching
+    pins:
+      1c: [ r15.1c, r20.4c ]
+      1no: [ d28.b, r39.lta ]
+
+  - name: r16
+    type: relay 
+    pins:
+      pa: r15.1no
+      pb: gnd
+
+  - name: r15
+    type: relay
+    pins:
+      1c: [ r40.1c, r20.4c ]
+      1no: r16.pa
+
+  - name: r15 
+    type: relay 
+    pins: 
+      pa: sw_shiftcontact.no
+      pb: r15.ha
+      ha: r15.pb
+      hb: gnd
+      
+  - name: r12
+    type: relay 
+    pins: 
+      pa: sw_shiftcontact.no
+      pb: r12.ha
+      ha: r12.pb
+      hb: gnd
+
+  - name: ps_keylock
+    type: solenoid
+    pins:
+      a: "STORE RC 89B 2"
+      b: "SOLENOID COMMON"
+
+  - name: r16
+    type: relay
+    pins:
+      1c: r1.2c
+      1no: [ r16.ha, tb78.2b ]
+
+  - name: r16
+    type: relay
+    pins:
+      ha: r16.1no
+      hb: gnd
+
+  - name: r20
+    type: relaylatching
+    warn: "Check polarity"
+    pins:
+      lpa: crcb.out1
+      lpb: "TEST REL PICK"
+
+  - name: r20
+    type: relaylatching
+    warn: "Check polarity"
+    pins:
+      lta: crcb.out6
+      ltb: "TEST REL TRIP"
+
+  - name: r39
+    type: relaylatching
+    pins:
+      1c: r3.3c
+      1no: r40.lpa
+
+  - name: r40
+    type: relaylatching
+    pins:
+      lpa: r39.1no
+      lpb: gnd
+
+  - name: r38
+    type: relay
+    pins:
+      2c: r7.2nc
+      2no: r40.lta
+
+  - name: r40
+    type: relaylatching
+    pins: 
+      lta: r38.2no
+      ltb: gnd
+
+

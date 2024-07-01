@@ -16,7 +16,7 @@ devices:
       out5: r1.3c
 
   - name: r1
-    type: relay
+    type: relaylatching
     pins: 
       3c: crcb.out5
       3no: r11.2c
@@ -30,7 +30,7 @@ devices:
       2no: r11.ha
 
   - name: r20
-    type: relay
+    type: relaylatching
     pins: 
       1c: r11.2nc
       1nc: r38.4c
