@@ -19,17 +19,23 @@ devices:
       lpa: gnd
       lpb: gnd
 
-  - name: pass1
+  - name: pass1a
     type: pass
     pins: 
-      a: "PRINT MAGNET COMMON"
+      a: [ "PRINT MAGNET COMMON" ]
       b: GND
 
-  - name: pass0
+  - name: pass1b
     type: pass
     pins: 
-      a: "X BIT THY DR"
+      a: [ "SOLENOID COMMON" ]
       b: GND
+
+  #- name: pass0
+  #  type: pass
+  #  pins: 
+  #    a: "X BIT THY DR"
+  #    b: GND
 
 #  - name: pass2
 #    type: pass
@@ -79,15 +85,6 @@ devices:
 #   pins: 
 #      a: "NOT WR STATUS DR"
 #      b: GND
-
-  - name: sw_shiftcontact
-    type: switch
-    pins:
-      c: "LAST COL CONTACT"
-      "no": [ r15.pa, r12.pa ]
-
-wires:
-  - "PRINT MAGNET COMMON"      
 
 
 

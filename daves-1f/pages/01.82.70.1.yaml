@@ -17,12 +17,12 @@ devices:
     type: relay 
     pins:
       3c: [ "SPACE INTLK CONT", r54.4no ]
-      3no: [ sw_tab_intlk_contact. no, r19.pa ]
+      3no: [ sw_tab_intlk_contact.no, r19.pa ]
 
   - name: r4
     type: relay
     pins:
-      1c: [ r5.1c, r19.1nc, d7b74.7b, r6.4c, tb78.2a ]
+      1c: [ r5.1c, r19.1nc, tb74.7b, r6.4c, tb78.2a ]
       1no: r4.ha
 
   - name: r4
@@ -95,7 +95,7 @@ devices:
     type: switch
     warn: "Need to connect!"
     pins:
-      c: [ "SHIFT CONT", sw_carr_rtn_intlk_contact.c, sw_tab_intlk_contact.c ]
+      c: [ sw_carr_rtn_intlk_contact.c, sw_tab_intlk_contact.c ]
 
   - name: crcb
     type: crcb
@@ -104,9 +104,10 @@ devices:
 
   - name: r1
     type: relaylatching
+    warn: "Removed tb98"
     pins:
       lta: [ crcb.out1, r39.1c, r3.lta ]
-      ltb: [ "NOT WR STATUS DR", tb98.5a ]
+      ltb: [ "NOT WR STATUS DR" ]
 
   - name: r3
     type: relaylatching
@@ -123,7 +124,7 @@ devices:
   - name: crcb
     type: crcb
     pins:
-      out6: [ r39.2c, r20.c3, r1.lpa ]
+      out6: [ r39.2c, r20.3c, r1.lpa ]
 
   - name: r1
     type: relaylatching
@@ -190,6 +191,7 @@ devices:
     pins: 
       2c: r4.2no
       2nc: ps_tab.a
+      2no: [ r19.ha, r19.3no, tb78.1a ]
 
   - name: ps_tab
     type: solenoid 
@@ -225,8 +227,8 @@ devices:
   - name: r10
     type: relaylatching
     pins:
-      10c: vp48
-      10no: ps_shift.a
+      1c: vp48
+      1no: ps_shift.a
 
   - name: ps_shift
     type: solenoid

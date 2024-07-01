@@ -89,7 +89,7 @@ class Edge:
     def tick(self):
         self.last_current = self.current
         self.current = False
-        self.tick = self.tick + 1
+        self.tick_count = self.tick_count + 1
 
     def get_last_current(self):
         return self.last_current
@@ -108,7 +108,7 @@ class CRCBEdge(Edge):
         return "CRCB " + self.device.get_name()
 
     def is_conductive(self):
-        angle = (self.tick * 5) % 360
+        angle = (self.tick_count * 5) % 360
         if self.make_angle <= angle and angle <= self.break_angle:
             return True
         else:
@@ -308,6 +308,15 @@ def load_page_2(p, devices, pins, nodes):
             util.traverse_graph([ pin ], pin_visitor)
 
             if len(connected_pins) > 0:
+                # Check to see if we have a case of multiple fixed names
+                name_list = []
+                for p in connected_pins:
+                    if p.is_fixed_name():
+                        name_list.append(p.get_name())
+                if len(name_list) > 1:
+                    print("Multiple names: ", name_list)
+                    raise Exception("Multiple fixed names on same net")
+
                 # Check to see if any of the pins have fixed names, if 
                 # so that has priority in node naming
                 pin_with_fixed_name = None
@@ -363,6 +372,8 @@ pins["GND"] = Pin("GND", True)
 pins["VP48"] = Pin("VP48", True)
 
 infiles = [
+    "01.81.50.1.yaml",
+    "01.81.55.1.yaml",
     "01.82.70.1.yaml",
     "01.82.72.1.yaml",
     "01.82.75.1.yaml",
@@ -374,7 +385,12 @@ infiles = [
 ]
 
 for infile in infiles:    
-    load_page_from_file_1a(infile, devices, pins)
+    try:
+        load_page_from_file_1a(infile, devices, pins)
+    except Exception as ex:
+        print("Failed on page", infile, ex)
+        raise ex
+        quit()
 for infile in infiles:    
     load_page_from_file_1b(infile, devices, pins)
 for infile in infiles:    
@@ -572,6 +588,8 @@ for device_name, device in devices.items():
             edge = ShortEdge(device, b)
             a.add_edge(edge)
             edges.append(edge)
+    elif device.get_type() == "tb86":
+        pass
     elif device.get_type() == "diode":
         a = get_conn(pins, device, "a")
         b = get_conn(pins, device, "b")
@@ -584,14 +602,12 @@ for device_name, device in devices.items():
     else:
         raise Exception("Device has unrecognized type " + device.get_name() + " " + device.get_type())
 
-"""
 # Diag
 for _, node in nodes.items():
-    print("Node", node.get_name())
+    print(node.get_name())
     # Edges
-    for edge in node.get_edges():
-        print("    Edge " + edge.get_device().get_name() + " to ", edge.get_neighbors()[0])        
-"""
+    #for edge in node.get_edges():
+    #    print("    Edge " + edge.get_device().get_name() + " to ", edge.get_neighbors()[0])        
 
 start = nodes["VP48"]
 end = nodes["GND"]
@@ -609,7 +625,9 @@ def visit1(node, path):
     else:
         return True
 
-for t in range(0, 20):
+quit()
+
+for t in range(0, 72):
 
     angle = (t * 5) % 360
     print(t, "Angle=" , angle)
@@ -622,6 +640,3 @@ for t in range(0, 20):
 
     # Do a traversal from the supply
     util.traverse_graph([ start ], visit1, False)
-
-
-

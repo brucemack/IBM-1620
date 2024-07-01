@@ -1,0 +1,20 @@
+type: circuit
+part: 2129180
+title: "TYPEWRITER OUTPUT SIGNALS"
+ec: 404750c
+num: 01.81.50.1
+capture: "By hand on 1-July-2024"
+
+# NOT COMPLETE
+# NOT COMPLETE
+# NOT COMPLETE
+# NOT COMPLETE
+
+devices:
+  - name: r54
+    type: relaylatching
+    warn: "Need to work on logic-level signals here"
+    pins:
+      4c: "+S TPWR RESP"
+      4nc: r41.2c
+      4no: 

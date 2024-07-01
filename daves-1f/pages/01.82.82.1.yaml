@@ -17,14 +17,14 @@ devices:
   - name: r19
     type: relay
     pins:
-      4n: r6.1c
+      4c: r6.1c
       4nc: sp_space.a
-      4no: "tb78-2a"     
+      4no: tb78.2a     
 
   - name: sp_space
     type: solenoid
     pins:
-      a: r16.4nc
+      a: r19.4nc
       b: "SOLENOID COMMON"
 
   - name: r22
@@ -37,7 +37,7 @@ devices:
   - name: sp_dash
     type: solenoid
     pins:
-      a: r22.cno
+      a: r22.3no
       b: "PRINT MAGNET COMMON"
 
   - name: r28      
@@ -86,6 +86,12 @@ devices:
       5c: r28.5nc
       5nc: r42.7no
       5no: sp_q.a 
+
+  - name: sp_q
+    type: solenoid
+    pins:
+      a: r22.5no
+      b: "PRINT MAGNET COMMON"
 
   - name: r28 
     type: relay 

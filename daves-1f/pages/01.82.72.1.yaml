@@ -11,7 +11,7 @@ devices:
     type: tb74
     pins:
       4b: r54.2nc
-      4a: [ r25.12no, r16.3c, r32.1no, r3.4nc ]
+      4a: [ r25.12no, r16.3c, r31.1no, r3.4nc ]
 
   - name: r10
     type: relaylatching
@@ -30,6 +30,12 @@ devices:
     pins:
       3c: [ r25.12no, r31.1no, r3.4nc, d29.a ]
       3no: [ r10.lta, d29.a ]
+
+  - name: d29
+    type: diode
+    pins: 
+      a: [ r10.lta, r16.3no ]
+      b: [ r11.pa, d30.b ]
 
   - name: crcb
     type: crcb
@@ -74,6 +80,12 @@ devices:
     pins:
       pa: [ r5.4no, d29.b, d30.b ]
       pb: gnd
+
+  - name: r20
+    type: relaylatching
+    pins:
+      3c: crcb.out4
+      3nc: r5.4c
   
   - name: r25
     type: relay
@@ -85,6 +97,7 @@ devices:
     type: diode
     pins:
       a: [ r10.lpa, r16.2nc ]
+      b: [ d29.b, r11.pa ]
 
   - name: r5
     type: relay
@@ -105,7 +118,7 @@ devices:
     pins:
       4c: r54.2no
       4nc: [ r31.1no, r16.3c, r25.12no, tb74.4a ]
-      4no: [ r3.2no, r116.2c, r25.11nc ]
+      4no: [ r3.2no, r16.2c, r25.11nc ]
 
   - name: r10
     type: relaylatching 
@@ -169,12 +182,12 @@ devices:
     type: diode
     pins: 
       a: [ r11.ha, r11.2no ]
-      b: [ r39.lta, r40.2no ]
+      b: [ r39.lta, r40.1no ]
 
   - name: r39
     type: relaylatching
     pins: 
-      lta: [ d28.b, r40.2no ]        
+      lta: [ d28.b, r40.1no ]        
       ltb: gnd
 
   - name: r40
@@ -194,6 +207,12 @@ devices:
     pins:
       1c: [ r40.1c, r20.4c ]
       1no: r16.pa
+
+  - name: sw_shiftcontact
+    type: switch
+    pins: 
+      c: VP48
+      "no": [ r12.pa, r15.pa ]
 
   - name: r15 
     type: relay 
@@ -246,7 +265,7 @@ devices:
   - name: r39
     type: relaylatching
     pins:
-      1c: r3.3c
+      1c: r3.lta
       1no: r40.lpa
 
   - name: r40

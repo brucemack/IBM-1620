@@ -1,0 +1,18 @@
+type: circuit
+part: 2129180
+title: "TYPEWRITER OUTPUT SIGNALS"
+ec: 404750c
+num: 01.81.55.1
+capture: "By hand on 1-July-2024"
+
+# NOT COMPLETE
+# NOT COMPLETE
+# NOT COMPLETE
+# NOT COMPLETE
+
+devices:
+  - name: tb86
+    type: tb86
+    pins:
+      7a: [ r38.4nc ]
+      7b: 

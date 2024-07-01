@@ -41,3 +41,5 @@ devices:
     type: tb74    
   - name: d29
     type: diode
+  - name: d30
+    type: diode    
