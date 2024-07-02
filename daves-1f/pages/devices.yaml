@@ -5,6 +5,9 @@ devices:
   - name: r3
     type: relaylatching
     desc: "Write Number"
+  - name: r6
+    type: relay
+    desc: "Control Space"
   - name: r7
     type: relaylatching
     desc: "Flag"

@@ -16,10 +16,12 @@ devices:
 
   - name: r19
     type: relay
+    warn: "ERROR in diagram?  Diagram shows connected to tb78.2a, should be .1a"
     pins:
       4c: r6.1c
       4nc: sp_space.a
-      4no: tb78.2a     
+      # Changed
+      4no: tb78.1a     
 
   - name: sp_space
     type: solenoid

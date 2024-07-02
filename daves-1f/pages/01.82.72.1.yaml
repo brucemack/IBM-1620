@@ -239,8 +239,8 @@ devices:
   - name: r16
     type: relay
     pins:
-      1c: r1.2c
-      1no: [ r16.ha, tb78.2b ]
+      1c: [ r1.2c, tb78.2b ]
+      1no: [ r16.ha ]
 
   - name: r16
     type: relay
