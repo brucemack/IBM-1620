@@ -87,6 +87,9 @@ class Edge:
         else:
             return [ ]
 
+    def get_to_node(self):
+        return self.to_node
+
     def tick(self):
         self.last_current = self.current
         self.current = False
@@ -97,6 +100,9 @@ class Edge:
 
     def set_current(self): 
         self.current = True
+
+    def get_current(self):
+        return self.current
 
     def __str__(self):
         if self.desc is None:
@@ -148,7 +154,8 @@ class NormallyOpenLatchingEdge(Edge):
         super().set_current()
         print("Current in (NO) ", str(self))
 
-    def is_conductive(self):
+    def tick(self):
+        super().tick()
         # Use the coil currents to decide if the transfer state has 
         # changed.
         if self.pick_coil.get_last_current():
@@ -158,6 +165,7 @@ class NormallyOpenLatchingEdge(Edge):
         # IMPORTANT: If there is no current in either coil the state
         # remains unchanged!
 
+    def is_conductive(self):
         if self.state:
             return True
         else:
@@ -178,7 +186,8 @@ class NormallyClosedLatchingEdge(Edge):
         super().set_current()
         print("Current in (NC)", str(self))
 
-    def is_conductive(self):
+    def tick(self):
+        super().tick()
         # Use the coil currents to decide if the transfer state has 
         # changed.
         if self.pick_coil.get_last_current():
@@ -188,6 +197,7 @@ class NormallyClosedLatchingEdge(Edge):
         # IMPORTANT: If there is no current in either coil the state
         # remains unchanged!
 
+    def is_conductive(self):
         if self.state:
             return False
         else:
@@ -217,9 +227,6 @@ class NormallyClosedEdge(Edge):
         super().__init__(device, to_node, desc)
         self.coil0 = coil0
         self.coil1 = coil1
-
-    def __str__(self):
-        return "NormallyClosed " + self.device.get_name()
 
     def set_current(self): 
         super().set_current()
@@ -360,6 +367,13 @@ def get_conn(pins, device, pin_name):
         return None
     return pins[full_pin_name].get_node()
 
+def fmt_path(path):
+    s = ""
+    for m in path:
+        m.set_current()
+        s = s + str(m) + " -> "
+    return s
+
 devices = {}
 pins = {}
 nodes = {}
@@ -492,14 +506,17 @@ for device_name, device in devices.items():
 
             b = get_conn(pins, device, str(i) + "NO")
             if a != None and b != None:
+
                 edge = NormallyOpenLatchingEdge(device, b, pick_coil, trip_coil, 
                         "Relay " + device.get_name() + " " + str(i) + "NO")
                 a.add_edge(edge)
                 edges.append(edge)
+
                 edge = NormallyOpenLatchingEdge(device, a, pick_coil, trip_coil, 
                         "Relay " + device.get_name() + " " + str(i) + "NO")
                 b.add_edge(edge)
                 edges.append(edge)
+
                                
     elif device.get_type() == "pass":
         a = get_conn(pins, device, "A")
@@ -524,6 +541,15 @@ for device_name, device in devices.items():
     elif device.get_type() == "crcb":
         a = get_conn(pins, device, "c")
         # Different phases
+        b = get_conn(pins, device, "out2")
+        if a != None and b != None:
+            edge = CRCBEdge(device, b, 50, 100, "CRCB 2")
+            a.add_edge(edge)
+            edges.append(edge)
+            edge = CRCBEdge(device, a, 50, 100, "CRCB 2")
+            b.add_edge(edge)
+            edges.append(edge)
+
         b = get_conn(pins, device, "out3")
         if a != None and b != None:
             edge = CRCBEdge(device, b, 99, 309, "CRCB 3")
@@ -532,6 +558,7 @@ for device_name, device in devices.items():
             edge = CRCBEdge(device, a, 99, 309, "CRCB 3")
             b.add_edge(edge)
             edges.append(edge)
+
         b = get_conn(pins, device, "out4")
         if a != None and b != None:
             edge = CRCBEdge(device, b, 171, 221, "CRCB 4")
@@ -609,11 +636,17 @@ for device_name, device in devices.items():
         raise Exception("Device has unrecognized type " + device.get_name() + " " + device.get_type())
 
 # Diag
+"""
 for _, node in nodes.items():
     print(node.get_name())
     # Edges
     for edge in node.get_edges():
         print("    Edge " + str(edge))        
+        if edge.get_to_node() != None:
+            print("        " + edge.get_to_node().get_name()) 
+        else:
+            print("          NOT CONNECTED")
+"""
 
 start = nodes["VP48"]
 end = nodes["GND"]
@@ -622,19 +655,28 @@ end = nodes["GND"]
 def visit1(node, path):
     # Any successful path?
     if node == end:
-        s = ""
-        for m in path:
-            m.set_current()
-            s = s + str(m) + " -> "
-        print(s)
+        print(fmt_path(path))
         return False
     else:
         return True
 
-for t in range(0, 72):
+for t in range(1, 72 * 2):
 
     angle = (t * 5) % 360
-    print(t, "Angle=" , angle)
+
+    if angle == 0:
+        print("================================================================")
+
+    # Display phases
+    s = ""
+    if angle >= 50 and angle <= 100:
+        s = s + "CRCB2 "
+    if angle >= 171 and angle <= 221:
+        s = s + "CRCB4 "
+    if angle >= 310 and angle <= 360:
+        s = s + "CRCB6 "
+    print()
+    print(t, "Angle=" , angle, s, "---------------------------------------------------------")
     
     # Prepare
     for node in nodes.values():
@@ -644,3 +686,11 @@ for t in range(0, 72):
 
     # Do a traversal from the supply
     util.traverse_graph([ start ], visit1, False)
+
+    # Display edges with current
+    #print("Edges that are conductive")
+    #for edge in edges:
+    #    if "R1 1NO" in str(edge):
+    #        print(str(edge), edge.is_conductive())
+
+

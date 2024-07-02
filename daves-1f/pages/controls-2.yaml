@@ -49,11 +49,11 @@ devices:
 #      a: "0 BIT THY DR"
 #      b: GND
 
-#  - name: pass2
-#    type: pass
-#    pins: 
-#      a: "1 BIT THY DR"
-#      b: GND
+  - name: pass2
+    type: pass
+    pins: 
+      a: "1 BIT THY DR"
+      b: GND
 
 #  - name: pass3
 #    type: pass
@@ -92,14 +92,16 @@ devices:
 #      a: "NOT WR STATUS DR"
 #      b: GND
 
-# SPACE TEST
-
   - name: pass8
     type: pass
     pins: 
-      a: "CTRL SPACE DR"
+      a: "WR NUM DR"
       b: GND
 
+# SPACE TEST
 
-
-
+#  - name: pass8
+#    type: pass
+#    pins: 
+#      a: "CTRL SPACE DR"
+#      b: GND

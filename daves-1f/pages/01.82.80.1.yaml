@@ -23,7 +23,7 @@ devices:
   - name: r11
     type: relay
     pins:
-      2c: r1.3c
+      2c: r1.3no
       2nc: r20.1c
       # Relay 11 hold
       2no: r11.ha
@@ -215,8 +215,8 @@ devices:
     type: relay
     pins:
       5c: r50.3no
-      5nc: [ r46.7no, r46.3no, r25.1no ]
-      5no: r42.7c
+      5nc: r42.7c
+      5no: [ r46.7no, r46.3no, r25.1no ]
 
   - name: ps_z
     type: solenoid
@@ -227,7 +227,7 @@ devices:
   - name: r42
     type: relay
     pins:
-      7c: r46.5no
+      7c: r46.5nc
       7nc: ps_z.a
       7no: [ ps_8comma.a, r22.5nc ]
 

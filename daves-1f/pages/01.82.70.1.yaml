@@ -123,13 +123,14 @@ devices:
 
   - name: crcb
     type: crcb
+    warn: "ERROR? Diagram shows a connection to R20-3C, but that doesn't seem right"
     pins:
-      out6: [ r39.2c, r20.3c, r1.lpa ]
+      out6: [ r39.2c, r1.lpa ]
 
   - name: r1
     type: relaylatching
     pins:
-      lpa: [ crcb.out6, r39.2c, r20.3c ]
+      lpa: [ crcb.out6 ]
       lpb: r15.2c
 
   - name: r15
@@ -141,13 +142,13 @@ devices:
   - name: r4
     type: relay 
     pins:
-      pa: [ r1.lpa, r5.pa, r6.pa, r54.lpa ]
+      pa: [ crcb.out6 ]
       pb: "CTRL TAB DR"
 
   - name: r5
     type: relay
     pins:
-      pa: [ r4.pa, r6.pa, r54.lpa ]
+      pa: [ crcb.out6 ]
       pb: r39.3nc
 
   - name: r39
@@ -172,7 +173,7 @@ devices:
   - name: r54
     type: relaylatching
     pins:
-      lpa: [ crcb.out6, r6.pa ]      
+      lpa: [ crcb.out6 ]      
       lpb: "STORE DR"
 
   - name: r19
@@ -247,5 +248,3 @@ devices:
     pins:
       lpa: crcb.out2
       lpb: "WR NUM DR"
-
-      

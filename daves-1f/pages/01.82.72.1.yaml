@@ -28,7 +28,7 @@ devices:
   - name: r16
     type: relay
     pins:
-      3c: [ r25.12no, r31.1no, r3.4nc, d29.a ]
+      3c: [ r25.12no, r31.1no, r3.4nc ]
       3no: [ r10.lta, d29.a ]
 
   - name: d29
@@ -131,12 +131,14 @@ devices:
     pins:
       1c: r5.4nc 
       1nc: r54.2c
-      1no: [ r54.3c, "WR STATUS" ]
+      "1no": [ r54.3c ]
+      #1no: [ r54.3c, "WR STATUS" ]
         
   - name: r54
     type: relaylatching 
     pins:
-      3c: [ r1.1no, "WR STATUS" ]
+      #3c: [ r1.1no, "WR STATUS" ]
+      3c: [ r1.1no ]
       3nc: r3.2c
 
   - name: r3
@@ -144,7 +146,7 @@ devices:
     pins:
       2c: r54.3nc
       2nc: [ r25.12c, r50.1no ]
-      2no: [ r3.4no, r25.11nc ]
+      2no: [ r16.2c, r3.4no, r25.11nc ]
 
   - name: r16
     type: relay
