@@ -11,20 +11,6 @@ devices:
     pins: 
       c: VP48
 
-  # Dummy - defined on 01.81.55.1
-  - name: r38
-    type: relay
-    pins:
-      pa: gnd
-      pb: gnd
-
-  # Dummy - defined on 01.81.55.1
-  - name: r39
-    type: relaylatching
-    pins:
-      lpa: gnd
-      lpb: gnd
-
   - name: pass1a
     type: pass
     pins: 
@@ -36,6 +22,12 @@ devices:
     pins: 
       a: [ "SOLENOID COMMON" ]
       b: GND
+
+#  - name: diag1
+#    type: solenoid
+#    pins: 
+#      a: r28.12c
+#      b: GND
 
   #- name: pass0
   #  type: pass

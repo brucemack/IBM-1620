@@ -150,10 +150,6 @@ class NormallyOpenLatchingEdge(Edge):
         self.state = False
         self.last_state = False
 
-    def set_current(self): 
-        super().set_current()
-        print("Current in (NO) ", str(self))
-
     def tick(self):
         super().tick()
         # Use the coil currents to decide if the transfer state has 
@@ -184,7 +180,7 @@ class NormallyClosedLatchingEdge(Edge):
 
     def set_current(self): 
         super().set_current()
-        print("Current in (NC)", str(self))
+        #print("Current in (NC)", str(self))
 
     def tick(self):
         super().tick()
@@ -212,7 +208,7 @@ class NormallyOpenEdge(Edge):
 
     def set_current(self): 
         super().set_current()
-        print("Current in (NO)", self.get_device().get_name())
+        #print("Current in (NO)", self.get_device().get_name())
 
     def is_conductive(self):
         if self.coil0 != None and self.coil0.get_last_current():
@@ -230,7 +226,7 @@ class NormallyClosedEdge(Edge):
 
     def set_current(self): 
         super().set_current()
-        print("Current in (NC)", self.get_device().get_name())
+        #print("Current in (NC)", self.get_device().get_name())
 
     def is_conductive(self):
         if self.coil0 != None and self.coil0.get_last_current():
@@ -436,7 +432,7 @@ for device_name, device in devices.items():
             edges.append(hold_coil)
 
         # Contacts
-        for i in range(1, 12):
+        for i in range(1, 13):
             a = get_conn(pins, device, str(i) + "C")            
 
             b = get_conn(pins, device, str(i) + "NC")
@@ -489,7 +485,7 @@ for device_name, device in devices.items():
             raise Exception("Trip coil missing for relay " + device.get_name())
 
         # Contacts
-        for i in range(1, 12):
+        for i in range(1, 13):
             a = get_conn(pins, device, str(i) + "C")            
 
             b = get_conn(pins, device, str(i) + "NC")
@@ -637,8 +633,15 @@ for device_name, device in devices.items():
 
 # Diag
 """
+for _, pin in pins.items():
+    print(pin.get_name())
+    for n in pin.get_neighbors():
+        print("   ", n.get_name())    
+
+
 for _, node in nodes.items():
     print(node.get_name())
+    
     # Edges
     for edge in node.get_edges():
         print("    Edge " + str(edge))        
@@ -649,18 +652,19 @@ for _, node in nodes.items():
 """
 
 start = nodes["VP48"]
-end = nodes["GND"]
+# Hitting any of these nodes stops the ground search
+end_list = [ nodes["GND"], nodes["SOLENOID COMMON"], nodes["PRINT MAGNET COMMON"] ]
 
 # Do a traversal from the supply
 def visit1(node, path):
     # Any successful path?
-    if node == end:
+    if node in end_list:
         print(fmt_path(path))
         return False
     else:
         return True
 
-for t in range(1, 72 * 2):
+for t in range(1, 72 * 3):
 
     angle = (t * 5) % 360
 
@@ -671,12 +675,16 @@ for t in range(1, 72 * 2):
     s = ""
     if angle >= 50 and angle <= 100:
         s = s + "CRCB2 "
+    if angle >= 99 and angle <= 309:
+        s = s + "CRCB3 "
     if angle >= 171 and angle <= 221:
         s = s + "CRCB4 "
+    if angle >= 220 and angle <= 300:
+        s = s + "CRCB5 "
     if angle >= 310 and angle <= 360:
         s = s + "CRCB6 "
     print()
-    print(t, "Angle=" , angle, s, "---------------------------------------------------------")
+    print(t,"Cycle=", int(t / 72), "Angle=" , angle, s, "---------------------------------------------------------")
     
     # Prepare
     for node in nodes.values():

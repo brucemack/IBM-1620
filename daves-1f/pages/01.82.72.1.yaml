@@ -131,14 +131,12 @@ devices:
     pins:
       1c: r5.4nc 
       1nc: r54.2c
-      "1no": [ r54.3c ]
-      #1no: [ r54.3c, "WR STATUS" ]
+      1no: [ r54.3c, "WR STATUS" ]
         
   - name: r54
     type: relaylatching 
     pins:
-      #3c: [ r1.1no, "WR STATUS" ]
-      3c: [ r1.1no ]
+      3c: [ r1.1no, "WR STATUS" ]
       3nc: r3.2c
 
   - name: r3

@@ -1,9 +1,9 @@
 type: circuit
-part: 2129180
-title: "TYPEWRITER OUTPUT SIGNALS"
+part: 2129181
+title: "TYPEWRITER OUTPUT AND CHECK"
 ec: 404750c
 num: 01.81.55.1
-capture: "By hand on 1-July-2024"
+capture: "By hand on 2-July-2024"
 
 # NOT COMPLETE
 # NOT COMPLETE
@@ -16,3 +16,120 @@ devices:
     pins:
       7a: [ r38.4nc ]
       7b: 
+
+  - name: r9
+    type: relay
+    pins:
+      2c: "WR STATUS"
+      2nc: r25.9c
+      2no: [ r25.9no, r28.11c ]
+
+  - name: r25
+    type: relay
+    pins:
+      9c: r9.2nc
+      9nc: r28.12c
+      9no: [ r9.2no, r28.11c ]     
+
+  - name: r28
+    type: relay
+    pins:
+      12c: r25.9nc
+      12nc: [ r28.11no, r50.10c ]
+      12no: [ r28.11nc, r50.11c ]           
+
+  - name: r28
+    type: relay
+    pins: 
+      11c: [ r25.9no, r9.2no ]
+      11nc: [ r28.12no, r50.11c ]
+      11no: [ r28.12nc, r50.10c ]                 
+
+  - name: r50
+    type: relay
+    pins:
+      11c: [ r28.12no, r28.11nc ]
+      11nc: [ r50.10no, r49.1c ]
+      11no: [ r50.10nc, r49.2c ]    
+
+  - name: r50
+    type: relay
+    pins:
+      10c: [r28.11no, r28.12nc ]
+      10nc: [ r50.11no, r49.2c ]
+      10no: [ r50.11nc, r49.1c ] 
+
+  - name: r49
+    type: relay
+    pins:
+      2c: [ r50.10nc, r50.11no ]
+      2nc: [ r49.1no, r45.3c ]
+      2no: [ r49.1nc, r45.4c ]                 
+
+  - name: r49
+    type: relay
+    pins:
+      1c: [ r50.10no, r50.11nc ]
+      1nc: [ r49.2no, r45.4c ]
+      1no: [ r49.2nc, r45.3c ]                       
+
+  - name: r45
+    type: relay
+    pins:
+      4c: [ r49.2no, r49.1nc ]
+      4nc: [ r45.3no, r41.3c ]
+      4no: [ r45.3nc, r41.4c ]                       
+
+  - name: r45
+    type: relay
+    pins: 
+      3c: [ r49.1no, r49.2nc ]
+      3nc: [ r45.4no, r41.4c ]
+      3no: [ r45.4nc, r41.3c ]                       
+
+  - name: r41
+    type: relay
+    pins:
+      4c: [ r45.4no, r45.3nc ]
+      4nc: [ r21.3no, r21.2nc, r41.3no ]
+      4no: [ r21.2no, r21.3nc, r41.3nc ]               
+
+  - name: r41
+    type: relay
+    pins:
+      3c: [ r45.3no, r45.4nc ]
+      3nc: [ r41.4no, r21.3nc, r21.2no ]
+      3no: [ r21.2nc, r21.3no, r41.4nc ]                      
+
+  - name: r21
+    type: relay
+    pins:
+      3c: [ r38.pa, r40.2no ]
+      3nc: [ r41.4no, r41.3nc, r21.2no ]
+      3no: [ r41.4nc, r41.3no, r21.2nc ]             
+
+  - name: r21
+    type: relay
+    pins:
+      2c: [ r40.2c ]
+      2nc: [ r41.3no, r41.4nc, r21.3no ]
+      2no: [ r41.4no, r41.3nc, r21.3nc ]                                         
+
+  - name: r38
+    type: relay
+    pins:
+      pa: r21.3c
+      pb: gnd
+
+  - name: r40
+    type: relaylatching
+    pins:
+      2c: r21.2c
+      2nc: r39.lpa
+      2no: [ r21.3c, r38.pa ]
+
+  - name: r39
+    type: relaylatching
+    pins:
+      lpa: r40.2nc
+      lpb: gnd
