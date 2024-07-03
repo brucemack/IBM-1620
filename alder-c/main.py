@@ -55,7 +55,7 @@ class Node:
         return self.edges
     
     def __str__(self):
-        return "Node: " + self.name
+        return self.name
 
     def tick(self):
         self.current = False
@@ -64,13 +64,16 @@ class Node:
 
 class Edge:
 
-    def __init__(self, device: Device, to_node: Node, desc: str = None):
+    def __init__(self, device: Device, to_node: Node, name: str):
         self.device = device
         self.to_node = to_node
-        self.desc = desc
+        self.name = name
         self.current = False
         self.last_current = False
         self.tick_count = 0
+
+    def get_name(self):
+        return self.name
 
     def get_device(self):
         return self.device
@@ -90,7 +93,7 @@ class Edge:
     def get_to_node(self):
         return self.to_node
 
-    def tick(self):
+    def tick(self, edges):
         self.last_current = self.current
         self.current = False
         self.tick_count = self.tick_count + 1
@@ -105,15 +108,12 @@ class Edge:
         return self.current
 
     def __str__(self):
-        if self.desc is None:
-            return "Edge " + self.device.get_name()
-        else:
-            return self.desc
+        return self.name
 
 class CRCBEdge(Edge):
 
-    def __init__(self, device: Device, to_node: Node, make_angle: int, break_angle: int, desc: str):
-        super().__init__(device, to_node, desc)
+    def __init__(self, device: Device, to_node: Node, make_angle: int, break_angle: int, name: str):
+        super().__init__(device, to_node, name)
         self.make_angle = make_angle
         self.break_angle = break_angle
 
@@ -126,16 +126,13 @@ class CRCBEdge(Edge):
 
 class ShortEdge(Edge):
 
-    def __init__(self, device: Device, to_node: Node, desc: str):
-        super().__init__(device, to_node, desc)
-
-    def __str__(self):
-        return "ShortEdge " + self.device.get_name()
+    def __init__(self, device: Device, to_node: Node, name: str):
+        super().__init__(device, to_node, name)
 
 class SolenoidEdge(Edge):
 
-    def __init__(self, device: Device, to_node: Node, desc: str):
-        super().__init__(device, to_node, desc)
+    def __init__(self, device: Device, to_node: Node, name: str):
+        super().__init__(device, to_node, name)
 
     def set_current(self): 
         super().set_current()
@@ -143,15 +140,15 @@ class SolenoidEdge(Edge):
 
 class NormallyOpenLatchingEdge(Edge):
 
-    def __init__(self, device: Device, to_node: Node, pick_coil: Edge, trip_coil: Edge, desc: str):
-        super().__init__(device, to_node, desc)
+    def __init__(self, device: Device, to_node: Node, pick_coil: Edge, trip_coil: Edge, name: str):
+        super().__init__(device, to_node, name)
         self.pick_coil = pick_coil
         self.trip_coil = trip_coil
         self.state = False
         self.last_state = False
 
-    def tick(self):
-        super().tick()
+    def tick(self, edges):
+        super().tick(edges)
         # Use the coil currents to decide if the transfer state has 
         # changed.
         if self.pick_coil.get_last_current():
@@ -167,12 +164,45 @@ class NormallyOpenLatchingEdge(Edge):
         else:
             return False
 
+class NormallyOpenLatchingEdge2(Edge):
+
+    def __init__(self, device: Device, to_node: Node, pick_coil_name: str, trip_coil_name: str, name: str):
+        super().__init__(device, to_node, name)
+        self.pick_coil_name = pick_coil_name
+        self.trip_coil_name = trip_coil_name
+        self.state = False
+        self.last_state = False
+
+    def tick(self, edges):
+        super().tick(edges)
+        pick_coil = edges[self.pick_coil_name]
+        if pick_coil == None:
+            raise Exception("Pick coil edge not found: " + self.pick_coil_name)
+        trip_coil = edges[self.trip_coil_name]
+        if trip_coil == None:
+            raise Exception("Trip coil edge not found: " + self.trip_coil_name)
+        # Use the coil currents to decide if the transfer state has 
+        # changed.
+        if pick_coil.get_last_current():
+            self.state = True
+        elif trip_coil.get_last_current():             
+            self.state = False
+        # IMPORTANT: If there is no current in either coil the state
+        # remains unchanged!
+
+    def is_conductive(self):
+        if self.state:
+            return True
+        else:
+            return False
+
+
 # TODO: CONSOLIDATE WITH ABOVE
 
 class NormallyClosedLatchingEdge(Edge):
 
-    def __init__(self, device: Device, to_node: Node, pick_coil: Edge, trip_coil: Edge, desc: str):
-        super().__init__(device, to_node, desc)
+    def __init__(self, device: Device, to_node: Node, pick_coil: Edge, trip_coil: Edge, name: str):
+        super().__init__(device, to_node, name)
         self.pick_coil = pick_coil
         self.trip_coil = trip_coil
         self.state = False
@@ -180,10 +210,9 @@ class NormallyClosedLatchingEdge(Edge):
 
     def set_current(self): 
         super().set_current()
-        #print("Current in (NC)", str(self))
 
-    def tick(self):
-        super().tick()
+    def tick(self, edges):
+        super().tick(edges)
         # Use the coil currents to decide if the transfer state has 
         # changed.
         if self.pick_coil.get_last_current():
@@ -201,14 +230,13 @@ class NormallyClosedLatchingEdge(Edge):
 
 class NormallyOpenEdge(Edge):
 
-    def __init__(self, device: Device, to_node: Node, coil0: Edge, coil1: Edge, desc: str):
-        super().__init__(device, to_node, desc)
+    def __init__(self, device: Device, to_node: Node, coil0: Edge, coil1: Edge, name: str):
+        super().__init__(device, to_node, name)
         self.coil0 = coil0
         self.coil1 = coil1
 
     def set_current(self): 
         super().set_current()
-        #print("Current in (NO)", self.get_device().get_name())
 
     def is_conductive(self):
         if self.coil0 != None and self.coil0.get_last_current():
@@ -219,14 +247,13 @@ class NormallyOpenEdge(Edge):
 
 class NormallyClosedEdge(Edge):
 
-    def __init__(self, device: Device, to_node: Node, coil0: Edge, coil1: Edge, desc: str):
-        super().__init__(device, to_node, desc)
+    def __init__(self, device: Device, to_node: Node, coil0: Edge, coil1: Edge, name: str):
+        super().__init__(device, to_node, name)
         self.coil0 = coil0
         self.coil1 = coil1
 
     def set_current(self): 
         super().set_current()
-        #print("Current in (NC)", self.get_device().get_name())
 
     def is_conductive(self):
         if self.coil0 != None and self.coil0.get_last_current():
@@ -373,7 +400,7 @@ def fmt_path(path):
 devices = {}
 pins = {}
 nodes = {}
-edges = []
+edges = {}
 
 # Some virtual pins
 pins["GND"] = Pin("GND", True)
@@ -415,9 +442,9 @@ for device_name, device in devices.items():
         pick_coil = None
         if a != None and b != None:
             # NOTICE: Edge only goes in one direction
-            pick_coil = SolenoidEdge(device, b, "Relay " + device.get_name() + " pick coil") 
+            pick_coil = SolenoidEdge(device, b, device.get_name() + ".PICKCOIL") 
             a.add_edge(pick_coil)
-            edges.append(pick_coil)
+            edges[pick_coil.get_name()] = pick_coil
         else:
             raise Exception("Pick coil missing for relay " + device.get_name())
         
@@ -427,9 +454,9 @@ for device_name, device in devices.items():
         hold_coil = None
         if a != None and b != None:
             # NOTICE: Edge only goes in one direction
-            hold_coil = SolenoidEdge(device, b,  "Relay " + device.get_name() + " hold coil")
+            hold_coil = SolenoidEdge(device, b, device.get_name() + ".HOLDCOIL")
             a.add_edge(hold_coil)
-            edges.append(hold_coil)
+            edges[hold_coil.get_name()] = hold_coil
 
         # Contacts
         for i in range(1, 13):
@@ -438,25 +465,26 @@ for device_name, device in devices.items():
             b = get_conn(pins, device, str(i) + "NC")
             if a != None and b != None:
                 edge = NormallyClosedEdge(device, b, pick_coil, hold_coil, 
-                        "Relay " + device.get_name() + " " + str(i) + "NC")
+                        device.get_name() + "." + str(i) + "NC.0")
                 a.add_edge(edge)
-                edges.append(edge)
-                edge = NormallyClosedEdge(device, a, pick_coil, hold_coil, 
-                        "Relay " + device.get_name() + " " + str(i) + "NC")
-                b.add_edge(edge)
+                edges[edge.get_name()] = edge
 
-                edges.append(edge)
+                edge = NormallyClosedEdge(device, a, pick_coil, hold_coil, 
+                        device.get_name() + "." + str(i) + "NC.1")
+                b.add_edge(edge)
+                edges[edge.get_name()] = edge
 
             b = get_conn(pins, device, str(i) + "NO")
             if a != None and b != None:
                 edge = NormallyOpenEdge(device, b, pick_coil, hold_coil, 
-                        "Relay " + device.get_name() + " " + str(i) + "NO")
+                        device.get_name() + "." + str(i) + "NO.0")
                 a.add_edge(edge)
-                edges.append(edge)
+                edges[edge.get_name()] = edge
+
                 edge = NormallyOpenEdge(device, a, pick_coil, hold_coil, 
-                        "Relay " + device.get_name() + " " + str(i) + "NO")
+                        device.get_name() + "." + str(i) + "NO.1")
                 b.add_edge(edge)
-                edges.append(edge)
+                edges[edge.get_name()] = edge
     
     elif device.get_type() == "relaylatching":
         
@@ -466,9 +494,9 @@ for device_name, device in devices.items():
         pick_coil = None
         if a != None and b != None:
             # NOTICE: Edge only goes in one direction
-            pick_coil = SolenoidEdge(device, b, "Relay " + device.get_name() + " pick coil") 
+            pick_coil = SolenoidEdge(device, b, device.get_name() + ".PICKCOIL") 
             a.add_edge(pick_coil)
-            edges.append(pick_coil)
+            edges[pick_coil.get_name()] = pick_coil
         else:
             raise Exception("Pick coil missing for relay " + device.get_name())
         
@@ -478,9 +506,9 @@ for device_name, device in devices.items():
         trip_coil = None
         if a != None and b != None:
             # NOTICE: Edge only goes in one direction
-            trip_coil = SolenoidEdge(device, b, "Relay " + device.get_name() + " trip coil") 
+            trip_coil = SolenoidEdge(device, b, device.get_name() + ".TRIPCOIL") 
             a.add_edge(trip_coil)
-            edges.append(trip_coil)
+            edges[trip_coil.get_name()] = trip_coil
         else:
             raise Exception("Trip coil missing for relay " + device.get_name())
 
@@ -491,132 +519,144 @@ for device_name, device in devices.items():
             b = get_conn(pins, device, str(i) + "NC")
             if a != None and b != None:
                 edge = NormallyClosedLatchingEdge(device, b, pick_coil, trip_coil, 
-                        "Relay " + device.get_name() + " " + str(i) + "NC")
+                        device.get_name() + "." + str(i) + "NC.0")
                 a.add_edge(edge)
-                edges.append(edge)
-                edge = NormallyClosedLatchingEdge(device, a, pick_coil, trip_coil, 
-                        "Relay " + device.get_name() + " " + str(i) + "NC")
-                b.add_edge(edge)
+                edges[edge.get_name()] = edge
 
-                edges.append(edge)
+                edge = NormallyClosedLatchingEdge(device, a, pick_coil, trip_coil, 
+                        device.get_name() + "." + str(i) + "NC.1")
+                b.add_edge(edge)
+                edges[edge.get_name()] = edge
 
             b = get_conn(pins, device, str(i) + "NO")
             if a != None and b != None:
-
                 edge = NormallyOpenLatchingEdge(device, b, pick_coil, trip_coil, 
-                        "Relay " + device.get_name() + " " + str(i) + "NO")
+                        device.get_name() + "." + str(i) + "NO.0")
                 a.add_edge(edge)
-                edges.append(edge)
+                edges[edge.get_name()] = edge
 
                 edge = NormallyOpenLatchingEdge(device, a, pick_coil, trip_coil, 
-                        "Relay " + device.get_name() + " " + str(i) + "NO")
+                        device.get_name() + "." + str(i) + "NO.1")
                 b.add_edge(edge)
-                edges.append(edge)
-
+                edges[edge.get_name()] = edge
                                
     elif device.get_type() == "pass":
         a = get_conn(pins, device, "A")
         b = get_conn(pins, device, "B")
         if a != None and b != None:
-            edge = ShortEdge(device, b, None)
+            edge = ShortEdge(device, b, device.get_name() + ".SHORT.0")
             a.add_edge(edge)
-            edges.append(edge)
-            edge = ShortEdge(device, a, None)
+            edges[edge.get_name()] = edge
+            edge = ShortEdge(device, a, device.get_name() + ".SHORT.1")
             b.add_edge(edge)
-            edges.append(edge)
+            edges[edge.get_name()] = edge
     elif device.get_type() == "solenoid":
         a = get_conn(pins, device, "A")
         b = get_conn(pins, device, "B")
         if a != None and b != None:
-            edge = SolenoidEdge(device, b, None)
+            # Notice: Only works in one direction
+            edge = SolenoidEdge(device, b, device.get_name() + ".COIL")
             a.add_edge(edge)
-            edges.append(edge)
-            edge = SolenoidEdge(device, a, None)
-            b.add_edge(edge)
-            edges.append(edge)
+            edges[edge.get_name()] = edge
+            #edge = SolenoidEdge(device, a, None)
+            #b.add_edge(edge)
+            #edges.append(edge)
     elif device.get_type() == "crcb":
         a = get_conn(pins, device, "c")
         # Different phases
         b = get_conn(pins, device, "out2")
         if a != None and b != None:
-            edge = CRCBEdge(device, b, 50, 100, "CRCB 2")
+            edge = CRCBEdge(device, b, 50, 100, "CRCB2.0")
             a.add_edge(edge)
-            edges.append(edge)
-            edge = CRCBEdge(device, a, 50, 100, "CRCB 2")
+            edges[edge.get_name()] = edge
+            edge = CRCBEdge(device, a, 50, 100, "CRCB2.1")
             b.add_edge(edge)
-            edges.append(edge)
+            edges[edge.get_name()] = edge
 
         b = get_conn(pins, device, "out3")
         if a != None and b != None:
-            edge = CRCBEdge(device, b, 99, 309, "CRCB 3")
+            edge = CRCBEdge(device, b, 99, 309, "CRCB3.0")
             a.add_edge(edge)
-            edges.append(edge)
-            edge = CRCBEdge(device, a, 99, 309, "CRCB 3")
+            edges[edge.get_name()] = edge
+            edge = CRCBEdge(device, a, 99, 309, "CRCB3.1")
             b.add_edge(edge)
-            edges.append(edge)
+            edges[edge.get_name()] = edge
 
         b = get_conn(pins, device, "out4")
         if a != None and b != None:
-            edge = CRCBEdge(device, b, 171, 221, "CRCB 4")
+            edge = CRCBEdge(device, b, 171, 221, "CRCB4.0")
             a.add_edge(edge)
-            edges.append(edge)
-            edge = CRCBEdge(device, a, 171, 221, "CRCB 4")
+            edges[edge.get_name()] = edge
+            edge = CRCBEdge(device, a, 171, 221, "CRCB4.1")
             b.add_edge(edge)
-            edges.append(edge)
+            edges[edge.get_name()] = edge
 
         b = get_conn(pins, device, "out5")
         if a != None and b != None:
-            edge = CRCBEdge(device, b, 220, 300, "CRCB 5")
+            edge = CRCBEdge(device, b, 220, 300, "CRCB5.0")
             a.add_edge(edge)
-            edges.append(edge)
-            edge = CRCBEdge(device, a, 220, 300, "CRCB 5")
+            edges[edge.get_name()] = edge
+            edge = CRCBEdge(device, a, 220, 300, "CRCB5.1")
             b.add_edge(edge)
-            edges.append(edge)
+            edges[edge.get_name()] = edge
 
         b = get_conn(pins, device, "out6")
         if a != None and b != None:
-            edge = CRCBEdge(device, b, 310, 360, "CRCB 6")
+            edge = CRCBEdge(device, b, 310, 360, "CRCB6.0")
             a.add_edge(edge)
-            edges.append(edge)
-            edge = CRCBEdge(device, a, 310, 360, "CRCB 6")
+            edges[edge.get_name()] = edge
+            edge = CRCBEdge(device, a, 310, 360, "CRCB6.1")
             b.add_edge(edge)
-            edges.append(edge)
+            edges[edge.get_name()] = edge
 
     elif device.get_type() == "switch":
         # ALL SWITCHES OPEN FOR NOW
         pass
+    elif device.get_type() == "shiftcontact":
+        c = get_conn(pins, device, "C")
+        no = get_conn(pins, device, "NO")
+        if c != None and no != None:
+            # Hard-wire the connection to the shift relays
+            edge = NormallyOpenLatchingEdge2(device, no, "R10.PICKCOIL", "R10.TRIPCOIL", 
+                    device.get_name() + "." + str(i) + "NO.0")
+            c.add_edge(edge)
+            edges[edge.get_name()] = edge
+            edge = NormallyOpenLatchingEdge2(device, c, "R10.PICKCOIL", "R10.TRIPCOIL", 
+                    device.get_name() + "." + str(i) + "NO.1")
+            no.add_edge(edge)
+            edges[edge.get_name()] = edge
     # Special diode array
     elif device.get_type() == "tb74":
         a = get_conn(pins, device, "4b")
         b = get_conn(pins, device, "4a")
         if a != None and b != None:
             # One direction
-            edge = ShortEdge(device, b, "TB74 4B->4A")
+            edge = ShortEdge(device, b, "TB74.4")
             a.add_edge(edge)
-            edges.append(edge)
+            edges[edge.get_name()] = edge
         a = get_conn(pins, device, "7a")
         b = get_conn(pins, device, "7b")
         if a != None and b != None:
             # One direction
-            edge = ShortEdge(device, b, "TB74 7A->7B")
+            edge = ShortEdge(device, b, "TB74.7")
             a.add_edge(edge)
-            edges.append(edge)
+            edges[edge.get_name()] = edge
     # Special diode array
     elif device.get_type() == "tb78":
         a = get_conn(pins, device, "1b")
         b = get_conn(pins, device, "1a")
         if a != None and b != None:
             # One direction
-            edge = ShortEdge(device, b, "TB78 1B->1A")
+            edge = ShortEdge(device, b, "TB78.1")
             a.add_edge(edge)
-            edges.append(edge)
+            edges[edge.get_name()] = edge
         a = get_conn(pins, device, "2b")
         b = get_conn(pins, device, "2a")
         if a != None and b != None:
             # One direction
-            edge = ShortEdge(device, b, "TB78 2B->2A")
+            edge = ShortEdge(device, b, "TB78.2")
             a.add_edge(edge)
-            edges.append(edge)
+            edges[edge.get_name()] = edge
     elif device.get_type() == "tb86":
         pass
     elif device.get_type() == "diode":
@@ -624,10 +664,9 @@ for device_name, device in devices.items():
         b = get_conn(pins, device, "b")
         if a != None and b != None:
             # One direction
-            edge = ShortEdge(device, b, "Diode " + device.get_name() + " A->B")
+            edge = ShortEdge(device, b, device.get_name())
             a.add_edge(edge)
-            edges.append(edge)
-
+            edges[edge.get_name()] = edge
     else:
         raise Exception("Device has unrecognized type " + device.get_name() + " " + device.get_type())
 
@@ -689,15 +728,15 @@ for t in range(1, 72 * 3):
     # Prepare
     for node in nodes.values():
         node.tick()
-    for edge in edges:
-        edge.tick()
+    for edge in edges.values():
+        edge.tick(edges)
 
     # Do a traversal from the supply
     util.traverse_graph([ start ], visit1, False)
 
     # Display edges with current
     #print("Edges that are conductive")
-    #for edge in edges:
+    #for edge in edges.value():
     #    if "R1 1NO" in str(edge):
     #        print(str(edge), edge.is_conductive())
 
