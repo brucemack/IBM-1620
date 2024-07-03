@@ -133,3 +133,16 @@ devices:
     pins:
       lpa: r40.2nc
       lpb: gnd
+
+  - name: r38
+    type: relay
+    pins:
+      1c: r1.3c
+      1no: r38.ha
+
+  - name: r38
+    type: relay
+    pins:
+      ha: r38.1no
+      hb: gnd
+
