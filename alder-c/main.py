@@ -703,7 +703,7 @@ def visit1(node, path):
     else:
         return True
 
-for t in range(1, 72 * 3):
+for t in range(1, 72 * 4):
 
     angle = (t * 5) % 360
 
