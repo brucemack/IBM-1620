@@ -40,7 +40,6 @@ class Vector:
         self.data = np.zeros((size))
 
     def add_term(self, r: int, v: float):
-        print("v add_term", r, v)
         self.data[r] = self.data[r] + v
 
 class ResistorEdge(Edge):
@@ -54,7 +53,7 @@ class ResistorEdge(Edge):
     def stamp(self, a_matrix, b_matrix):
         if self.node_a.get_index() == 0:
             a_matrix.add_term(self.node_b.get_index() - 1, self.node_b.get_index() - 1, 1 / self.r)    
-        if self.node_b.get_index() == 0:
+        elif self.node_b.get_index() == 0:
             a_matrix.add_term(self.node_a.get_index() - 1, self.node_a.get_index() - 1, 1 / self.r)    
         else:
             a_matrix.add_term(self.node_a.get_index() - 1, self.node_a.get_index() - 1, 1 / self.r)
@@ -62,7 +61,7 @@ class ResistorEdge(Edge):
             a_matrix.add_term(self.node_b.get_index() - 1, self.node_a.get_index() - 1, -1 / self.r)
             a_matrix.add_term(self.node_b.get_index() - 1, self.node_b.get_index() - 1, 1 / self.r)
 
-# Positive current comes out of the A node and into the B node
+# Positive current goes into the A node and out of the B node
 class CurrentSourceEdge(Edge):
 
     def __init__(self, a: Node, b: Node):
@@ -98,59 +97,58 @@ def connect_nodes(a: Node, b: Node, edge_type: EdgeType):
     a.add_edge(edge)
     b.add_edge(edge)
 
+def demo_1():
 
-rt = ResistorEdgeType()
-cst = CurrentSourceEdgeType()
+    rt = ResistorEdgeType()
+    cst = CurrentSourceEdgeType()
 
-nodes = []
-edges = []
+    nodes = []
+    edges = []
 
-node_0 = Node("0")
-node_1 = Node("1")
-node_2 = Node("2")
-node_3 = Node("3")
+    node_0 = Node("0")
+    node_1 = Node("1")
+    node_2 = Node("2")
+    node_3 = Node("3")
 
-nodes.append(node_0)
-nodes.append(node_1)
-nodes.append(node_2)
-nodes.append(node_3)
+    nodes.append(node_0)
+    nodes.append(node_1)
+    nodes.append(node_2)
+    nodes.append(node_3)
 
-i = 0
-for node in nodes:
-    node.set_index(i)
-    i = i + 1
+    i = 0
+    for node in nodes:
+        node.set_index(i)
+        i = i + 1
 
-ia = cst.create(node_1, node_0)
-ia.set_i(-5)
-edges.append(ia)
+    ia = cst.create(node_1, node_0)
+    ia.set_i(-5)
+    edges.append(ia)
 
-ra = rt.create(node_1, node_2)
-ra.set_r(1)
-edges.append(ra)
+    ra = rt.create(node_1, node_2)
+    ra.set_r(1)
+    edges.append(ra)
 
-rb = rt.create(node_2, node_0)
-rb.set_r(2)
-edges.append(rb)
+    rb = rt.create(node_2, node_0)
+    rb.set_r(2)
+    edges.append(rb)
 
-rc = rt.create(node_2, node_3)
-rc.set_r(3)
-edges.append(rc)
+    rc = rt.create(node_2, node_3)
+    rc.set_r(1)
+    edges.append(rc)
 
-rd = rt.create(node_3, node_0)
-rd.set_r(4)
-edges.append(rd)
+    rd = rt.create(node_3, node_0)
+    rd.set_r(1)
+    edges.append(rd)
 
-a = Matrix(3, 3)
-b = Vector(3)
+    a = Matrix(3, 3)
+    b = Vector(3)
 
-# Stamp all devices
-for edge in edges:
-    edge.stamp(a, b)
+    # Stamp all devices
+    for edge in edges:
+        edge.stamp(a, b)
 
-print(a.data)    
-print(b.data)
+    print("A", a.data)    
+    print("b", b.data)
+    print("x", np.linalg.inv(a.data).dot(b.data))
 
-ainv = np.linalg.inv(a.data)
-print("Result", ainv.dot(b.data))
-
-
+demo_1()
