@@ -26,24 +26,24 @@ def test_1():
         node.set_index(i)
         i = i + 1
 
-    ia = cst.create(node_1, node_0)
+    ia = cst.create("ia", node_1, node_0)
     # IMPORTANT: NOTICE NEGATIVE CURRENT
     ia.set_i(-5)
     edges.append(ia)
 
-    ra = rt.create(node_1, node_2)
+    ra = rt.create("ra", node_1, node_2)
     ra.set_r(1)
     edges.append(ra)
 
-    rb = rt.create(node_2, node_0)
+    rb = rt.create("rb", node_2, node_0)
     rb.set_r(2)
     edges.append(rb)
 
-    rc = rt.create(node_2, node_3)
+    rc = rt.create("rc", node_2, node_3)
     rc.set_r(1)
     edges.append(rc)
 
-    rd = rt.create(node_3, node_0)
+    rd = rt.create("rd", node_3, node_0)
     rd.set_r(1)
     edges.append(rd)
 
@@ -92,15 +92,15 @@ def test_2():
         node.set_index(i)
         i = i + 1
 
-    va = vst.create(node_1, node_0)
+    va = vst.create("va", node_1, node_0)
     va.set_v(5)
     edges.append(va)
 
-    ra = rt.create(node_1, node_2)
+    ra = rt.create("ra", node_1, node_2)
     ra.set_r(1)
     edges.append(ra)
 
-    rb = rt.create(node_2, node_0)
+    rb = rt.create("rb", node_2, node_0)
     rb.set_r(1)
     edges.append(rb)
 
@@ -150,19 +150,19 @@ def test_3():
         node.set_index(i)
         i = i + 1
 
-    va = vst.create(node_1, node_0)
+    va = vst.create("va", node_1, node_0)
     va.set_v(5)
     edges.append(va)
 
-    ra = rt.create(node_1, node_2)
+    ra = rt.create("ra", node_1, node_2)
     ra.set_r(1)
     edges.append(ra)
 
-    vb = vst.create(node_2, node_3)
+    vb = vst.create("vb", node_2, node_3)
     vb.set_v(1)
     edges.append(vb)
 
-    rb = rt.create(node_3, node_0)
+    rb = rt.create("rb", node_3, node_0)
     rb.set_r(1)
     edges.append(rb)
 

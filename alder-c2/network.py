@@ -20,12 +20,17 @@ class EdgeType:
         raise Exception("Create failed")
 
 class Edge:
-    def __init__(self, a: Node, b: Node):
+    def __init__(self, name: str, a: Node, b: Node):
+        self.name = name
         self.node_a = a
         self.node_b = b
 
+    def get_name(self): return self.name
     def get_aux_variable_count(self): return 0
-    def assign_aux_variable(self, aux_index: int, mat_index: int): pass
+    def assign_aux_variable(self, aux_index: int, mat_index: int): 
+       raise Exception("Unexpected aux_index")
+    def get_aux_variable(self, aux_index: int) -> int:
+       raise Exception("Unexpected aux_index")
 
 class Matrix:
     def __init__(self, rows: int, cols: int):
@@ -46,8 +51,8 @@ class Vector:
 
 class ResistorEdge(Edge):
 
-    def __init__(self, a: Node, b: Node):
-        super().__init__(a, b)
+    def __init__(self, name: str, a: Node, b: Node):
+        super().__init__(name, a, b)
         self.r = 0
 
     def set_r(self, r): self.r = r
@@ -66,8 +71,8 @@ class ResistorEdge(Edge):
 # Positive current goes into the A node and out of the B node
 class CurrentSourceEdge(Edge):
 
-    def __init__(self, a: Node, b: Node):
-        super().__init__(a, b)
+    def __init__(self, name: str, a: Node, b: Node):
+        super().__init__(name, a, b)
         self.i = 0
 
     def set_i(self, i): self.i = i
@@ -81,8 +86,8 @@ class CurrentSourceEdge(Edge):
 
 class VoltageSourceEdge(Edge):
 
-    def __init__(self, a: Node, b: Node):
-        super().__init__(a, b)
+    def __init__(self, name: str, a: Node, b: Node):
+        super().__init__(name, a, b)
         self.v = 0
         self.aux_index = 0
 
@@ -93,6 +98,12 @@ class VoltageSourceEdge(Edge):
     def assign_aux_variable(self, aux_index: int, mat_index: int): 
         if aux_index == 0:
             self.aux_index = mat_index
+        else:
+            raise Exception("Unexpected aux_index")
+        
+    def get_aux_variable(self, aux_index: int) -> int:
+        if aux_index == 0:
+            return self.aux_index
         else:
             raise Exception("Unexpected aux_index")
 
@@ -110,27 +121,27 @@ class ResistorEdgeType(EdgeType):
     def __init__(self):
         super().__init__()
 
-    def create(self, a: Node, b: Node):
-        return ResistorEdge(a, b)
+    def create(self, name: str, a: Node, b: Node):
+        return ResistorEdge(name, a, b)
 
 class CurrentSourceEdgeType(EdgeType):
 
     def __init__(self):
         super().__init__()
 
-    def create(self, a: Node, b: Node):
-        return CurrentSourceEdge(a, b)
+    def create(self, name: str, a: Node, b: Node):
+        return CurrentSourceEdge(name, a, b)
 
 class VoltageSourceEdgeType(EdgeType):
 
     def __init__(self):
         super().__init__()
 
-    def create(self, a: Node, b: Node):
-        return VoltageSourceEdge(a, b)
+    def create(self, name: str, a: Node, b: Node):
+        return VoltageSourceEdge(name, a, b)
 
-def connect_nodes(a: Node, b: Node, edge_type: EdgeType):
-    edge = edge_type.create(a, b, edge_type)
+def connect_nodes(name: str, a: Node, b: Node, edge_type: EdgeType):
+    edge = edge_type.create(name, a, b, edge_type)
     a.add_edge(edge)
     b.add_edge(edge)
 
