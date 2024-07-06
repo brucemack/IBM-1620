@@ -94,6 +94,36 @@ class CurrentControlledResistorEdge(Edge):
             a_matrix.add_term(self.node_b.get_index() - 1, self.node_a.get_index() - 1, -g)
             a_matrix.add_term(self.node_b.get_index() - 1, self.node_b.get_index() - 1, g)
 
+class SwitchEdge(Edge):
+
+    def __init__(self, name: str, a: Node, b: Node, r0: float, r1: float):
+        super().__init__(name, a, b)
+        self.r0 = r0
+        self.r1 = r1
+        self.thresh = 0.001
+        self.state = False
+
+    def set_state(self, s: bool): self.state = s
+
+    def stamp(self, a_matrix, b_matrix, previous_x_matrix):
+
+        # Figure out if either of the control nodes are above the threshold
+        r = self.r0
+        if self.state:
+            r = self.r1
+
+        g = 1 / r
+
+        if self.node_a.get_index() == 0:
+            a_matrix.add_term(self.node_b.get_index() - 1, self.node_b.get_index() - 1, g)    
+        elif self.node_b.get_index() == 0:
+            a_matrix.add_term(self.node_a.get_index() - 1, self.node_a.get_index() - 1, g)    
+        else:
+            a_matrix.add_term(self.node_a.get_index() - 1, self.node_a.get_index() - 1, g)
+            a_matrix.add_term(self.node_a.get_index() - 1, self.node_b.get_index() - 1, -g)
+            a_matrix.add_term(self.node_b.get_index() - 1, self.node_a.get_index() - 1, -g)
+            a_matrix.add_term(self.node_b.get_index() - 1, self.node_b.get_index() - 1, g)
+
 # Positive current goes into the A node and out of the B node
 class CurrentSourceEdge(Edge):
 

@@ -1,4 +1,4 @@
-component_types = [ "r", "r2", "c", "l", "v", "i" ]
+component_types = [ "r", "r2", "sw", "c", "l", "v", "i" ]
 
 class Component:
     def __init__(self, name: str, type: str, use_io_names: list[str], params: map = None):
@@ -119,7 +119,9 @@ def test_2(v):
 
     c1_parts = []
     # Battery that powers the relay
-    c1_parts.append(Component("v0", "v", [ "a", "0"], { "v": 48 }))
+    c1_parts.append(Component("v0", "v", [ "a", "b"], { "v": 48 }))
+    # Switch that controls the relay
+    c1_parts.append(Component("sw0", "sw", [ "b", "0"], { "r0": 10000000, "r1": 1 }))
     # Light for NO
     c1_parts.append(Component("l_nc", "bulb", [ "nc_l", "0"] ))
     # Light for NC

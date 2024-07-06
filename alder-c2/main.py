@@ -6,7 +6,6 @@ nodes = {}
 nodes["0"] = net.Node("0")
 nodes["0"].set_index(0)
 edges = []
-edge_names = {}
 
 def get_or_create_node(nodes, node_name):
     if not node_name in nodes:
@@ -35,6 +34,15 @@ def visitor(name, type, io_names, params):
             get_or_create_node(nodes,  "#" + params["s0"]), get_or_create_node(nodes, "#" + params["s1"]),
             float(params["r0"]), float(params["r1"]))
         edges.append(edge)
+    elif type == "sw":
+        if len(io_names) != 2:
+            raise Exception("Node count error for device " + name)
+        if not "r0" in params or not "r1" in params:
+            raise Exception("Parameter missing for device " + name)
+        edge = net.SwitchEdge(name, 
+            get_or_create_node(nodes, io_names[0]), get_or_create_node(nodes, io_names[1]),
+            float(params["r0"]), float(params["r1"]))
+        edges.append(edge)
     elif type == "v":
         if len(io_names) != 2:
             raise Exception("Node count error for device " + name)
@@ -59,31 +67,41 @@ for node in nodes.values():
         print("Node", node.get_name(), node.get_index())
         node_count = node_count + 1
 
-a = net.Matrix(node_count - 1, node_count - 1)
+# Get node names
+edge_names = {}
+for edge in edges:
+    edge_names[edge.get_name()] = edge
+
+# Setup linear algebra
+A = net.Matrix(node_count - 1, node_count - 1)
 b = net.Vector(node_count - 1)
 x = np.zeros((node_count - 1))
 
-# Two iterations
-for i in range(0, 2):
+# Time steps
+for i in range(0, 4):
 
     print("-----", i, "---------")
 
-    a.clear()
+    A.clear()
     b.clear()
 
-    # Stamp all devices
+    if i == 2:
+        edge_names["sw0"].set_state(True)
+
+    # Stamp all devices into A/b matrices
     for edge in edges:
-        edge.stamp(a, b, x)
+        edge.stamp(A, b, x)
 
     # Calculate the network
-    #print("A", a.data)    
-    #print("b", b.data)
-    x = np.linalg.inv(a.data).dot(b.data)
+    x = np.linalg.inv(A.data).dot(b.data)
 
     # Display values
+    """
     for node in nodes.values():
         if node.get_index() == 0:
             pass
         else:
             print("Node", node.get_name(), x[node.get_index() - 1])
-
+    """
+    print("Lamp NC", x[nodes["#l_nc.sense"].get_index() - 1])
+    print("Lamp NO", x[nodes["#l_no.sense"].get_index() - 1])
