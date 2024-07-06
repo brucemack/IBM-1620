@@ -1,4 +1,4 @@
-import network as net 
+component_types = [ "r", "r2", "c", "l", "v", "i" ]
 
 class Component:
     def __init__(self, name: str, type: str, use_io_names: list[str], params: map = None):
@@ -61,7 +61,7 @@ class Circuit:
                 comp_name = comp.name
             # Make the node names for the hook-up
             local_names = translate_node_names(parent_name, comp.use_io_names, self.def_io_names, use_io_names)
-            if comp.type == "r" or comp.type == "c" or comp.type == "v" or comp.type == "l" or comp.type == "i":
+            if comp.type in component_types:
                 comp.visit_leaves(parent_name, comp_name, local_names, visitor)
             else:
                 circuit = circuits[comp.type]
@@ -102,10 +102,12 @@ def test_2(v):
     c0_parts.append(Component("p_coil", "r", [ "px", "p1" ], { "r": 10 } ))
     c0_parts.append(Component("h_sense", "v", [ "h0", "hx" ], { "v": 0 } ))
     c0_parts.append(Component("h_coil", "r", [ "hx", "h1" ], { "r": 10 } ))
-    c0_parts.append(Component("rno", "r", [ "no", "op" ], 
-            { "r": 1, "r0": 1, "r1": 10000000, "s0": "@parent/p_sense", "s1": "@parent/h_sense", } ))
-    c0_parts.append(Component("rnc", "r", [ "nc", "op" ], 
-            { "r": 10000000, "r0": 10000000, "r1": 1, "s0": "@parent/p_sense", "s1": "@parent/h_sense", } ))
+    # Normally open path: high resistance by default
+    c0_parts.append(Component("rno", "r2", [ "no", "op" ], 
+            { "r0": 10000000, "r1": 1, "s0": "@parent.p_sense", "s1": "@parent.h_sense", } ))
+    # Normally closed path: low resistance by default
+    c0_parts.append(Component("rnc", "r2", [ "nc", "op" ], 
+            { "r0": 1, "r1": 10000000, "s0": "@parent.p_sense", "s1": "@parent.h_sense", } ))
     c0 = Circuit(c0_parts, [ "p0", "p1", "h0", "h1", "nc", "op", "no" ])
     circuits["relay"] = c0
 
@@ -119,13 +121,13 @@ def test_2(v):
     # Battery that powers the relay
     c1_parts.append(Component("v0", "v", [ "a", "0"], { "v": 48 }))
     # Light for NO
-    c1_parts.append(Component("l0", "bulb", [ "e", "0"] ))
+    c1_parts.append(Component("l_nc", "bulb", [ "nc_l", "0"] ))
     # Light for NC
-    c1_parts.append(Component("l1", "bulb", [ "g", "0"] ))
+    c1_parts.append(Component("l_no", "bulb", [ "no_l", "0"] ))
     # Power for light
     c1_parts.append(Component("v1", "v", [ "f", "0"], { "v": 48 }))
     # Relay
-    c1_parts.append(Component("x0", "relay", [ "a", "0", "a", "0", "e", "f", "g" ]))
+    c1_parts.append(Component("x0", "relay", [ "a", "0", "a", "0", "nc_l", "f", "no_l" ]))
     c1 = Circuit(c1_parts, [ "w", "x" ])
 
     c1.visit_leaves(circuits, None, [ "a", "b" ], v)
