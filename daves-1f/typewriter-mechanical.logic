@@ -1,0 +1,180 @@
+// IBM 1620 Logic Reproduction
+// Bruce MacKinnon 7-July-2024
+//
+// Typewriter Control Mechanical Logic
+
+// ===== Duo Relays =======================================================
+
+input r6_pick_current, r6_hold_current;
+reg r6_state;
+r6_state <= (r6_pick_current | r6_hold_current);
+r6_1_no = r6_state;
+r6_1_nc = !r6_1_no;
+
+input r8_pick_current, r8_hold_current;
+reg r8_state;
+r8_state <= (r8_pick_current | r8_hold_current);
+r8_1_no = r8_state;
+r8_1_nc = !r8_1_no;
+
+input r9_pick_current, r9_hold_current;
+reg r9_state;
+r9_state <= (r9_pick_current | r9_hold_current);
+r9_1_no = r9_state;
+r9_1_nc = !r9_1_no;
+
+input r11_pick_current, r11_hold_current;
+reg r11_state;
+r11_state <= (r11_pick_current | r11_hold_current);
+r11_1_no = r11_state;
+r11_1_nc = !r11_1_no;
+
+input r12_pick_current, r12_hold_current;
+reg r12_state;
+r12_state <= (r12_pick_current | r12_hold_current);
+r12_1_no = r12_state;
+r12_1_nc = !r12_1_no;
+
+input r15_pick_current, r15_hold_current;
+reg r15_state;
+r15_state <= (r15_pick_current | r15_hold_current);
+r15_1_no = r15_state;
+r15_1_nc = !r15_1_no;
+
+input r16_pick_current, r16_hold_current;
+reg r16_state;
+r16_state <= (r16_pick_current | r16_hold_current);
+r16_1_no = r16_state;
+r16_1_nc = !r16_1_no;
+
+input r19_pick_current, r19_hold_current;
+reg r19_state;
+r19_state <= (r19_pick_current | r19_hold_current);
+r19_1_no = r19_state;
+r19_1_nc = !r19_1_no;
+
+input r20_pick_current, r20_hold_current;
+reg r20_state;
+r20_state <= (r20_pick_current | r20_hold_current);
+r20_1_no = r20_state;
+r20_1_nc = !r20_1_no;
+
+input r21_pick_current, r21_hold_current;
+reg r21_state;
+r21_state <= (r21_pick_current | r21_hold_current);
+r21_1_no = r21_state;
+r21_1_nc = !r21_1_no;
+
+input r22_pick_current, r22_hold_current;
+reg r22_state;
+r22_state <= (r22_pick_current | r22_hold_current);
+r22_1_no = r22_state;
+r22_1_nc = !r22_1_no;
+
+input r25_pick_current, r25_hold_current;
+reg r25_state;
+r25_state <= (r25_pick_current | r25_hold_current);
+r25_1_no = r25_state;
+r25_1_nc = !r25_1_no;
+
+input r28_pick_current, r28_hold_current;
+reg r28_state;
+r28_state <= (r28_pick_current | r28_hold_current);
+r28_1_no = r28_state;
+r28_1_nc = !r28_1_no;
+
+input r38_pick_current, r38_hold_current;
+reg r38_state;
+r38_state <= (r38_pick_current | r38_hold_current);
+r38_1_no = r38_state;
+r38_1_nc = !r38_1_no;
+
+input r41_pick_current, r41_hold_current;
+reg r41_state;
+r41_state <= (r41_pick_current | r41_hold_current);
+r41_1_no = r41_state;
+r41_1_nc = !r41_1_no;
+
+input r45_pick_current, r45_hold_current;
+reg r45_state;
+r45_state <= (r45_pick_current | r45_hold_current);
+r45_1_no = r45_state;
+r45_1_nc = !r45_1_no;
+input r45_pick_current, r45_hold_current;
+
+reg r49_state;
+r49_state <= (r49_pick_current | r49_hold_current);
+r49_1_no = r49_state;
+r49_1_nc = !r49_1_no;
+
+reg r50_state;
+r50_state <= (r50_pick_current | r50_hold_current);
+r50_1_no = r50_state;
+r50_1_nc = !r50_1_no;
+
+reg r56_state;
+r56_state <= (r56_pick_current | r56_hold_current);
+r56_1_no = r56_state;
+r56_1_nc = !r56_1_no;
+
+// ===== Latching Relays ===================================================
+
+input r1_pick_current, r1_trip_current;
+reg r1_state;
+r1_state <= (r1_state & !r1_trip_current) | r1_pick_current;
+r1_1_no = r1_state;
+r1_1_nc = !r1_1_no;
+
+input r3_pick_current, r3_trip_current;
+reg r3_state;
+r3_state <= (r3_state & !r3_trip_current) | r3_pick_current;
+r3_1_no = r3_state;
+r3_1_nc = !r3_1_no;
+
+// FLAG INTLK
+input r7_pick_current, r7_trip_current;
+reg r7_state;
+r7_state <= (r7_state & !r7_trip_current) | r7_pick_current;
+r7_1_no = r7_state;
+r7_1_nc = !r7_1_no;
+
+// SHIFT
+input r10_pick_current, r10_trip_current;
+reg r10_state;
+r10_state <= (r10_state & !r10_trip_current) | r10_pick_current;
+r10_1_no = r10_state;
+r10_1_nc = !r10_1_no;
+
+input r39_pick_current, r39_trip_current;
+reg r39_state;
+r39_state <= (r39_state & !r39_trip_current) | r39_pick_current;
+r39_1_no = r39_state;
+r39_1_nc = !r39_1_no;
+
+input r40_pick_current, r40_trip_current;
+reg r40_state;
+r40_state <= (r40_state & !r40_trip_current) | r40_pick_current;
+r40_1_no = r40_state;
+r40_1_nc = !r40_1_no;
+
+input r54_pick_current, r54_trip_current;
+reg r54_state;
+r54_state <= (r54_state & !r54_trip_current) | r54_pick_current;
+r54_1_no = r54_state;
+r54_1_nc = !r54_1_no;
+
+// ===== CRCB Cam Relay ======================================================
+
+crcb_1_no = (_angle >= 0) & (_angle < 51);
+crcb_2_no = (_angle >= 50) & (_angle < 100);
+crcb_3_no = (_angle >= 99) & (_angle < 309);
+crcb_4_no = (_angle >= 171) & (_angle < 221);
+crcb_5_no = (_angle >= 220) & (_angle < 300);
+crcb_6_no = (_angle >= 310) & (_angle < 360);
+
+// ===== Other Connections ====================================================
+
+//tab_intlk_contact_no = 
+//carr_rtn_intlk_contact_no = 
+//last_col_contact_no = 
+//shift_contact_no = 

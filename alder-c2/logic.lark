@@ -1,3 +1,6 @@
+// Lark grammar for simple logic language
+// Bruce MacKinnon 7-July-2024
+
 start: program 
 
 program : statement*
@@ -5,8 +8,8 @@ program : statement*
 statement: assignment ";"
          | declaration ";"
 
-assignment: IDENTIFIER "=" logicalexp -> assignment_eq
-          | IDENTIFIER "<=" logicalexp -> assignment_eq2
+assignment: IDENTIFIER "=" exp -> assignment_eq
+          | IDENTIFIER "<=" exp -> assignment_eq2
 
 declaration: INPUT identifierlist -> declaration_input
            | REG identifierlist -> declaration_reg
@@ -14,19 +17,22 @@ declaration: INPUT identifierlist -> declaration_input
 identifierlist: IDENTIFIER "," identifierlist -> identifierlist_add
               | IDENTIFIER -> identifierlist_start
 
-logicalexp: logicalexp "|" logicalexp -> logicalexp_or
-          | logicalexp "&" logicalexp -> logicalexp_and
-          | logicalexp "^" logicalexp -> logicalexp_xor
-          | ("!" | "~") logicalexp -> logicalexp_not
-          | "(" logicalexp ")" -> logicalexp_paren
-          | IDENTIFIER -> logicalexp_id
+exp: exp "|" exp -> exp_or
+    | exp "&" exp -> exp_and
+    | exp "^" exp -> exp_xor
+    | ("!" | "~") exp -> exp_not
+    | exp ">" exp -> exp_gt
+    | exp ">=" exp -> exp_gte
+    | exp "<" exp -> exp_lt
+    | exp "<=" exp -> exp_lte
+    | "(" exp ")" -> exp_paren
+    | IDENTIFIER -> exp_id
+    | SIGNED_NUMBER -> exp_number
 
 IDENTIFIER: /[A-Za-z_][A-Za-z_0-9]*/
-ASSIGNMENT: "=" | "<="
 INPUT: "input"
 REG: "reg"
 WIRE: "wire"
-
 
 %import common.ESCAPED_STRING
 %import common.SIGNED_NUMBER

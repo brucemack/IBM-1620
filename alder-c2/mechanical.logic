@@ -1,3 +1,6 @@
+// IBM 1620 Logic Replication
+
+
 input r30_pick_current, r30_hold_current;
 reg r30_state;
 
@@ -15,5 +18,7 @@ reg r10_state;
 r10_state <= (r10_state & !r10_trip_current) | r10_pick_current;
 r10_1_no = r10_state;
 r10_1_nc = !r10_1_no;
+
+crcb_4_no = (_angle > 3) & (_angle <= 8);
 
 

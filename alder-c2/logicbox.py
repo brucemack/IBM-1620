@@ -1,11 +1,5 @@
 import lark
 
-parser = lark.Lark.open("./logic.lark")
-
-#tree = parser.parse("c = a | b; d = 1;")
-tree = parser.parse(open("./mechanical.logic").read())
-print(tree.pretty())
-
 class DeclarationProcessor(lark.visitors.Transformer):
 
     def __init__(self, input_names, reg_names):
@@ -81,53 +75,52 @@ class Evaluator(lark.visitors.Transformer):
     def SIGNED_NUMBER(self, tree):
         return str(tree)
 
-# Process declarations (one time)
-input_names = []
-reg_names = []
-d = DeclarationProcessor(input_names, reg_names)
-d.transform(tree)
-print("Inputs:", input_names)
-print("Regs:", reg_names)
+class LogicBox:
 
-value_map = {}
+    def __init__(self, logic_file_name, value_source):
+        self.value_source = value_source
+        parser = lark.Lark.open("./logic.lark")
+        with open(logic_file_name) as lf:
+            self.tree = parser.parse(lf.read())
+        self.tick_count = 0
+        print(self.tree.pretty())
 
-# Setup variable
-for n in input_names:
-    value_map[n] = False
-for n in reg_names:
-    value_map[n] = False
+        # Process declarations (one time)
+        self.input_names = []
+        self.reg_names = []
+        d = DeclarationProcessor(self.input_names, self.reg_names)
+        d.transform(self.tree)
+        print("Inputs:", self.input_names)
+        print("Regs:", self.reg_names)
 
-# Time Loop
+        self.value_map = {}
+
+        # Initialize varaibles
+        for n in self.input_names:
+            self.value_map[n] = False
+        for n in self.reg_names:
+            self.value_map[n] = False
+
+    def get_input_names(self) -> list[str]:
+        return self.input_names.copy()
+
+    def get(self, name: str):
+        return self.value_map[name]
     
-for t in range(0, 8):
+    def tick(self):
 
-    print(t, "-----------------------------")
+        # Setup input
+        for n in self.input_names:
+            self.value_map[n] = self.value_source.get(n)
 
-    if t == 1:
-        value_map["r30_pick_current"] = True
-        value_map["r10_pick_current"] = True
-    elif t == 2:
-        value_map["r30_pick_current"] = False
-        value_map["r10_pick_current"] = False
-    elif t == 4:
-        value_map["r10_trip_current"] = True
-    elif t == 5:
-        value_map["r10_trip_current"] = False
+        self.value_map["_angle"] = (self.tick_count % 360)
 
+        next_value_map = {}
+        ev = Evaluator(self.value_map, next_value_map)
+        ev.transform(self.tree)
 
-    value_map["angle"] = t
+        # Copy values down
+        for n, v in next_value_map.items():
+            self.value_map[n] = v
 
-    next_value_map = {}
-    ev = Evaluator(value_map, next_value_map)
-    ev.transform(tree)
-    #print("Values", value_map)
-    #print("Next Values", next_value_map)
-    print(value_map["r30_1_no"], value_map["r10_1_no"], value_map["crcb_4_no"])
-
-    # Copy values down
-    for n, v in next_value_map.items():
-        value_map[n] = v
-
-
-
-
+        self.tick_count = self.tick_count + 1
