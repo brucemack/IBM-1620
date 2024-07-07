@@ -1,0 +1,19 @@
+input r30_pick_current, r30_hold_current;
+reg r30_state;
+
+// Notice that the state is evaluated on every cycle,
+// so will return to zero if both currents return to zero (spring)
+r30_state <= (r30_pick_current | r30_hold_current);
+r30_1_no = r30_state;
+r30_1_nc = !r30_1_no;
+
+input r10_pick_current, r10_trip_current;
+reg r10_state;
+
+// Notice here that the state is being fed back. So state will 
+// be maintained unless the trip current 
+r10_state <= (r10_state & !r10_trip_current) | r10_pick_current;
+r10_1_no = r10_state;
+r10_1_nc = !r10_1_no;
+
+

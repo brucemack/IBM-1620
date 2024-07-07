@@ -1,4 +1,4 @@
-component_types = [ "r", "r2", "sw", "c", "l", "v", "i" ]
+component_types = [ "r", "r2", "sw", "c", "l", "v", "i", "d" ]
 
 class Component:
     def __init__(self, name: str, type: str, use_io_names: list[str], params: map = None):

@@ -34,6 +34,15 @@ def visitor(name, type, io_names, params):
             get_or_create_node(nodes,  "#" + params["s0"]), get_or_create_node(nodes, "#" + params["s1"]),
             float(params["r0"]), float(params["r1"]))
         edges.append(edge)
+    elif type == "d":
+        if len(io_names) != 2:
+            raise Exception("Node count error for device " + name)
+        if not "r0" in params or not "r1" in params:
+            raise Exception("Parameter missing for device " + name)
+        edge = net.DiodeEdge(name, 
+            get_or_create_node(nodes, io_names[0]), get_or_create_node(nodes, io_names[1]),
+            float(params["r0"]), float(params["r1"]))
+        edges.append(edge)
     elif type == "sw":
         if len(io_names) != 2:
             raise Exception("Node count error for device " + name)

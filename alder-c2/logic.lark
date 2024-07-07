@@ -1,0 +1,38 @@
+start: program 
+
+program : statement*
+
+statement: assignment ";"
+         | declaration ";"
+
+assignment: IDENTIFIER "=" logicalexp -> assignment_eq
+          | IDENTIFIER "<=" logicalexp -> assignment_eq2
+
+declaration: INPUT identifierlist -> declaration_input
+           | REG identifierlist -> declaration_reg
+
+identifierlist: IDENTIFIER "," identifierlist -> identifierlist_add
+              | IDENTIFIER -> identifierlist_start
+
+logicalexp: logicalexp "|" logicalexp -> logicalexp_or
+          | logicalexp "&" logicalexp -> logicalexp_and
+          | logicalexp "^" logicalexp -> logicalexp_xor
+          | ("!" | "~") logicalexp -> logicalexp_not
+          | "(" logicalexp ")" -> logicalexp_paren
+          | IDENTIFIER -> logicalexp_id
+
+IDENTIFIER: /[A-Za-z_][A-Za-z_0-9]*/
+ASSIGNMENT: "=" | "<="
+INPUT: "input"
+REG: "reg"
+WIRE: "wire"
+
+
+%import common.ESCAPED_STRING
+%import common.SIGNED_NUMBER
+%import common.WS
+%import common.CPP_COMMENT
+%import common.C_COMMENT
+%ignore WS
+%ignore CPP_COMMENT
+%ignore C_COMMENT

@@ -558,9 +558,6 @@ for device_name, device in devices.items():
             edge = SolenoidEdge(device, b, device.get_name() + ".COIL")
             a.add_edge(edge)
             edges[edge.get_name()] = edge
-            #edge = SolenoidEdge(device, a, None)
-            #b.add_edge(edge)
-            #edges.append(edge)
     elif device.get_type() == "crcb":
         a = get_conn(pins, device, "c")
         # Different phases
