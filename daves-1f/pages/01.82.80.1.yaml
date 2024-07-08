@@ -49,15 +49,19 @@ devices:
 
   - name: r38
     type: relay
+    warn: "Check this!  Missing connection to TB86"
     pins: 
       4c: r20.1nc
-      4nc: [ ps_centerscore.a, tb86.7a ]
+      #4nc: [ ps_centerscore.a, tb86.7a ]
+      4nc: [ ps_centerscore.a ]
       4no: r7.2c
 
   - name: ps_centerscore
     type: solenoid
+    warn: "Check this!  Missing connection to TB86"
     pins:
-      a: [ r38.4nc, tb86.7a ]
+      #a: [ r38.4nc, tb86.7a ]
+      a: [ r38.4nc ]
       b: "SOLENOID COMMON"
 
   - name: ps_1u

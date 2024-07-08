@@ -104,6 +104,12 @@ class LogicBox:
     def get_input_names(self) -> list[str]:
         return self.input_names.copy()
 
+    def get_names(self) -> list[str]:
+        result = []
+        for name, _ in self.value_map.items():
+            result.append(name)
+        return result
+
     def get(self, name: str):
         return self.value_map[name]
     

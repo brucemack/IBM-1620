@@ -11,11 +11,11 @@ capture: "By hand on 2-July-2024"
 # NOT COMPLETE
 
 devices:
-  - name: tb86
-    type: tb86
-    pins:
-      7a: [ r38.4nc ]
-      7b: 
+  #- name: tb86
+  #  type: tb86
+  #  pins:
+  #    7a: [ r38.4nc ]
+  #    7b: 
 
   - name: r9
     type: relay

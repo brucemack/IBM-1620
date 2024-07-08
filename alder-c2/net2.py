@@ -96,14 +96,20 @@ class CurrentControlledResistorEdge(Edge):
 
 class SwitchEdge(Edge):
 
-    def __init__(self, name: str, a: Node, b: Node, r0: float, r1: float):
+    def __init__(self, name: str, a: Node, b: Node, r0: float, r1: float, state: bool = False):
         super().__init__(name, a, b)
         self.r0 = r0
         self.r1 = r1
         self.thresh = 0.001
-        self.state = False
+        self.state = state
 
-    def set_state(self, s: bool): self.state = s
+    def set_state(self, s: bool) -> bool:
+        old_state = self.state
+        if s:
+            self.state = True
+        else:
+            self.state = False
+        return old_state != self.state
 
     def stamp(self, a_matrix, b_matrix, previous_x_matrix):
 
@@ -126,10 +132,11 @@ class SwitchEdge(Edge):
 
 class DiodeEdge(Edge):
 
-    def __init__(self, name: str, a: Node, b: Node, r0: float, r1: float):
+    def __init__(self, name: str, a: Node, b: Node):
         super().__init__(name, a, b)
-        self.r0 = r0
-        self.r1 = r1
+        # Hard-coded values.  R0 is off, R1 is on
+        self.r0 = 10000000
+        self.r1 = 1
         self.thresh = 0.1
 
     def stamp(self, a_matrix, b_matrix, previous_x_matrix):

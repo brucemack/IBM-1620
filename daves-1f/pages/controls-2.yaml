@@ -97,3 +97,76 @@ devices:
 #    pins: 
 #      a: "CTRL SPACE DR"
 #      b: GND
+
+# PLACEHOLDERS
+  - name: r9
+    type: relay 
+    pins:
+      ha: gnd
+      hb: gnd
+
+  - name: r21
+    type: relay 
+    pins:
+      ha: gnd
+      hb: gnd
+
+  - name: r22
+    type: relay 
+    pins:
+      ha: gnd
+      hb: gnd
+
+  - name: r25
+    type: relay 
+    pins:
+      ha: gnd
+      hb: gnd
+
+  - name: r28
+    type: relay 
+    pins:
+      ha: gnd
+      hb: gnd
+
+  - name: r31
+    type: relay 
+    pins:
+      ha: gnd
+      hb: gnd
+
+  - name: r41
+    type: relay 
+    pins:
+      ha: gnd
+      hb: gnd
+
+  - name: r42
+    type: relay 
+    pins:
+      ha: gnd
+      hb: gnd
+
+  - name: r45
+    type: relay 
+    pins:
+      ha: gnd
+      hb: gnd
+
+  - name: r46
+    type: relay 
+    pins:
+      ha: gnd
+      hb: gnd
+
+  - name: r49
+    type: relay 
+    pins:
+      ha: gnd
+      hb: gnd
+
+  - name: r50
+    type: relay 
+    pins:
+      ha: gnd
+      hb: gnd

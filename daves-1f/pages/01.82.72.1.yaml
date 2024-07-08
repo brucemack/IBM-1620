@@ -209,9 +209,8 @@ devices:
       1no: r16.pa
 
   - name: sw_shiftcontact
-    #type: switch
-    # TODO: CHANGE THIS BACK! TEMPORARILY CONNECTING TO SHIFT RELAY R10
-    type: shiftcontact
+    warn: "Need to check this connection"
+    type: switch
     pins: 
       c: VP48
       "no": [ r12.pa, r15.pa ]

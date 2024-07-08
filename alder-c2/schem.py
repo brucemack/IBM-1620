@@ -7,14 +7,18 @@ class Component:
         self.use_io_names = use_io_names
         self.params = params
 
+    def __str__(self):
+        return self.name + " " + self.type + " " + str(self.use_io_names) + " " + str(self.params)
+
     def visit_leaves(self, parent_name: str, instance_name: str, local_names: list[str], visitor):
         # Perform the translation on any properties that need
         expanded_params = {}
-        for l, v in self.params.items():
-            if parent_name:
-                expanded_params[l] = str(v).replace("@parent", parent_name)
-            else:
-                expanded_params[l] = v
+        if self.params:
+            for l, v in self.params.items():
+                if parent_name:
+                    expanded_params[l] = str(v).replace("@parent", parent_name)
+                else:
+                    expanded_params[l] = v
         visitor(instance_name, self.type, local_names, expanded_params)
 
 def translate_node_names(parent_instance_name: str, use_io_names: list[str], 
