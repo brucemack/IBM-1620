@@ -237,6 +237,10 @@ for _, pin in pins.items():
     #for n in pin.get_neighbors():
     #    print("   ", n.get_name())    
 
+SHORT_R = 0.001
+OPEN_R = 100000000
+COIL_R = 50 
+
 def setup_switch(name: str, pins):
 
     parts = []
@@ -249,7 +253,7 @@ def setup_switch(name: str, pins):
         node_c_name = pins[pin_c_name].get_node().get_name()
         node_no_name = pins[pin_no_name].get_node().get_name()
         parts.append(schem.Component(dev_name, "sw", [ node_no_name, node_c_name ], 
-                { "r0": 10000000, "r1": 1 }))
+                { "r0": OPEN_R, "r1": SHORT_R }))
 
     return parts
 
@@ -264,7 +268,7 @@ def setup_duo_relay(name: str, pins):
     node_pb = pin_pb.get_node().get_name()
     node_px = name + ".px"
     parts.append(schem.Component(name.lower() + "_pick_current", "v", [ node_pa, node_px ], { "v": 0 } ))
-    parts.append(schem.Component(name.lower() + "_pcoil", "r", [ node_px, node_pb ], { "r": 10 } ))
+    parts.append(schem.Component(name.lower() + "_pcoil", "r", [ node_px, node_pb ], { "r": COIL_R } ))
 
     # Hold coil
     pin_ha = pins[name + ".HA"]
@@ -273,7 +277,7 @@ def setup_duo_relay(name: str, pins):
     node_hb = pin_hb.get_node().get_name()
     node_hx = name + ".hx"
     parts.append(schem.Component(name.lower() + "_hold_current", "v", [ node_ha, node_hx ], { "v": 0 } ))
-    parts.append(schem.Component(name.lower() + "_hcoil", "r", [ node_hx, node_hb ], { "r": 10 } ))
+    parts.append(schem.Component(name.lower() + "_hcoil", "r", [ node_hx, node_hb ], { "r": COIL_R } ))
 
     # Stacks
     for s in range(0, 13):
@@ -287,14 +291,14 @@ def setup_duo_relay(name: str, pins):
         if pin_no_name in pins:
             node_no_name = pins[pin_no_name].get_node().get_name()
             parts.append(schem.Component(dev_no_name, "sw", [ node_no_name, node_c_name ], 
-                                         { "r0": 10000000, "r1": 1 }))
+                                         { "r0": OPEN_R, "r1": SHORT_R }))
 
         pin_nc_name = name + "." + str(s) + "NC"
         dev_nc_name = name.lower() + "_" + str(s) + "nc_sw"
         if pin_nc_name in pins:
             node_nc_name = pins[pin_nc_name].get_node().get_name()
             parts.append(schem.Component(dev_nc_name, "sw", [ node_nc_name, node_c_name ], 
-                                         { "r0": 10000000, "r1": 1, "state": True }))
+                                         { "r0": OPEN_R, "r1": SHORT_R, "state": True }))
 
     return parts
 
@@ -309,7 +313,7 @@ def setup_latching_relay(name: str, pins):
     node_pb = pin_pb.get_node().get_name()
     node_px = name + ".px"
     parts.append(schem.Component(name.lower() + "_pick_current", "v", [ node_pa, node_px ], { "v": 0 } ))
-    parts.append(schem.Component(name.lower() + "_pcoil", "r", [ node_px, node_pb ], { "r": 10 } ))
+    parts.append(schem.Component(name.lower() + "_pcoil", "r", [ node_px, node_pb ], { "r": COIL_R } ))
 
     # Hold coil
     pin_ha = pins[name + ".LTA"]
@@ -318,7 +322,7 @@ def setup_latching_relay(name: str, pins):
     node_hb = pin_hb.get_node().get_name()
     node_hx = name + ".tx"
     parts.append(schem.Component(name.lower() + "_trip_current", "v", [ node_ha, node_hx ], { "v": 0 } ))
-    parts.append(schem.Component(name.lower() + "_tcoil", "r", [ node_hx, node_hb ], { "r": 10 } ))
+    parts.append(schem.Component(name.lower() + "_tcoil", "r", [ node_hx, node_hb ], { "r": COIL_R } ))
 
     # Stacks
     for s in range(0, 13):
@@ -332,14 +336,14 @@ def setup_latching_relay(name: str, pins):
         if pin_no_name in pins:
             node_no_name = pins[pin_no_name].get_node().get_name()
             parts.append(schem.Component(dev_no_name, "sw", [ node_no_name, node_c_name ], 
-                                         { "r0": 10000000, "r1": 1 }))
+                                         { "r0": OPEN_R, "r1": SHORT_R }))
 
         pin_nc_name = name + "." + str(s) + "NC"
         dev_nc_name = name.lower() + "_" + str(s) + "nc_sw"
         if pin_nc_name in pins:
             node_nc_name = pins[pin_nc_name].get_node().get_name()
             parts.append(schem.Component(dev_nc_name, "sw", [ node_nc_name, node_c_name ], 
-                                         { "r0": 10000000, "r1": 1, "state": True }))
+                                         { "r0": OPEN_R, "r1": SHORT_R, "state": True }))
 
     return parts
 
@@ -397,7 +401,7 @@ def setup_crcb(name: str, pins):
         node_name = pins[pin_name].get_node().get_name()
         dev_name = name.lower() + "_" + str(i) + "no_sw"
         parts.append(schem.Component(dev_name, "sw", [ node_name, node_c_name ], 
-                                    { "r0": 10000000, "r1": 1 }))
+                                    { "r0": OPEN_R, "r1": SHORT_R }))
 
     return parts
 
@@ -411,7 +415,7 @@ def setup_solenoid(name: str, pins):
     node_b = pin_b.get_node().get_name()
     node_x = name + ".x"
     parts.append(schem.Component(name.lower() + "_current", "v", [ node_a, node_x ], { "v": 0 } ))
-    parts.append(schem.Component(name.lower() + "_coil", "r", [ node_x, node_b ], { "r": 10 } ))
+    parts.append(schem.Component(name.lower() + "_coil", "r", [ node_x, node_b ], { "r": COIL_R } ))
 
     return parts
 
@@ -550,10 +554,6 @@ A = net.Matrix(node_count - 1, node_count - 1)
 b = net.Vector(node_count - 1)
 x = np.zeros((node_count - 1))
 
-# Force switches
-#edge_names["crcb_6no_sw"].set_state(True)
-#edge_names["r15_2nc_sw"].set_state(True)
-
 # LogicBox Related
 
 # Interface to allow the LogicBox to pull values out of the solved network
@@ -566,15 +566,16 @@ class Source:
         #print("Get", name)
         node = net_nodes["#" + name]
         # Turn the current into a boolean
-        return (x[node.get_index() - 1] > self.threshold)
+        # TODO: INVESTIGATE SIGN OF COIL CURRENT!
+        return (abs(x[node.get_index() - 1]) > self.threshold)
 
 lb_source = Source()
 lb = logicbox.LogicBox("../daves-1f/typewriter-mechanical.logic", lb_source)    
 
 # Time steps
-for i in range(0, 360):
+for i in range(0, 360 * 3):
 
-    print("-----", i, "---------")
+    print("-----", int(i / 360), (i % 360), "---------")
 
     A.clear()
     b.clear()
@@ -593,7 +594,15 @@ for i in range(0, 360):
             pass
         else:
             print("Node", node.get_name(), x[node.get_index() - 1])
+
     """
+
+    for name, node in net_nodes.items():
+        if name.startswith("#") and abs(x[node.get_index() - 1]) > 0.1:
+            if not name == "#VP48":
+                print("Current in node", name, abs(x[node.get_index() - 1]))
+
+    print("_NODE19_R38.1C",x[net_nodes["_NODE19_R38.1C"].get_index() - 1])
 
     lb_source.set_x(x)      
     lb.tick()
@@ -606,7 +615,6 @@ for i in range(0, 360):
             else:
                 changed = edge_names[logic_name].set_state(lb.get(logic_name))
                 if changed:
-                    print("Changed", logic_name)
+                    print(logic_name, "changed to", lb.get(logic_name))
           
-
 

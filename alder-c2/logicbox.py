@@ -83,15 +83,15 @@ class LogicBox:
         with open(logic_file_name) as lf:
             self.tree = parser.parse(lf.read())
         self.tick_count = 0
-        print(self.tree.pretty())
+        #print(self.tree.pretty())
 
         # Process declarations (one time)
         self.input_names = []
         self.reg_names = []
         d = DeclarationProcessor(self.input_names, self.reg_names)
         d.transform(self.tree)
-        print("Inputs:", self.input_names)
-        print("Regs:", self.reg_names)
+        #print("Inputs:", self.input_names)
+        #print("Regs:", self.reg_names)
 
         self.value_map = {}
 

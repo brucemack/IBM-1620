@@ -53,6 +53,7 @@ class ResistorEdge(Edge):
 
         g = 1 / self.r
 
+        """
         if self.node_a.get_index() == 0:
             a_matrix.add_term(self.node_b.get_index() - 1, self.node_b.get_index() - 1,  g)    
         elif self.node_b.get_index() == 0:
@@ -62,6 +63,11 @@ class ResistorEdge(Edge):
             a_matrix.add_term(self.node_a.get_index() - 1, self.node_b.get_index() - 1, -g)
             a_matrix.add_term(self.node_b.get_index() - 1, self.node_a.get_index() - 1, -g)
             a_matrix.add_term(self.node_b.get_index() - 1, self.node_b.get_index() - 1,  g)
+        """
+        a_matrix.add_term(self.node_a.get_index(), self.node_a.get_index(),  g)
+        a_matrix.add_term(self.node_a.get_index(), self.node_b.get_index(), -g)
+        a_matrix.add_term(self.node_b.get_index(), self.node_a.get_index(), -g)
+        a_matrix.add_term(self.node_b.get_index(), self.node_b.get_index(),  g)
 
 class CurrentControlledResistorEdge(Edge):
 
@@ -135,18 +141,27 @@ class DiodeEdge(Edge):
     def __init__(self, name: str, a: Node, b: Node):
         super().__init__(name, a, b)
         # Hard-coded values.  R0 is off, R1 is on
-        self.r0 = 10000000
-        self.r1 = 1
+        self.r0 = 100000000
+        self.r1 = 0.01
         self.thresh = 0.1
+        self.state = False
 
     def stamp(self, a_matrix, b_matrix, previous_x_matrix):
+
+        old_state = self.state
 
         # Figure out if the diode is forward biased
         r = self.r0
         va = previous_x_matrix[self.node_a.get_index() - 1]
         vb = previous_x_matrix[self.node_b.get_index() - 1]
-        if va - vb > self.thresh:
+        if (va - vb) > self.thresh:
             r = self.r1 
+            self.state = True
+        else:
+            self.state = False
+
+        if old_state != self.state:
+            print("Diode", self.name, "changed to", r)
 
         g = 1 / r
 
@@ -181,6 +196,7 @@ class VoltageSourceEdge(Edge):
         self.v = v
 
     def stamp(self, a_matrix, b_vector, previous_x_matrix):
+        """
         if self.node_a.get_index() != 0:
             a_matrix.add_term(self.node_a.get_index() - 1, self.aux_node.get_index() - 1, 1)    
             a_matrix.add_term(self.aux_node.get_index() - 1, self.node_a.get_index() - 1, 1)    
@@ -188,4 +204,10 @@ class VoltageSourceEdge(Edge):
             a_matrix.add_term(self.node_b.get_index() - 1, self.aux_node.get_index() - 1, -1)    
             a_matrix.add_term(self.aux_node.get_index() - 1, self.node_b.get_index() - 1, -1)    
         b_vector.add_term(self.aux_node.get_index() - 1, self.v)
+        """
 
+        a_matrix.add_term(self.node_a.get_index(), self.aux_node.get_index(), -1)    
+        a_matrix.add_term(self.aux_node.get_index(), self.node_a.get_index(), -1)    
+        a_matrix.add_term(self.node_b.get_index(), self.aux_node.get_index(), 1)    
+        a_matrix.add_term(self.aux_node.get_index(), self.node_b.get_index(), 1)    
+        b_vector.add_term(self.aux_node.get_index(), self.v)

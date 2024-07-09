@@ -19,11 +19,11 @@ devices:
     warn: "ERROR in diagram?  Diagram shows connected to tb78.2a, should be .1b"
     pins:
       4c: r6.1c
-      4nc: sp_space.a
+      4nc: ps_space.a
       # Different from schematic
       4no: tb78.1b     
 
-  - name: sp_space
+  - name: ps_space
     type: solenoid
     pins:
       a: r19.4nc
