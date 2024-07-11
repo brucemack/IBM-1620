@@ -8,6 +8,8 @@ def test_1():
     devices = []
 
     # IMPORTANT: NOTICE NEGATIVE CURRENT
+    # Positive current flows from 1->0
+    # Negative current flows from 0->1
     devices.append(net.CurrentSource("ia", "1", "0", -5))
     devices.append(net.Resistor("ra", "1", "2", 1))
     devices.append(net.Resistor("rb", "2", "0", 2))
@@ -90,3 +92,96 @@ def test_3():
 
     assert x[mapper.get("2")] == 3
     assert x[mapper.get("3")] == 2
+
+# Checking sign convention on current source.  Source is not
+# connected to ground.
+def test_4():
+
+    devices = []
+
+    devices.append(net.Resistor("ra", "0", "1", 1))
+    # We are assuming that a positive current enters the first node and 
+    # leaves the second node. 1->2
+    devices.append(net.CurrentSource("ia", "1", "2", 1))
+    devices.append(net.Resistor("rb", "2", "0", 2))
+
+    mapper = net.Mapper()
+    for device in devices:
+        device.register_node_names(mapper)
+
+    A = np.zeros((mapper.get_size(), mapper.get_size()))
+    b = np.zeros((mapper.get_size()))
+    x = np.zeros((mapper.get_size()))
+
+    # Stamp all devices
+    for device in devices:
+        device.stamp(A, b, None, None)
+    
+    x = np.linalg.inv(A).dot(b)
+
+    assert x[mapper.get("1")] == -1
+    assert x[mapper.get("2")] == 2
+
+# Checking sign convention on current source that is connected to 
+# ground.
+def test_5():
+
+    devices = []
+
+    # We are assuming that a positive current enters the first node and 
+    # leaves the second node. 1->0
+    devices.append(net.CurrentSource("ia", "1", "0", 1))
+    devices.append(net.Resistor("rb", "1", "0", 1))
+
+    mapper = net.Mapper()
+    for device in devices:
+        device.register_node_names(mapper)
+
+    A = np.zeros((mapper.get_size(), mapper.get_size()))
+    b = np.zeros((mapper.get_size()))
+    x = np.zeros((mapper.get_size()))
+
+    # Stamp all devices
+    for device in devices:
+        device.stamp(A, b, None, None)
+    
+    x = np.linalg.inv(A).dot(b)
+
+    assert x[mapper.get("1")] == -1
+
+# Two voltage sources, one not connected to ground. Using 
+#  this to check sign conventions.
+def test_6():
+
+    devices = []
+
+    devices.append(net.VoltageSource("va", "2", "0", 10))
+    devices.append(net.Resistor("ra", "2", "1", 100))
+    devices.append(net.Diode("d", "0", "1"))
+
+    mapper = net.Mapper()
+    for device in devices:
+        device.register_node_names(mapper)
+
+    x = np.zeros((mapper.get_size()))
+
+    # Initial guess
+    x[mapper.get("1")] = 1
+
+    for i in range(0, 50):
+
+        A = np.zeros((mapper.get_size(), mapper.get_size()))
+        b = np.zeros((mapper.get_size()))
+
+        # Stamp all devices
+        for device in devices:
+            device.stamp(A, b, None, x)
+
+        x = np.linalg.inv(A).dot(b)
+
+        print(str(x[mapper.get("#va")]) + "\t" + str(x[mapper.get("2")] - x[mapper.get("1")]))
+
+    #assert x[mapper.get("2")] == 3
+    #assert x[mapper.get("3")] == 2
+
+test_6()
