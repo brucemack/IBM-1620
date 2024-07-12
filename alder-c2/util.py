@@ -23,3 +23,4 @@ def traverse_graph(start_node_list, visitor, prevent_duplicates = True):
     for start_node in start_node_list:
         traverse_graph_recursive(start_node, visited_nodes, [ start_node ], 
                                  visitor, prevent_duplicates)
+        

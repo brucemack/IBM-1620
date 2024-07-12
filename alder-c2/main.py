@@ -1,7 +1,7 @@
 import yaml
 import util 
 import schem 
-import net2 as net
+import net3 as net
 import numpy as np
 import logicbox
 
@@ -237,9 +237,10 @@ for _, pin in pins.items():
     #for n in pin.get_neighbors():
     #    print("   ", n.get_name())    
 
-SHORT_R = 0.001
+#SHORT_R = 0.001
+SHORT_R = 0.0000000001
 OPEN_R = 100000000
-COIL_R = 50 
+COIL_R = 0.1
 
 def setup_switch(name: str, pins):
 
@@ -442,7 +443,7 @@ def setup_pass(name: str, pins):
     pin_b_name = name + ".B"
     node_b_name = pins[pin_b_name].get_node().get_name()
     dev_name = name.lower()
-    parts.append(schem.Component(dev_name, "r", [ node_a_name, node_b_name ], { "r": 1 } ))
+    parts.append(schem.Component(dev_name, "r", [ node_a_name, node_b_name ], { "r": SHORT_R } ))
 
     return parts
 
@@ -451,7 +452,7 @@ out_devices = []
 
 # Supply and ground
 out_devices.append(schem.Component("VP48", "v", [ "VP48", "0" ], { "v": 48 } ))
-out_devices.append(schem.Component("GND", "r", [ "GND", "0" ], { "r": 1 } ))
+out_devices.append(schem.Component("GND", "r", [ "GND", "0" ], { "r": SHORT_R } ))
 
 for name, device in devices.items():
     if device.get_type() == "relay":
@@ -480,15 +481,8 @@ c1 = schem.Circuit(out_devices, [ ])
 for c in out_devices:
     print(c)
 
-net_nodes = {}
-net_nodes["0"] = net.Node("0")
-net_edges = []
-
-def get_or_create_node(node_name):
-    global net_nodes
-    if not node_name in net_nodes:
-        net_nodes[node_name] = net.Node(node_name)
-    return net_nodes[node_name]
+net_mapper = net.Mapper()
+net_devices = []
 
 # Instantiate the final network
 def net_setup_visitor(name, type, io_names, params):
@@ -498,16 +492,11 @@ def net_setup_visitor(name, type, io_names, params):
             raise Exception("Node count error for device " + name)
         if not "r" in params:
             raise Exception("Parameter missing for device " + name)
-        edge = net.ResistorEdge(name, 
-            get_or_create_node(io_names[0]), get_or_create_node(io_names[1]),
-            float(params["r"]))
-        net_edges.append(edge)
+        net_devices.append(net.Resistor(name, io_names[0], io_names[1], float(params["r"])))
     elif type == "d":
         if len(io_names) != 2:
             raise Exception("Node count error for device " + name)
-        edge = net.DiodeEdge(name, 
-            get_or_create_node(io_names[0]), get_or_create_node(io_names[1]))
-        net_edges.append(edge)
+        net_devices.append(net.Diode(name, io_names[0], io_names[1]))
     elif type == "sw":
         if len(io_names) != 2:
             raise Exception("Node count error for device " + name)
@@ -516,43 +505,27 @@ def net_setup_visitor(name, type, io_names, params):
         state = False
         if "state" in params:
             state = params["state"]
-        edge = net.SwitchEdge(name, 
-            get_or_create_node(io_names[0]), get_or_create_node(io_names[1]),
-            float(params["r0"]), float(params["r1"]), state)
-        net_edges.append(edge)
+        #net_devices.append(net.Switch(name, io_names[0], io_names[1], state))
+        # This switch type will not stamp into the matrix if it is open
+        net_devices.append(net.Switch2(name, io_names[0], io_names[1], state))
     elif type == "v":
         if len(io_names) != 2:
             raise Exception("Node count error for device " + name)
         if not "v" in params:
             raise Exception("Parameter missing for device " + name)
-        edge = net.VoltageSourceEdge(name, 
-            get_or_create_node(io_names[0]), 
-            get_or_create_node(io_names[1]),
-            get_or_create_node("#" + name),
-            float(params["v"]))
-        net_edges.append(edge)
+        net_devices.append(net.VoltageSource(name, io_names[0], io_names[1], float(params["v"])))
     else:
         raise Exception("Unable to create device " + name)
 
 c1.visit_leaves({ }, None, [ ], net_setup_visitor)
 
-# Assign node numbers
-node_count = 1
-for node in net_nodes.values():
-    if node.get_name() != "0":
-        node.set_index(node_count)
-        print("Node", node.get_name(), node.get_index())
-        node_count = node_count + 1
+# Setup nodes and get device names
+mapper = net.Mapper()
 
-# Get node names
-edge_names = {}
-for edge in net_edges:
-    edge_names[edge.get_name()] = edge
-
-# Setup linear algebra
-A = net.Matrix(node_count - 1, node_count - 1)
-b = net.Vector(node_count - 1)
-x = np.zeros((node_count - 1))
+# Setup name->device mapping
+name_to_device = {}
+for dev in net_devices:
+    name_to_device[dev.get_name()] = dev
 
 # LogicBox Related
 
@@ -564,45 +537,106 @@ class Source:
         self.x = x
     def get(self, name):
         #print("Get", name)
-        node = net_nodes["#" + name]
+        i = mapper.get("#" + name)
         # Turn the current into a boolean
         # TODO: INVESTIGATE SIGN OF COIL CURRENT!
-        return (abs(x[node.get_index() - 1]) > self.threshold)
+        return (abs(x[i]) > self.threshold)
 
 lb_source = Source()
 lb = logicbox.LogicBox("../daves-1f/typewriter-mechanical.logic", lb_source)    
 
+max_iter = 50
+
 # Time steps
 for i in range(0, 360 * 3):
+#for i in range(0, 1):
 
     print("-----", int(i / 360), (i % 360), "---------")
 
-    A.clear()
-    b.clear()
+    node_name_to_devices = {}
 
-    # Stamp all devices into A/b matrices
-    for edge in net_edges:
-        edge.stamp(A, b, x)
+    # Get the relevant nodes allocated.  This may depend on device 
+    # state, which can change at each time step
+    mapper.clear()
+    for dev in net_devices:
+        dev.register_node_names(mapper)
+        for node_name in dev.get_connected_node_names():
+            if not node_name in node_name_to_devices:
+                node_name_to_devices[node_name] = []
+            node_name_to_devices[node_name].append(dev)
 
-    # Calculate the network
-    x = np.linalg.inv(A.data).dot(b.data)
+    found_ground = False
 
-    # Display values
+    def ground_search(node_name, name_path):
+        global found_ground
+        # Stop at 0
+        if node_name == "0":
+            found_ground = True
+            return False
+        return True
+
+    def search_2(node_name, name_path):
+        global found_ground
+        # Stop at 0
+        if node_name == "0" or node_name == "GND" or node_name == "VP48" or node_name == "SOLENOID COMMON":
+            print(name_path)
+            return False
+        return True
+    
     """
-    for node in net_nodes.values():
-        if node.get_index() == 0:
-            pass
-        else:
-            print("Node", node.get_name(), x[node.get_index() - 1])
-
+    # Check to see if there are any nodes that lack a path to ground
+    for node_name, _ in node_name_to_devices.items():
+        found_ground = False
+        net.traverse_graph_2(node_name_to_devices, name_to_device, [ node_name ], ground_search)
+        if not found_ground:
+            print("No ground path found from node ", node_name)
     """
 
-    for name, node in net_nodes.items():
-        if name.startswith("#") and abs(x[node.get_index() - 1]) > 0.1:
+    #net.traverse_graph_2(node_name_to_devices, name_to_device, [ "_NODE47_D30.A" ], search_2, False)
+    #net.traverse_graph_2(node_name_to_devices, name_to_device, [ "_NODE76_PS_1U.A" ], search_2, False)
+
+    # Dimension of network can change at each time step as nodes are added/removed
+    # by switch actions.
+    x = np.zeros((mapper.get_size()))
+    previous_x = np.zeros((mapper.get_size()))
+
+    # NR loop
+    converged = False
+    for j in range(0, max_iter):
+
+        A = np.zeros((mapper.get_size(), mapper.get_size()))
+        b = np.zeros((mapper.get_size()))
+
+        # Stamp all devices
+        for device in net_devices:
+            device.stamp(A, b, None, x)
+
+        previous_x[:] = x
+        x = np.linalg.inv(A).dot(b)
+        e = np.absolute(x - previous_x)
+
+        # Display values
+        #def node_visitor_1(name, ix):
+        #    if abs(x[ix]) > 1:
+        #        print("Node", name, ix, abs(x[ix]))
+        #mapper.visit_all(node_visitor_1)
+
+        if np.all(e < 0.01): 
+            converged = True
+            #print("Breaking at", j)
+            break
+
+    if not converged:
+        print("Warning: failed to converge")
+
+    #print("Voltage at _NODE62_R38.2NO",x[mapper.get("_NODE62_R38.2NO")])
+    #print("Voltage at GND",x[mapper.get("GND")])
+
+    def node_visitor_2(name, ix):
+        if name.startswith("#") and abs(x[ix]) > 0.1:
             if not name == "#VP48":
-                print("Current in node", name, abs(x[node.get_index() - 1]))
-
-    print("_NODE19_R38.1C",x[net_nodes["_NODE19_R38.1C"].get_index() - 1])
+                print("Current in node", name, abs(x[ix]))
+    mapper.visit_all(node_visitor_2)
 
     lb_source.set_x(x)      
     lb.tick()
@@ -610,11 +644,11 @@ for i in range(0, 360 * 3):
     # Transfer all of the switch values
     for logic_name in lb.get_names():
         if logic_name.endswith("_sw"):
-            if not logic_name in edge_names:
+            if not logic_name in name_to_device:
                 pass
             else:
-                changed = edge_names[logic_name].set_state(lb.get(logic_name))
+                changed = name_to_device[logic_name].set_state(lb.get(logic_name))
                 if changed:
                     print(logic_name, "changed to", lb.get(logic_name))
-          
+ 
 

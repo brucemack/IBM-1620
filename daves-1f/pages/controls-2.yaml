@@ -78,11 +78,11 @@ devices:
       b: GND
 
 # NEGATIVE OF ABOVE
-#  - name: pass8
-#    type: pass
-#   pins: 
-#      a: "NOT WR STATUS DR"
-#      b: GND
+  - name: pass7b
+    type: pass
+    pins: 
+      a: "NOT WR STATUS DR"
+      b: VP48
 
   - name: pass8
     type: pass
