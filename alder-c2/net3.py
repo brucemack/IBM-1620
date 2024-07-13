@@ -80,12 +80,21 @@ class Device2:
 
     def get_connected_node_names(self):
         return [ self.node_name_0, self.node_name_1 ]
+    
+    def can_get_current(self):
+        return False
 
 class Resistor(Device2):
 
     def __init__(self, name: str, node_name_0: str, node_name_1: str, r: float):
         super().__init__(name, node_name_0, node_name_1)
         self.r = r
+
+    def can_get_current(self):
+        return True
+    
+    def get_current(self, x):
+        return (x[self.i0] - x[self.i1]) / self.r
 
     def stamp(self, A, b, x_t, x_n):
         g = 1 / self.r

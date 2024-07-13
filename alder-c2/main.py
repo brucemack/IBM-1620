@@ -267,18 +267,14 @@ def setup_duo_relay(name: str, pins):
     node_pa = pin_pa.get_node().get_name()
     pin_pb = pins[name + ".PB"]
     node_pb = pin_pb.get_node().get_name()
-    node_px = name + ".px"
-    parts.append(schem.Component(name.lower() + "_pick_current", "v", [ node_pa, node_px ], { "v": 0 } ))
-    parts.append(schem.Component(name.lower() + "_pcoil", "r", [ node_px, node_pb ], { "r": COIL_R } ))
+    parts.append(schem.Component(name.lower() + "_pick_coil", "co", [ node_pa, node_pb ]))
 
     # Hold coil
     pin_ha = pins[name + ".HA"]
     node_ha = pin_ha.get_node().get_name()
     pin_hb = pins[name + ".HB"]
     node_hb = pin_hb.get_node().get_name()
-    node_hx = name + ".hx"
-    parts.append(schem.Component(name.lower() + "_hold_current", "v", [ node_ha, node_hx ], { "v": 0 } ))
-    parts.append(schem.Component(name.lower() + "_hcoil", "r", [ node_hx, node_hb ], { "r": COIL_R } ))
+    parts.append(schem.Component(name.lower() + "_hold_coil", "co", [ node_ha, node_hb ] ))
 
     # Stacks
     for s in range(0, 13):
@@ -312,18 +308,14 @@ def setup_latching_relay(name: str, pins):
     node_pa = pin_pa.get_node().get_name()
     pin_pb = pins[name + ".LPB"]
     node_pb = pin_pb.get_node().get_name()
-    node_px = name + ".px"
-    parts.append(schem.Component(name.lower() + "_pick_current", "v", [ node_pa, node_px ], { "v": 0 } ))
-    parts.append(schem.Component(name.lower() + "_pcoil", "r", [ node_px, node_pb ], { "r": COIL_R } ))
+    parts.append(schem.Component(name.lower() + "_pick_coil", "co", [ node_pa, node_pb ] ))
 
     # Hold coil
     pin_ha = pins[name + ".LTA"]
     node_ha = pin_ha.get_node().get_name()
     pin_hb = pins[name + ".LTB"]
     node_hb = pin_hb.get_node().get_name()
-    node_hx = name + ".tx"
-    parts.append(schem.Component(name.lower() + "_trip_current", "v", [ node_ha, node_hx ], { "v": 0 } ))
-    parts.append(schem.Component(name.lower() + "_tcoil", "r", [ node_hx, node_hb ], { "r": COIL_R } ))
+    parts.append(schem.Component(name.lower() + "_trip_coil", "co", [ node_ha, node_hb ]))
 
     # Stacks
     for s in range(0, 13):
@@ -414,9 +406,7 @@ def setup_solenoid(name: str, pins):
     node_a = pin_a.get_node().get_name()
     pin_b = pins[name + ".B"]
     node_b = pin_b.get_node().get_name()
-    node_x = name + ".x"
-    parts.append(schem.Component(name.lower() + "_current", "v", [ node_a, node_x ], { "v": 0 } ))
-    parts.append(schem.Component(name.lower() + "_coil", "r", [ node_x, node_b ], { "r": COIL_R } ))
+    parts.append(schem.Component(name.lower() + "_coil", "co", [ node_a, node_b ] ))
 
     return parts
 
@@ -493,6 +483,11 @@ def net_setup_visitor(name, type, io_names, params):
         if not "r" in params:
             raise Exception("Parameter missing for device " + name)
         net_devices.append(net.Resistor(name, io_names[0], io_names[1], float(params["r"])))
+    elif type == "co":
+        if len(io_names) != 2:
+            raise Exception("Node count error for device " + name)
+        # NOTE: We represent a coil using a low-valued resistor
+        net_devices.append(net.Resistor(name, io_names[0], io_names[1], COIL_R))
     elif type == "d":
         if len(io_names) != 2:
             raise Exception("Node count error for device " + name)
@@ -537,10 +532,14 @@ class Source:
         self.x = x
     def get(self, name):
         #print("Get", name)
-        i = mapper.get("#" + name)
-        # Turn the current into a boolean
-        # TODO: INVESTIGATE SIGN OF COIL CURRENT!
-        return (abs(x[i]) > self.threshold)
+        dev = name_to_device[name]
+        if not dev.can_get_current():
+            print("WARNING: Can't read current from", name)
+            return 0
+        else:
+            # Turn the current into a boolean
+            # TODO: INVESTIGATE SIGN OF COIL CURRENT!
+            return (abs(dev.get_current(self.x)) > self.threshold)
 
 lb_source = Source()
 lb = logicbox.LogicBox("../daves-1f/typewriter-mechanical.logic", lb_source)    
@@ -549,7 +548,6 @@ max_iter = 50
 
 # Time steps
 for i in range(0, 360 * 3):
-#for i in range(0, 1):
 
     print("-----", int(i / 360), (i % 360), "---------")
 
@@ -638,7 +636,15 @@ for i in range(0, 360 * 3):
                 print("Current in node", name, abs(x[ix]))
     mapper.visit_all(node_visitor_2)
 
+    # Display coil currents
+    for dev in net_devices:
+        if dev.can_get_current() and ("coil" in dev.get_name()):
+            i = dev.get_current(x)
+            if abs(i) > 0.1:
+                print("Current in device", dev.get_name(), i)
+
     lb_source.set_x(x)      
+    # This is what causes the currents to be read from the network
     lb.tick()
 
     # Transfer all of the switch values
