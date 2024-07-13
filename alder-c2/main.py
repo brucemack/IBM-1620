@@ -4,6 +4,7 @@ import schem
 import net3 as net
 import numpy as np
 import logicbox
+import time 
 
 indir = "../daves-1f/pages"
 
@@ -240,7 +241,8 @@ for _, pin in pins.items():
 #SHORT_R = 0.001
 SHORT_R = 0.0000000001
 OPEN_R = 100000000
-COIL_R = 0.1
+#COIL_R = 0.1
+COIL_R = 10
 
 def setup_switch(name: str, pins):
 
@@ -406,7 +408,7 @@ def setup_solenoid(name: str, pins):
     node_a = pin_a.get_node().get_name()
     pin_b = pins[name + ".B"]
     node_b = pin_b.get_node().get_name()
-    parts.append(schem.Component(name.lower() + "_coil", "co", [ node_a, node_b ] ))
+    parts.append(schem.Component(name.lower() + "_sol", "co", [ node_a, node_b ] ))
 
     return parts
 
@@ -546,32 +548,28 @@ lb = logicbox.LogicBox("../daves-1f/typewriter-mechanical.logic", lb_source)
 
 max_iter = 50
 
+start = time.perf_counter()
+
 # Time steps
-for i in range(0, 360 * 3):
+for i in range(0, 30 * 5):
 
-    print("-----", int(i / 360), (i % 360), "---------")
+    print("-----", i, lb.get("_cycle"), lb.get("_angle"), "---------")
 
-    node_name_to_devices = {}
+    #node_name_to_devices = {}
 
     # Get the relevant nodes allocated.  This may depend on device 
     # state, which can change at each time step
     mapper.clear()
+
     for dev in net_devices:
         dev.register_node_names(mapper)
-        for node_name in dev.get_connected_node_names():
-            if not node_name in node_name_to_devices:
-                node_name_to_devices[node_name] = []
-            node_name_to_devices[node_name].append(dev)
+        #for node_name in dev.get_connected_node_names():
+        #    if not node_name in node_name_to_devices:
+        #        node_name_to_devices[node_name] = []
+        #    node_name_to_devices[node_name].append(dev)
 
+    """
     found_ground = False
-
-    def ground_search(node_name, name_path):
-        global found_ground
-        # Stop at 0
-        if node_name == "0":
-            found_ground = True
-            return False
-        return True
 
     def search_2(node_name, name_path):
         global found_ground
@@ -581,7 +579,6 @@ for i in range(0, 360 * 3):
             return False
         return True
     
-    """
     # Check to see if there are any nodes that lack a path to ground
     for node_name, _ in node_name_to_devices.items():
         found_ground = False
@@ -630,15 +627,16 @@ for i in range(0, 360 * 3):
     #print("Voltage at _NODE62_R38.2NO",x[mapper.get("_NODE62_R38.2NO")])
     #print("Voltage at GND",x[mapper.get("GND")])
 
-    def node_visitor_2(name, ix):
-        if name.startswith("#") and abs(x[ix]) > 0.1:
-            if not name == "#VP48":
-                print("Current in node", name, abs(x[ix]))
-    mapper.visit_all(node_visitor_2)
+    #def node_visitor_2(name, ix):
+    #    if name.startswith("#") and abs(x[ix]) > 0.1:
+    #        if not name == "#VP48":
+    #            print("Current in node", name, abs(x[ix]))
+    #mapper.visit_all(node_visitor_2)
 
     # Display coil currents
     for dev in net_devices:
-        if dev.can_get_current() and ("coil" in dev.get_name()):
+        if dev.can_get_current() and ("_coil" in dev.get_name() or "_sol" in dev.get_name()):
+        #if dev.can_get_current() and ("_sol" in dev.get_name()):
             i = dev.get_current(x)
             if abs(i) > 0.1:
                 print("Current in device", dev.get_name(), i)
@@ -658,3 +656,5 @@ for i in range(0, 360 * 3):
                     print(logic_name, "changed to", lb.get(logic_name))
  
 
+end = time.perf_counter()
+print(end - start)

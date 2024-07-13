@@ -75,6 +75,16 @@ class Evaluator(lark.visitors.Transformer):
     def SIGNED_NUMBER(self, tree):
         return str(tree)
 
+# We only process the angles that really matter    
+significant_angles = [ 0, 1, 2, 3,
+                    49, 50, 51, 52,
+                    98, 99, 100, 101, 
+                    170, 171, 172, 173,
+                    219, 220, 221, 222, 223,
+                    299, 300, 301, 302,
+                    309, 310, 311, 312,
+                    359 ]
+
 class LogicBox:
 
     def __init__(self, logic_file_name, value_source):
@@ -101,6 +111,9 @@ class LogicBox:
         for n in self.reg_names:
             self.value_map[n] = False
 
+        self.value_map["_angle"] = 0
+        self.value_map["_cycle"] = 0
+
     def get_input_names(self) -> list[str]:
         return self.input_names.copy()
 
@@ -112,14 +125,19 @@ class LogicBox:
 
     def get(self, name: str):
         return self.value_map[name]
-    
+
     def tick(self):
+
+        global significant_angles
 
         # Setup input
         for n in self.input_names:
             self.value_map[n] = self.value_source.get(n)
 
-        self.value_map["_angle"] = (self.tick_count % 360)
+        sa_ptr = self.tick_count % (len(significant_angles))
+        sa_cycle = int(self.tick_count / (len(significant_angles)))
+        self.value_map["_angle"] = significant_angles[sa_ptr]
+        self.value_map["_cycle"] = sa_cycle
 
         next_value_map = {}
         ev = Evaluator(self.value_map, next_value_map)

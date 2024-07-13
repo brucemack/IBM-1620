@@ -29,11 +29,11 @@ devices:
 #      a: r28.12c
 #      b: GND
 
-#  - name: pass0
-#    type: pass
-#    pins: 
-#      a: "X BIT THY DR"
-#      b: GND
+  - name: pass0
+    type: pass
+    pins: 
+      a: "X BIT THY DR"
+      b: GND
 
 #  - name: pass2
 #    type: pass
@@ -65,11 +65,11 @@ devices:
 #      a: "8 BIT THY DR"
 #      b: GND
 
-#  - name: pass6
-#    type: pass
-#    pins: 
-#      a: "C BIT THY DR"
-#      b: GND
+  - name: pass6
+    type: pass
+    pins: 
+      a: "C BIT THY DR"
+      b: GND
 
   - name: pass7
     type: pass

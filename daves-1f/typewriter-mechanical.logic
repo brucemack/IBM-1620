@@ -341,5 +341,5 @@ crcb_6no_sw = (_angle >= 310) & (_angle < 360);
 //carr_rtn_intlk_contact_no = 
 //last_col_contact_no = 
 
-input ps_shift_coil;
-sw_shiftcontact_no_sw = ps_shift_coil;
+input ps_shift_sol;
+sw_shiftcontact_no_sw = ps_shift_sol;
