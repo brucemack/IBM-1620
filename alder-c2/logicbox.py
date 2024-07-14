@@ -1,10 +1,189 @@
 import lark
 
+class Module:
+    def __init__(self, name, parameters):
+        self.name = name
+        self.parameters = parameters
+
+class ExecutableStatement:
+    def __init__(self):
+        pass
+    def execute(self, value_map, next_value_map):
+        pass
+
+class ExecutableAssignmentStatement(ExecutableStatement):
+    def __init__(self, target_name, exp_node):
+        pass
+    def execute(self, value_map, next_value_map):
+        pass
+
+class ExecuableExpressionNode:
+    def __init__(self, target_name, exp_node):
+        pass
+    def evaluate(self, value_map):
+        pass
+
+class Declaration:
+
+    def __init__(self, io, wr, name):
+        self.io = io
+        self.wr = wr 
+        self.name = name
+
+    def fill_in(self, d):
+        if self.io is None:
+            self.io = d.io
+        if self.wr is None:
+            self.wr = d.wr
+ 
+    def override(self, d):
+        if not d.io is None:
+            self.io = d.io
+        if not d.wr is None:
+            self.wr = d.wr
+
+    def __repr__(self) -> str:
+        io = self.io 
+        if io is None:
+            io = "?"
+        wr = self.wr 
+        if wr is None:
+            wr = "?"
+        return io + "/" + wr + "/" + self.name
+
+# ----- Parse Tree Transformers ---------------------------------------------------------
+
+class ModuleDeclarationProcessor(lark.visitors.Transformer):
+
+    def __init__(self, modules):
+        self.modules = modules
+
+    # moduledeclaration: MODULE IDENTIFIER "(" identifierlist ")" ";" statementlist ENDMODULE
+        #                          [1]              [2]                   [3]
+    def moduledeclaration(self, tree):
+        module_name = str(tree[1])
+        declaration_list = []
+        # Process the identifiers
+        last_declaration = Declaration( "INPUT", "WIRE", None)
+        for decl in tree[2]:
+            # Handle defaults by carrying over the previous characteristic
+            decl.fill_in(last_declaration)
+            declaration_list.append(decl)
+            last_declaration = decl
+        # Process the statements looking for declarations
+        for statement in tree[3]:
+            if statement.data == "statement_declaration":
+                for d in statement.children:
+                    for decl in d:
+                        # Scan to look for name matches
+                        found = False
+                        for possible in declaration_list:
+                            if decl.name ==  possible.name:
+                                possible.override(decl)
+                                found = True
+                        if not found:
+                            declaration_list.append(decl)
+            elif statement.data == "statement_assignment":
+                pass
+            elif statement.data == "statement_moduleinstantiation":
+                pass
+
+        # Deal with declaration defaults
+        print("BEFORE",declaration_list)
+        for decl in declaration_list:
+            decl.fill_in(Declaration("LOCAL", "WIRE", None))
+        print("AFTER",declaration_list)
+            
+        self.modules[module_name] = Module(module_name, None)
+
+    def statementlist_add(self, tree):
+        l = tree[1].copy()
+        l.insert(0, tree[0])
+        return l
+
+    def statementlist_start(self, tree):
+        return [ tree[0] ]
+    
+    def declarationidentifier_a(self, tree):
+        return Declaration( tree[0].type, tree[1].type, str(tree[2]) )
+
+    def declarationidentifier_b(self, tree):
+        return Declaration( tree[0].type, None, str(tree[1]) )
+
+    def declarationidentifier_c(self, tree):
+        return Declaration( None, tree[0].type, str(tree[1]) )
+    
+    def declarationidentifier_d(self, tree):
+        return Declaration( None, None, str(tree[0]) )
+
+    # This will be a list of Declarations
+    def declarationidentifierlist_start(self, tree):
+        return [ tree[0] ]
+
+    def declarationidentifierlist_add(self, tree):
+        l = tree[1].copy()
+        l.insert(0, tree[0])
+        return l
+
+    def declaration_input(self, tree):
+        result = []
+        for id in tree[1]:
+            result.append(Declaration( "INPUT", None, id) )
+        return result
+    
+    def declaration_input_wire(self, tree):
+        result = []
+        for id in tree[2]:
+            result.append(Declaration( "INPUT", "WIRE", id) )
+        return result
+
+    def declaration_output(self, tree):
+        result = []
+        for id in tree[1]:
+            result.append(Declaration( "OUTPUT", None, id))
+        return result
+    
+    def declaration_output_wire(self, tree):
+        result = []
+        for id in tree[2]:
+            result.append(Declaration( "OUTPUT", "WIRE", id))
+        return result
+    
+    def declaration_output_reg(self, tree):
+        result = []
+        for id in tree[2]:
+            result.append(Declaration( "OUTPUT", "REG", id))
+        return result
+
+    def declaration_reg(self, tree):
+        result = []
+        for id in tree[1]:
+            result.append(Declaration( None, "REG", id))
+        return result
+    
+    def declaration_wire(self, tree):
+        result = []
+        for id in tree[1]:
+            result.append(Declaration( None, "WIRE", id))
+        return result
+
+    # Start a list of strings
+    def identifierlist_start(self, tree):
+        return [ str(tree[0]) ]
+
+    # Continue a list of strings
+    def identifierlist_add(self, tree):
+        l = tree[1].copy()
+        l.insert(0, str(tree[0]))
+        return l  
+
+"""
 class DeclarationProcessor(lark.visitors.Transformer):
 
     def __init__(self, input_names, reg_names):
         self.input_names = input_names
         self.reg_names = reg_names
+        self.stack = []
 
     def identifierlist_start(self, tree):
         return [ tree[0] ]
@@ -22,6 +201,7 @@ class DeclarationProcessor(lark.visitors.Transformer):
 
     def IDENTIFIER(self, tree):
         return str(tree)
+"""
 
 class Evaluator(lark.visitors.Transformer):
 
