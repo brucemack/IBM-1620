@@ -1,9 +1,15 @@
 // Lark grammar for simple logic language
 // Bruce MacKinnon 7-July-2024
 
-start: moduledeclaration* 
+start: moduledeclaration*
 
-moduledeclaration: MODULE IDENTIFIER "(" declarationidentifierlist ")" ";" statementlist ENDMODULE
+moduledeclaration: MODULE IDENTIFIER "(" portdeclarationlist ")" ";" statementlist ENDMODULE
+
+portdeclarationlist: portdeclaration "," portdeclarationlist -> portdeclarationlist_add
+                   | portdeclaration -> portdeclarationlist_start
+
+portdeclaration: (INPUT | OUTPUT) (WIRE | REG) IDENTIFIER -> portdeclaration_full
+               | IDENTIFIER -> portdeclaration_default
 
 statementlist: statement statementlist -> statementlist_add
              | statement -> statementlist_start
@@ -12,12 +18,7 @@ statement: declaration -> statement_declaration
          | assignment -> statement_assignment
          | moduleinstantiation -> statement_moduleinstantiation
 
-declaration: INPUT identifierlist ";" -> declaration_input
-           | INPUT WIRE identifierlist ";" -> declaration_input_wire
-           | OUTPUT identifierlist ";" -> declaration_output
-           | OUTPUT WIRE identifierlist ";" -> declaration_output_wire
-           | OUTPUT REG identifierlist ";" -> declaration_output_reg
-           | WIRE identifierlist ";" -> declaration_wire
+declaration: WIRE identifierlist ";" -> declaration_wire
            | REG identifierlist ";" -> declaration_reg
 
 assignment: IDENTIFIER "=" exp ";" -> assignment_eq
@@ -25,13 +26,6 @@ assignment: IDENTIFIER "=" exp ";" -> assignment_eq
 
 moduleinstantiation: IDENTIFIER IDENTIFIER "(" parameterlist ")" ";"
 
-declarationidentifier: (INPUT | OUTPUT) (WIRE | REG) IDENTIFIER -> declarationidentifier_a 
-                     | (INPUT | OUTPUT) IDENTIFIER -> declarationidentifier_b 
-                     | (WIRE | REG) IDENTIFIER -> declarationidentifier_c 
-                     | IDENTIFIER -> declarationidentifier_d 
-
-declarationidentifierlist: declarationidentifier "," declarationidentifierlist -> declarationidentifierlist_add
-                          | declarationidentifier -> declarationidentifierlist_start
 
 identifierlist: IDENTIFIER "," identifierlist -> identifierlist_add
               | IDENTIFIER -> identifierlist_start
