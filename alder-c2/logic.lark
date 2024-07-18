@@ -3,7 +3,7 @@
 
 start: moduledeclaration*
 
-moduledeclaration: MODULE IDENTIFIER "(" portdeclarationlist ")" ";" statementlist ENDMODULE
+moduledeclaration: MODULE IDENTIFIER "(" portdeclarationlist? ")" ";" statementlist ENDMODULE
 
 portdeclarationlist: portdeclaration "," portdeclarationlist -> portdeclarationlist_add
                    | portdeclaration -> portdeclarationlist_start
@@ -11,21 +11,12 @@ portdeclarationlist: portdeclaration "," portdeclarationlist -> portdeclarationl
 portdeclaration: (INPUT | OUTPUT) (WIRE | REG) IDENTIFIER -> portdeclaration_full
                | IDENTIFIER -> portdeclaration_default
 
-statementlist: statement statementlist -> statementlist_add
+statementlist: statementlist statement -> statementlist_add
              | statement -> statementlist_start
 
-statement: declaration -> statement_declaration
-         | assignment -> statement_assignment
-         | moduleinstantiation -> statement_moduleinstantiation
-
-declaration: WIRE identifierlist ";" -> declaration_wire
-           | REG identifierlist ";" -> declaration_reg
-
-assignment: IDENTIFIER "=" exp ";" -> assignment_eq
-          | IDENTIFIER "<=" exp ";" -> assignment_eq2
-
-moduleinstantiation: IDENTIFIER IDENTIFIER "(" parameterlist ")" ";"
-
+statement: (WIRE | REG) identifierlist ";" -> statement_declaration
+         | IDENTIFIER (EQ_SIGN | LTEQ_SIGN) exp ";" -> statement_assignment
+         | IDENTIFIER IDENTIFIER "(" parameterlist ")" ";" -> statement_moduleinstantiation
 
 identifierlist: IDENTIFIER "," identifierlist -> identifierlist_add
               | IDENTIFIER -> identifierlist_start
@@ -33,7 +24,7 @@ identifierlist: IDENTIFIER "," identifierlist -> identifierlist_add
 parameterlist: parameter "," parameterlist -> parameterlist_add
              | parameter -> parameterlist_start
 
-parameter: "." IDENTIFIER "(" exp ")"
+parameter: "." IDENTIFIER "(" IDENTIFIER ")"
 
 exp: exp "|" exp -> exp_or
     | exp "&" exp -> exp_and
@@ -54,6 +45,8 @@ REG: "reg"
 WIRE: "wire"
 MODULE: "module"
 ENDMODULE: "endmodule"
+EQ_SIGN: "="
+LTEQ_SIGN: "<="
 
 %import common.ESCAPED_STRING
 %import common.SIGNED_NUMBER

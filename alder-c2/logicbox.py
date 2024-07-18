@@ -1,7 +1,10 @@
 import lark
 
 def make_global_name(namespace: str, local_name: str):
-    return namespace + "." + local_name
+    if namespace:
+        return namespace + "." + local_name
+    else:
+        return local_name
 
 # ----- Expression Related ---------------------------------------------------
 
@@ -12,47 +15,55 @@ class Value:
 
     def get_bool(self):
         return bool(self.value)
+    
+    def __repr__(self) -> str:
+        return str(self.value)
 
 class Expression:
-    def evaluate(self, namespace: str, variable_declarations, \
-                 value_state: dict[str, Value]) -> Value:
+    def evaluate(self, assignment_0_map, value_state: dict[str, Value]) -> Value:
         raise Exception("Not implemented")
     
-class Variable(Expression):
+class VariableExpression(Expression):
 
-    def __init__(self, local_name):
-        self.local_name = local_name 
+    def __init__(self, name):
+        self.name = name 
 
-    def evaluate(self, namespace: str, variable_declarations: dict[str, Expression], \
+    def evaluate(self, assignment_0_map: dict[str, Expression], \
                  value_state: dict[str, Value]) -> Value:
-        global_name = make_global_name(namespace, self.local_name)
         # If the variable has not been computed in this cycle then perform the 
         # computation and hold the result for next time.
-        if not global_name in value_state:
-            exp = variable_declarations[global_name]
-            value_state[global_name] = exp.evaluate(namespace, variable_declarations, value_state)
-        return value_state[global_name]
+        if not self.name in value_state:
+            # Get the RHS expression that defines the variable
+            exp = assignment_0_map[self.name]
+            # Evaluate the expression and hold for future use
+            value_state[self.name] = exp.evaluate(assignment_0_map, value_state)
+        return value_state[self.name]
 
-class Constant(Expression):
+    def __repr__(self) -> str:
+        return self.name
 
-    def __init__(self, value):
+class ConstantExpression(Expression):
+
+    def __init__(self, value: Value):
         self.value = value
 
-    def evaluate(self, namespace: str, variable_declarations, \
+    def evaluate(self, assignment_0_map: dict[str, Expression], \
                  value_state: dict[str, Value]) -> Value:
         return self.value
 
-class BinaryExpresion(Expression):
+    def __repr__(self):
+        return str(self.value)
+
+class BinaryExpression(Expression):
 
     def __init__(self, type, lhs, rhs):
         self.type = type 
         self.lhs = lhs
         self.rhs = rhs
 
-    def evaluate(self, namespace: str, variable_declarations, \
-                 value_state: dict[str, Value]) -> Value:
-        lhs_value = self.lhs.evaluate(namespace, variable_declarations, value_state)
-        rhs_value = self.rhs.evaluate(namespace, variable_declarations, value_state)
+    def evaluate(self, assignment_0_map: dict[str, Expression], value_state: dict[str, Value]) -> Value:
+        lhs_value = self.lhs.evaluate(assignment_0_map, value_state)
+        rhs_value = self.rhs.evaluate(assignment_0_map, value_state)
         return self.eval(lhs_value, rhs_value)
     
     def eval(self, lhs: Value, rhs: Value) -> Value:
@@ -62,16 +73,18 @@ class BinaryExpresion(Expression):
             return Value(lhs.get_bool() and rhs.get_bool())
         else:
             raise Exception("Invalid operation type")
+        
+    def __repr__(self):
+        return "(" + str(self.lhs) + " " + self.type + " " + str(self.rhs) + ")"
 
-class UnaryExpresion(Expression):
+class UnaryExpression(Expression):
 
     def __init__(self, type, lhs):
         self.type = type 
         self.lhs = lhs
 
-    def evaluate(self, namespace: str, variable_declarations, \
-                 value_state: dict[str, Value]) -> Value:
-        lhs_value = self.lhs.evaluate(namespace, variable_declarations, value_state)
+    def evaluate(self, assignment_0_map: dict[str, Expression], value_state: dict[str, Value]) -> Value:
+        lhs_value = self.lhs.evaluate(assignment_0_map, value_state)
         return self.eval(lhs_value)
     
     def eval(self, lhs: Value)-> Value:
@@ -79,10 +92,8 @@ class UnaryExpresion(Expression):
             return Value(not lhs.get_bool())
         else:
             raise Exception("Invalid operation type")
-        
-
-
-
+    
+# ----- Statement Related -------------------------------------------------------
 
 class Module:
     def __init__(self, name, ports, body):
@@ -92,7 +103,6 @@ class Module:
 
     def __repr__(self):
         return "Module: " + self.name + " " + str(self.ports) + " " + str(self.body)
-
 
 class AssignmentStatement:
 
@@ -144,12 +154,15 @@ class ModuleDeclarationProcessor(lark.visitors.Transformer):
         pass
 
     def moduledeclaration(self, tree):
-        # Carry forward declaration information as needed
-        previous_pd = PortDeclaration("INPUT", "WIRE", None)
-        for pd in tree[2]:
-            pd.fill_in(previous_pd)
-            previous_pd = pd
-        return Module(str(tree[1]), tree[2], tree[3])
+        if len(tree) == 5:
+            # Carry forward declaration information as needed
+            previous_pd = PortDeclaration("INPUT", "WIRE", None)    
+            for pd in tree[2]:
+                pd.fill_in(previous_pd)
+                previous_pd = pd
+            return Module(str(tree[1]), tree[2], tree[3])
+        elif len(tree) == 4:
+            return Module(str(tree[1]), [], tree[2])
 
     def portdeclaration_full(self, tree):
         return PortDeclaration( tree[0].type, tree[1].type, str(tree[2]) )
@@ -204,57 +217,125 @@ class DeclarationProcessor(lark.visitors.Transformer):
         l.extend(tree[0])
         return l
 
-class Evaluator(lark.visitors.Transformer):
+class ExpressionTransformer(lark.visitors.Transformer):
 
-    def __init__(self, value_map, next_value_map):
-        self.value_map = value_map
-        self.next_value_map = next_value_map
-
-    def assignment_eq(self, tree):
-        self.value_map[tree[0]] = tree[1]
-
-    def assignment_eq2(self, tree):
-        self.next_value_map[tree[0]] = tree[1]
+    def __init__(self, base_name):
+        self.base_name = base_name
 
     def exp_or(self, tree):
-        return tree[0] == True or tree[1] == True
+        return BinaryExpression("or", tree[0], tree[1])
 
     def exp_and(self, tree):
-        return tree[0] == True and tree[1] == True
+        return BinaryExpression("or", tree[0], tree[1])
 
     def exp_xor(self, tree):
-        return (tree[0] == True and tree[1] == False) or \
-               (tree[0] == False and tree[1] == True)
+        return BinaryExpression("xor", tree[0], tree[1])
 
     def exp_lt(self, tree):
-        return tree[0] < tree[1]
+        return BinaryExpression("lt", tree[0], tree[1])
 
     def exp_lte(self, tree):
-        return tree[0] <= tree[1]
+        return BinaryExpression("lte", tree[0], tree[1])
 
     def exp_gt(self, tree):
-        return tree[0] > tree[1]
+        return BinaryExpression("gt", tree[0], tree[1])
 
     def exp_gte(self, tree):
-        return tree[0] >= tree[1]
+        return BinaryExpression("gte", tree[0], tree[1])
 
     def exp_not(self, tree):
-        return (tree[0] != True)
+        return UnaryExpression("not", tree[0])
 
     def exp_paren(self, tree):
         return tree[0]
 
     def exp_id(self, tree):
-        return self.value_map[tree[0]]
+        return VariableExpression(make_global_name(self.base_name, str(tree[0])))
 
     def exp_number(self, tree):
-        return int(tree[0])
+        return ConstantExpression(Value(int(str(tree[0]))))
 
-    def IDENTIFIER(self, tree):
-        return str(tree)
+# Creates a list of tuples
+class ParameterListTransformer(lark.visitors.Transformer):
 
-    def SIGNED_NUMBER(self, tree):
-        return str(tree)
+    def parameterlist_start(self, tree):
+        return [ tree[0] ]
+
+    def parameterlist_add(self, tree):
+        l = tree[1].copy()
+        l.insert(0, tree[0])
+        return l
+    
+    def parameter(self, tree):
+        return (str(tree[0]), str(tree[1]))
+
+class IdentifierListTransformer(lark.visitors.Transformer):
+
+    def __init__(self, base_name):
+        self.base_name = base_name
+
+    def identifierlist_start(self, tree):
+        return [ make_global_name(self.base_name, str(tree[0])) ]
+
+    def identifierlist_add(self, tree):
+        l = tree[1].copy()
+        l.insert(0, make_global_name(self.base_name, str(tree[0])))
+        return l
+
+class StatementVisitor(lark.visitors.Visitor):
+
+    def __init__(self, modules, assignment_0_map, assignment_1_map, register_list, base_name):
+        self.modules = modules
+        self.assignment_0_map = assignment_0_map
+        self.assignment_1_map = assignment_1_map
+        self.register_list = register_list
+        self.base_name = base_name 
+
+    def statement_declaration(self, tree):
+        if str(tree.children[0]).upper() == "REG":
+            self.register_list.extend(
+                IdentifierListTransformer(self.base_name).transform(tree.children[1]))
+
+    def statement_assignment(self, tree):
+        lhs_name = str(tree.children[0])
+        # Transform the expression 
+        exp = ExpressionTransformer(self.base_name).transform(tree.children[2])
+        if str(tree.children[1]) == "=":
+            self.assignment_0_map[make_global_name(self.base_name, lhs_name)] = exp
+        elif str(tree.children[1]) == "<=":
+            self.assignment_1_map[make_global_name(self.base_name, lhs_name)] = exp
+        else:
+            raise Exception("Invalid operation")
+
+    def statement_moduleinstantiation(self, tree):
+        module_name = str(tree.children[0])
+        module = self.modules[module_name]
+        instance_name = str(tree.children[1])
+        parameter_map = {}
+        for parameter in ParameterListTransformer().transform(tree.children[2]):
+            parameter_map[parameter[0]] = parameter[1]
+        # Create the assignment statements for the ports
+        for port in module.ports:
+            if not port.name in parameter_map:
+                raise Exception("Parameter for " + module_name + " not found: " + port.name)
+            if port.io == "INPUT":
+                # We are assuming that the parameter assignments happen immediately
+                self.assignment_0_map[make_global_name(self.base_name, instance_name + "." + port.name)] = \
+                    VariableExpression(make_global_name(self.base_name, parameter_map[port.name]))
+            elif port.io == "OUTPUT":
+                # We are assuming that the parameter assignments happen immediately
+                self.assignment_0_map[make_global_name(self.base_name, parameter_map[port.name])] = \
+                    VariableExpression(make_global_name(self.base_name, instance_name + "." + port.name))
+                if port.wr == "REG":
+                    self.register_list.append(
+                        make_global_name(self.base_name, instance_name + "." + port.name))
+        # Recurse
+        instantiate_recursive(self.modules, \
+                              self.assignment_0_map, self.assignment_1_map, self.register_list, \
+                              module_name, make_global_name(self.base_name, instance_name))
+
+    
+
 
 # We only process the angles that really matter    
 significant_angles = [ 0, 1, 2, 3,
@@ -330,3 +411,19 @@ class LogicBox:
 
         self.tick_count = self.tick_count + 1
 """
+
+def instantiate_recursive(modules, assignment_0_map, assignment_1_map, register_list: list[str],
+                          module_name, base_name):
+    
+    module = modules[module_name]
+
+    # No input/output wires for the root level
+    if not base_name is None:
+        pass
+    # Visit the statements in the module
+    v = StatementVisitor(modules, assignment_0_map, assignment_1_map, register_list, base_name)
+    v.visit(module.body)
+
+def instantiate(modules, assignment_0_map, assignment_1_map, register_list: list[str]):
+    declaration_map = {}
+    instantiate_recursive(modules, assignment_0_map, assignment_1_map, register_list, "main", None)
