@@ -63,6 +63,12 @@ class Mapper:
         for n, i in self.map.items():
             visitor(n, i)
 
+    def index_to_name(self, index):
+        for n, i in self.map.items():
+            if i == index:
+                return n
+        return None
+    
 class Device2:
 
     def __init__(self, name: str, node_name_0: str, node_name_1: str):

@@ -16,7 +16,7 @@ statementlist: statementlist statement -> statementlist_add
 
 statement: (WIRE | REG) identifierlist ";" -> statement_declaration
          | IDENTIFIER (EQ_SIGN | LTEQ_SIGN) exp ";" -> statement_assignment
-         | IDENTIFIER IDENTIFIER "(" parameterlist ")" ";" -> statement_moduleinstantiation
+         | IDENTIFIER IDENTIFIER "(" parameterlist? ")" ";" -> statement_moduleinstantiation
 
 identifierlist: IDENTIFIER "," identifierlist -> identifierlist_add
               | IDENTIFIER -> identifierlist_start

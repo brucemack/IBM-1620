@@ -16,6 +16,15 @@ class Value:
     def get_bool(self):
         return bool(self.value)
     
+    def get_float(self):
+        return float(self.value)
+
+    def get_int(self):
+        return int(self.value)
+    
+    def get_value(self):
+        return self.value
+
     def __repr__(self) -> str:
         return str(self.value)
 
@@ -67,10 +76,18 @@ class BinaryExpression(Expression):
         return self.eval(lhs_value, rhs_value)
     
     def eval(self, lhs: Value, rhs: Value) -> Value:
-        if self.type == "or":
+        if self.type == "|":
             return Value(lhs.get_bool() or rhs.get_bool())
-        elif self.type == "and":
+        elif self.type == "&":
             return Value(lhs.get_bool() and rhs.get_bool())
+        elif self.type == "<":
+            return Value(lhs.get_float() < rhs.get_float())
+        elif self.type == "<=":
+            return Value(lhs.get_float() <= rhs.get_float())
+        elif self.type == ">":
+            return Value(lhs.get_float() > rhs.get_float())
+        elif self.type == ">=":
+            return Value(lhs.get_float() >= rhs.get_float())
         else:
             raise Exception("Invalid operation type")
         
@@ -88,10 +105,13 @@ class UnaryExpression(Expression):
         return self.eval(lhs_value)
     
     def eval(self, lhs: Value)-> Value:
-        if self.type == "not":
+        if self.type == "!":
             return Value(not lhs.get_bool())
         else:
             raise Exception("Invalid operation type")
+
+    def __repr__(self):
+        return "(" + self.type + str(self.lhs) + ")"
     
 # ----- Statement Related -------------------------------------------------------
 
@@ -186,12 +206,6 @@ class DeclarationProcessor(lark.visitors.Transformer):
     def __init__(self):
         pass
 
-    def declaration_wire(self, tree):
-        return [ Declaration("WIRE", x) for x in tree[1] ]
-
-    def declaration_reg(self, tree):
-        return [ Declaration("REG", x) for x in tree[1] ]
-
     def identifierlist_start(self, tree):
         return [ str(tree[0]) ]
 
@@ -201,7 +215,7 @@ class DeclarationProcessor(lark.visitors.Transformer):
         return l
 
     def statement_declaration(self, tree):
-        return tree[0]
+        return [ Declaration(str(tree[0]).upper(), x) for x in tree[1] ]
 
     def statement_assignment(self, tree):
         return [ ]
@@ -210,11 +224,11 @@ class DeclarationProcessor(lark.visitors.Transformer):
         return [ ]
 
     def statementlist_start(self, tree):
-        return tree[0]
-
+        return tree[0] 
+    
     def statementlist_add(self, tree):
-        l = tree[1].copy()
-        l.extend(tree[0])
+        l = tree[0].copy()
+        l.extend(tree[1])
         return l
 
 class ExpressionTransformer(lark.visitors.Transformer):
@@ -223,28 +237,28 @@ class ExpressionTransformer(lark.visitors.Transformer):
         self.base_name = base_name
 
     def exp_or(self, tree):
-        return BinaryExpression("or", tree[0], tree[1])
+        return BinaryExpression("|", tree[0], tree[1])
 
     def exp_and(self, tree):
-        return BinaryExpression("or", tree[0], tree[1])
+        return BinaryExpression("&", tree[0], tree[1])
 
     def exp_xor(self, tree):
-        return BinaryExpression("xor", tree[0], tree[1])
+        return BinaryExpression("^", tree[0], tree[1])
 
     def exp_lt(self, tree):
-        return BinaryExpression("lt", tree[0], tree[1])
+        return BinaryExpression("<", tree[0], tree[1])
 
     def exp_lte(self, tree):
-        return BinaryExpression("lte", tree[0], tree[1])
+        return BinaryExpression("<=", tree[0], tree[1])
 
     def exp_gt(self, tree):
-        return BinaryExpression("gt", tree[0], tree[1])
+        return BinaryExpression(">", tree[0], tree[1])
 
     def exp_gte(self, tree):
-        return BinaryExpression("gte", tree[0], tree[1])
+        return BinaryExpression(">=", tree[0], tree[1])
 
     def exp_not(self, tree):
-        return UnaryExpression("not", tree[0])
+        return UnaryExpression("!", tree[0])
 
     def exp_paren(self, tree):
         return tree[0]
@@ -308,12 +322,17 @@ class StatementVisitor(lark.visitors.Visitor):
             raise Exception("Invalid operation")
 
     def statement_moduleinstantiation(self, tree):
+        
         module_name = str(tree.children[0])
         module = self.modules[module_name]
         instance_name = str(tree.children[1])
         parameter_map = {}
-        for parameter in ParameterListTransformer().transform(tree.children[2]):
-            parameter_map[parameter[0]] = parameter[1]
+
+        # The parameter list is optional
+        if len(tree.children) > 2:
+            for parameter in ParameterListTransformer().transform(tree.children[2]):
+                parameter_map[parameter[0]] = parameter[1]
+
         # Create the assignment statements for the ports
         for port in module.ports:
             if not port.name in parameter_map:
@@ -334,84 +353,6 @@ class StatementVisitor(lark.visitors.Visitor):
                               self.assignment_0_map, self.assignment_1_map, self.register_list, \
                               module_name, make_global_name(self.base_name, instance_name))
 
-    
-
-
-# We only process the angles that really matter    
-significant_angles = [ 0, 1, 2, 3,
-                    49, 50, 51, 52,
-                    98, 99, 100, 101, 
-                    170, 171, 172, 173,
-                    219, 220, 221, 222, 223,
-                    299, 300, 301, 302,
-                    309, 310, 311, 312,
-                    359 ]
-"""
-class LogicBox:
-
-    def __init__(self, logic_file_name, value_source):
-        self.value_source = value_source
-        parser = lark.Lark.open("./logic.lark")
-        with open(logic_file_name) as lf:
-            self.tree = parser.parse(lf.read())
-        self.tick_count = 0
-        #print(self.tree.pretty())
-
-        # Process declarations (one time)
-        self.input_names = []
-        self.reg_names = []
-        d = ModuleDeclarationProcessor(self.input_names, self.reg_names)
-        d.transform(self.tree)
-        #print("Inputs:", self.input_names)
-        #print("Regs:", self.reg_names)
-
-        self.value_map = {}
-
-        # Initialize varaibles
-        for n in self.input_names:
-            self.value_map[n] = False
-        for n in self.reg_names:
-            self.value_map[n] = False
-
-        self.value_map["_angle"] = 0
-        self.value_map["_cycle"] = 0
-
-    def get_input_names(self) -> list[str]:
-        return self.input_names.copy()
-
-    def get_names(self) -> list[str]:
-        result = []
-        for name, _ in self.value_map.items():
-            result.append(name)
-        return result
-
-    def get(self, name: str):
-        return self.value_map[name]
-
-    def tick(self):
-
-        global significant_angles
-
-        # Setup input
-        for n in self.input_names:
-            self.value_map[n] = self.value_source.get(n)
-
-        sa_ptr = self.tick_count % (len(significant_angles))
-        sa_cycle = int(self.tick_count / (len(significant_angles)))
-        self.value_map["_angle"] = significant_angles[sa_ptr]
-        self.value_map["_cycle"] = sa_cycle
-
-        next_value_map = {}
-        ev = Evaluator(self.value_map, next_value_map)
-        ev.transform(self.tree)
-
-        # Copy values down
-        for n, v in next_value_map.items():
-            self.value_map[n] = v
-
-        self.tick_count = self.tick_count + 1
-"""
-
 def instantiate_recursive(modules, assignment_0_map, assignment_1_map, register_list: list[str],
                           module_name, base_name):
     
@@ -427,3 +368,101 @@ def instantiate_recursive(modules, assignment_0_map, assignment_1_map, register_
 def instantiate(modules, assignment_0_map, assignment_1_map, register_list: list[str]):
     declaration_map = {}
     instantiate_recursive(modules, assignment_0_map, assignment_1_map, register_list, "main", None)
+
+# We only process the angles that really matter    
+significant_angles = [ 0, 1, 2, 3,
+                    49, 50, 51, 52,
+                    98, 99, 100, 101, 
+                    170, 171, 172, 173,
+                    219, 220, 221, 222, 223,
+                    299, 300, 301, 302,
+                    309, 310, 311, 312,
+                    359 ]
+class LogicBox:
+
+    def __init__(self, logic_file_names: list[str]):
+
+        parser = lark.Lark.open("./logic.lark")
+
+        modules = {}
+        
+        for logic_file_name in logic_file_names:
+            with open(logic_file_name) as lf:
+                tree = parser.parse(lf.read())
+                d = ModuleDeclarationProcessor()
+                for module in d.transform(tree).children:
+                    modules[module.name] = module
+
+        self.tick_count = 0
+        self.assignment_0_map = {}
+        self.assignment_1_map = {}
+        self.register_list = []
+        self.next_value_state = {}
+
+        # Build out the complete network
+        instantiate(modules, self.assignment_0_map, self.assignment_1_map, self.register_list)
+
+        print("M0", self.assignment_0_map)
+        print("M1", self.assignment_1_map)
+        print("RL", self.register_list)
+
+        self.value_state = {}
+        self.value_state["tw._angle"] = Value(0)
+        self.value_state["tw._cycle"] = Value(0)
+
+    def get_names(self) -> list[str]:
+        result = []
+        for name, _ in self.value_state.items():
+            result.append(name)
+        return result
+
+    def get_bool(self, name: str):
+        return self.value_state[name].get_bool()
+
+    def get_int(self, name: str):
+        return self.value_state[name].get_int()
+
+    def set(self, name: str, value):
+        self.value_state[name] = Value(value)
+
+    def tick(self, values = dict()):
+
+        global significant_angles
+
+        # Clear state.  Carry over registers and create default values 
+        # for any missing registers
+        old_value_state = self.value_state
+        self.value_state = {}
+        for reg_name in self.register_list:
+            if reg_name in old_value_state:
+                self.value_state[reg_name] = old_value_state[reg_name]
+            else:
+                self.value_state[reg_name] = Value(False)
+
+        # Set any internal values
+        sa_ptr = self.tick_count % (len(significant_angles))
+        sa_cycle = int(self.tick_count / (len(significant_angles)))
+        self.value_state["tw._angle"] = Value(significant_angles[sa_ptr])
+        self.value_state["tw._cycle"] = Value(sa_cycle)
+
+        # Set values that are passed in by the caller
+        for n, v in values.items():
+            self.value_state[n] = Value(v)
+
+        # Evaluate all blocking assignments
+        for name, exp in self.assignment_0_map.items():
+            if not name in self.value_state:
+                value = exp.evaluate(self.assignment_0_map, self.value_state)
+                self.value_state[name] = value
+
+        # Evaluate the non-blocking assignments
+        next_value_state = {}
+        for name, exp in self.assignment_1_map.items():
+            next_value = exp.evaluate(self.assignment_1_map, self.value_state)
+            next_value_state[name] = next_value
+
+        # Move state across in preparation for the next cycle
+        for n, v in next_value_state.items():
+            self.value_state[n] = next_value_state[n]
+
+        self.tick_count = self.tick_count + 1

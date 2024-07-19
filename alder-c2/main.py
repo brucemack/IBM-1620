@@ -502,7 +502,6 @@ def net_setup_visitor(name, type, io_names, params):
         state = False
         if "state" in params:
             state = params["state"]
-        #net_devices.append(net.Switch(name, io_names[0], io_names[1], state))
         # This switch type will not stamp into the matrix if it is open
         net_devices.append(net.Switch2(name, io_names[0], io_names[1], state))
     elif type == "v":
@@ -524,27 +523,10 @@ name_to_device = {}
 for dev in net_devices:
     name_to_device[dev.get_name()] = dev
 
-# LogicBox Related
+# Setup digital logic
 
-# Interface to allow the LogicBox to pull values out of the solved network
-class Source:
-    def __init__(self):
-        self.threshold = 0.1
-    def set_x(self, x):
-        self.x = x
-    def get(self, name):
-        #print("Get", name)
-        dev = name_to_device[name]
-        if not dev.can_get_current():
-            print("WARNING: Can't read current from", name)
-            return 0
-        else:
-            # Turn the current into a boolean
-            # TODO: INVESTIGATE SIGN OF COIL CURRENT!
-            return (abs(dev.get_current(self.x)) > self.threshold)
-
-lb_source = Source()
-lb = logicbox.LogicBox("../daves-1f/typewriter-mechanical.logic", lb_source)    
+fns = [ "../daves-1f/main.logic", "../daves-1f/typewriter-mechanical.logic" ]
+lb = logicbox.LogicBox(fns)    
 
 max_iter = 50
 
@@ -553,9 +535,7 @@ start = time.perf_counter()
 # Time steps
 for i in range(0, 30 * 5):
 
-    print("-----", i, lb.get("_cycle"), lb.get("_angle"), "---------")
-
-    #node_name_to_devices = {}
+    print("-----", i, lb.get_int("tw._cycle"), lb.get_int("tw._angle"), "---------")
 
     # Get the relevant nodes allocated.  This may depend on device 
     # state, which can change at each time step
@@ -616,13 +596,16 @@ for i in range(0, 30 * 5):
         #        print("Node", name, ix, abs(x[ix]))
         #mapper.visit_all(node_visitor_1)
 
-        if np.all(e < 0.01): 
+        if np.all(e < 0.1): 
             converged = True
             #print("Breaking at", j)
             break
 
     if not converged:
         print("Warning: failed to converge")
+        for i in range(0, mapper.get_size()):
+            if e[i] > 0.1:
+                print(i, mapper.index_to_name(i), e[i])
 
     #print("Voltage at _NODE62_R38.2NO",x[mapper.get("_NODE62_R38.2NO")])
     #print("Voltage at GND",x[mapper.get("GND")])
@@ -633,28 +616,31 @@ for i in range(0, 30 * 5):
     #            print("Current in node", name, abs(x[ix]))
     #mapper.visit_all(node_visitor_2)
 
-    # Display coil currents
+    # Push coil/solenoid state into logic 
+    coil_values = {}
     for dev in net_devices:
         if dev.can_get_current() and ("_coil" in dev.get_name() or "_sol" in dev.get_name()):
-        #if dev.can_get_current() and ("_sol" in dev.get_name()):
             i = dev.get_current(x)
             if abs(i) > 0.1:
                 print("Current in device", dev.get_name(), i)
+                coil_values["tw." + dev.get_name()] = True
+            else:
+                coil_values["tw." + dev.get_name()] = False
 
-    lb_source.set_x(x)      
-    # This is what causes the currents to be read from the network
-    lb.tick()
+    # Advance the logic by one step
+    lb.tick(coil_values)
 
     # Transfer all of the switch values
     for logic_name in lb.get_names():
-        if logic_name.endswith("_sw"):
-            if not logic_name in name_to_device:
+        if logic_name.startswith("tw.") and logic_name.endswith("_sw"):
+            # Strip off the leading "tw."
+            device_name = logic_name[3:]
+            if not device_name in name_to_device:
                 pass
             else:
-                changed = name_to_device[logic_name].set_state(lb.get(logic_name))
+                changed = name_to_device[device_name].set_state(lb.get_bool(logic_name))
                 if changed:
-                    print(logic_name, "changed to", lb.get(logic_name))
- 
+                    print("CHANGED", device_name, "to", lb.get_bool(logic_name))
 
 end = time.perf_counter()
 print(end - start)

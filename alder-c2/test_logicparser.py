@@ -19,7 +19,6 @@ def test_1():
         test1 test1inst(.a(a1), .b(b1));
     endmodule
     """)
-    print(tree.pretty())
 
     d = logicbox.ModuleDeclarationProcessor()
     for module in d.transform(tree).children:
@@ -32,25 +31,33 @@ def test_2():
     decls = {}
     states = {}
 
-    x0 = logicbox.BinaryExpression("and", logicbox.Constant(logicbox.Value(True)), \
-                                  logicbox.Constant(logicbox.Value(True)))
-    assert x0.evaluate("root", decls, states).get_bool()
+    x0 = logicbox.BinaryExpression("&", logicbox.ConstantExpression(logicbox.Value(True)), \
+                                  logicbox.ConstantExpression(logicbox.Value(True)))
+    assert x0.evaluate(decls, states).get_bool()
 
-    x1 = logicbox.BinaryExpression("and", logicbox.Constant(logicbox.Value(True)), \
-                                  logicbox.Constant(logicbox.Value(False)))
-    assert not x1.evaluate("root", decls, states).get_bool()
+    x0 = logicbox.BinaryExpression(">=", logicbox.ConstantExpression(logicbox.Value(100)), \
+                                  logicbox.ConstantExpression(logicbox.Value(200)))
+    assert not x0.evaluate(decls, states).get_bool()
 
-    states["root.a"] = logicbox.Value(True)
+    x0 = logicbox.BinaryExpression(">=", logicbox.ConstantExpression(logicbox.Value(200)), \
+                                  logicbox.ConstantExpression(logicbox.Value(100)))
+    assert x0.evaluate(decls, states).get_bool()
+
+    x1 = logicbox.BinaryExpression("&", logicbox.ConstantExpression(logicbox.Value(True)), \
+                                  logicbox.ConstantExpression(logicbox.Value(False)))
+    assert not x1.evaluate(decls, states).get_bool()
+
+    states["a"] = logicbox.Value(True)
     
-    x2 = logicbox.BinaryExpression("and", logicbox.Constant(logicbox.Value(True)), \
-                                  logicbox.Variable("a"))
-    assert x2.evaluate("root", decls, states).get_bool()
+    x2 = logicbox.BinaryExpression("&", logicbox.ConstantExpression(logicbox.Value(True)), \
+                                  logicbox.VariableExpression("a"))
+    assert x2.evaluate(decls, states).get_bool()
 
     # Put the last expression into the declaration map
-    decls["root.b"] = x2
+    decls["b"] = x2
 
-    x3 = logicbox.UnaryExpression("not", logicbox.Variable("b"))
-    assert not x3.evaluate("root", decls, states).get_bool()
+    x3 = logicbox.UnaryExpression("!", logicbox.VariableExpression("b"))
+    assert not x3.evaluate(decls, states).get_bool()
 
 def test_3():
 
@@ -115,5 +122,9 @@ def test_3():
     assert not value_state["t0.m0.b"].get_bool()
     assert value_state["c2"].get_bool()
 
+def test_4():
 
-test_3()
+    fns = [] 
+    fns.append("../daves-1f/main.logic")
+    fns.append("../daves-1f/typewriter-mechanical.logic")
+    lb = logicbox.LogicBox(fns)
