@@ -636,6 +636,7 @@ for i in range(0, 30 * 5):
             # Strip off the leading "tw."
             device_name = logic_name[3:]
             if not device_name in name_to_device:
+                #print("Can't find switch", device_name)
                 pass
             else:
                 changed = name_to_device[device_name].set_state(lb.get_bool(logic_name))

@@ -346,4 +346,35 @@ module typewriter();
     wire ps_shift_sol;
     sw_shiftcontact_no_sw = ps_shift_sol;
 
+    // ===== Temporary Logic =======================================================
+
+    // ----- Page 01.82.60.1 -------------------------------------------------------
+
+    // Positive logic.  A logic HI on the input turns the switch on (i.e. path 
+    // to ground is completed).
+    switch_wr_status_dr_no_sw = 1;
+    switch_not_wr_status_dr_no_sw = 0;
+
+    // ----- Page 01.82.62.1 -------------------------------------------------------
+
+    negs_op_36_rn = 1;
+    negs_op_38_wn = 0;
+    negs_op_35_dn_p = 1;
+    s_not_wr_num_intlk = 0;
+    
+    // CD at 3E
+    sms_01da_1d07_d = !(negs_op_36_rn & negs_op_38_wn & negs_op_35_dn_p);
+
+    // MX at 4F
+    sms_01da_1d06_k = !sms_01da_1d07_d;
+    
+    // Positive logic.  A logic HI on the input turns the switch on (i.e. path 
+    // to ground is completed).
+    switch_wr_num_status_dr_no_sw = sms_01da_1d07_d;
+    switch_not_wr_num_status_dr_no_sw = sms_01da_1d06_k;
+
+
+
+
+
 endmodule
