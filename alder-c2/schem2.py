@@ -307,10 +307,8 @@ class Machine:
                     # Make a node and connect the pins
                     node = Node(naming_pin.get_global_id(), node_pins)
                     self.nodes.append(node)
-                    print("Created node", node.name)
                     for pin in node_pins:
                         pin.set_node(node)
-                        print("  ", pin.get_global_id())
 
                     
 
