@@ -26,17 +26,30 @@ class Device:
 
     def get_type(self) -> DeviceType: return self.type
     def set_type(self, type: DeviceType): self.type = type
+    def get_type_name(self) -> str: return self.type.get_name()
     def get_id(self) -> str: return self.id
+    def get_name(self) -> str: return self.id
 
     def visit_pins(self, visitor): 
         for pin in self.pins.values(): visitor(pin)
 
     def get_or_create_pin(self, id: str):
         if not id in self.pins:
-            self.pins[id] = Pin(self, id)
-        return self.pins[id]
+            self.pins[id] = Pin(self, id.upper())
+        return self.pins[id.upper()]
 
     def get_pins(self): return self.pins.values()
+
+    def uses_pin(self, local_pin_id):
+        return local_pin_id.upper() in self.pins
+
+    def get_node_name_for_pin(self, local_pin_id) -> str:
+        if not local_pin_id in self.pins:
+            raise Exception("Pin " + local_pin_id + " not found on " + self.id)
+        pin = self.pins[local_pin_id]
+        if not pin.get_node():
+            raise Exception("No node for pin " + local_pin_id + " on " + self.id)
+        return pin.get_node().get_name()
 
 class SMSCard(Device):
 
@@ -73,6 +86,12 @@ class Node:
         self.name = name
         self.pins = pins
 
+    def get_name(self): return self.name
+
+    def get_pins(self): return self.pins
+
+    def get_pin_count(self): return len(self.pins)
+
 def recursive_traverse(visited_pins: set[str], start_pin: Pin, visitor = None):
     if not start_pin.get_global_id() in visited_pins:
         if visitor:
@@ -88,7 +107,7 @@ class Machine:
         # A list of tuples
         self.alias_links = []
         # A special device used for managing named nets
-        self.alias_device = Device(None, "_ALIASES")
+        self.alias_device = Device(self.get_device_type("_alias"), "_ALIASES")
         self.devices["_ALIASES"] = self.alias_device
         self.nodes = []
 
@@ -99,6 +118,8 @@ class Machine:
 
     def visit_devices(self, visitor):
         for device in self.devices.values(): visitor(device)
+
+    def get_nodes(self): return self.nodes
 
     def get_or_create_device(self, device_id) -> Device:
         if not device_id in self.devices:
@@ -231,6 +252,15 @@ class Machine:
                             target_pin.add_connection(alias_pin)
                             alias_pin.add_connection(target_pin)
 
+    def load_from_ald2s(self, indir, ald_fns):
+        for ald_fn in ald_fns:
+            try:
+                self.load_from_ald2(indir + "/" + ald_fn)
+            except Exception as ex:
+                print("Failed on page", ald_fn, ex)
+                raise ex
+                quit()
+
     def load_from_ald2(self, ald_fn):
 
         with open(ald_fn) as file:
@@ -261,11 +291,7 @@ class Machine:
                     # Register the pins
                     for pin_name, _ in yaml_device["pins"].items():
                         local_pin_name = pin_name.upper()
-                        if local_pin_name in device.pins:
-                            raise Exception("Duplicate definition of pin " + local_pin_name + \
-                                            " on device " + device_name)
-                        local_pin = Pin(device, local_pin_name)
-                        device.pins[local_pin_name] = local_pin
+                        local_pin = device.get_or_create_pin(local_pin_name)
 
                 # Second pass, cross-connects
                 for yaml_device in p["devices"]:
@@ -310,7 +336,8 @@ class Machine:
                     def visitor(pin):
                         node_pins.append(pin)
                     recursive_traverse(visited_pins, pin, visitor)
-                    # Figure out if any of the pins on the node are aliases
+                    # Figure out if any of the pins on the node are aliases.  If
+                    # so, these get priority when naming the net
                     naming_pin = node_pins[0]
                     for pin in node_pins:
                         if pin.device == self.alias_device:
@@ -322,11 +349,3 @@ class Machine:
                     for pin in node_pins:
                         pin.set_node(node)
 
-                    
-
-  
-
-
-
-
-    

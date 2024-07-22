@@ -18,7 +18,6 @@ devices:
     type: relaylatching
     pins:
       2c: [ crcb.out3, r16.1c ]
-      2nc: 
       2no: [ r8.2c, r28.pa, r31.pa, r41.pa, r42.pa, r45.pa, r46.pa, r49.pa, r50.pa, r21.pa, r8.1c, r8.3c, "+48 CRCB 3 WR STATUS" ]
 
   - name: r8
@@ -27,7 +26,6 @@ devices:
       # Relying on this connection to bridge to all other pins
       2c: [ r1.2no ]
       2nc: [ r22.pa, r25.pa ]
-      2no:
 
   - name: r22
     type: relay

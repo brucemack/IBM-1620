@@ -89,6 +89,9 @@ class Device2:
     
     def can_get_current(self):
         return False
+    
+    def __repr__(self) -> str:
+        return self.name + "[" + self.node_name_0 + "," + self.node_name_1 + "]"
 
 class Resistor(Device2):
 
