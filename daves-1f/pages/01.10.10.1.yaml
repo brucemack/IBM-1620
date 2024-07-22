@@ -7,7 +7,7 @@ num: 01.10.10.1
 ec: 404750C
 notes: "Part of cascading clock registers"
 
-blocks:
+devices:
 
   - note: "Input chained from C8"
     gate: 01BA

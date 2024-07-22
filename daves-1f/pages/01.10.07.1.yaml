@@ -7,7 +7,7 @@ num: 01.10.07.1
 pdf: 88
 notes: "Part of cascading clock registers"
 
-blocks:
+devices:
 
   - note: "Input chained from C2"
     gate: 01BA

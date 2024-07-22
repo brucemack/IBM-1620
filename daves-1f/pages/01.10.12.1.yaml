@@ -7,7 +7,7 @@ ec: 404750c
 num: 01.10.12.1 
 capture: "By hand on 16-June-2024"
 
-blocks:
+devices:
 
   - gate: 01BA
     loc: 1F22

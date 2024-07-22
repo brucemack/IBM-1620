@@ -52,7 +52,7 @@ num: 01.06.01.1
 # The "name:" tag gives the name of the wire.
 # The "imp:" tag gives the list of block OUTPUTS that 
 #  the net is connected to (i.e. driving block outputs)
-blocks:
+devices:
 
   - gate: 01BA
     loc: 1G16

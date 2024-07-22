@@ -89,13 +89,6 @@ devices:
       c: "NOT WR STATUS DR"
       "no": GND
 
-# NEGATIVE OF ABOVE
-#  - name: pass7b
-#    type: pass
-#    pins: 
-#      a: "NOT WR STATUS DR"
-#      b: VP48
-
   - name: switch_wr_num_status_dr
     type: switch
     pins: 

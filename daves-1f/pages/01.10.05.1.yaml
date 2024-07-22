@@ -6,7 +6,7 @@ title: "CLOCK OSC + CONTROL"
 num: 01.10.05.1 
 pdf: 86
 
-blocks:
+devices:
 
   - gate: 01BA
     loc: 1B17

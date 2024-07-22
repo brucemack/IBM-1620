@@ -73,6 +73,7 @@ def load_page_1a(p, devices, pins):
         for device in p["devices"]:
             device_name = device["name"].upper()
             device_type = device["type"]
+            # First time for this device
             if not device_name in devices:
                 devices[device_name] = Device(device_name, device_type)
             else:
@@ -87,7 +88,7 @@ def load_page_1a(p, devices, pins):
                 pins[local_pin_name] = local_pin
 
 # Second pass: Creates connections
-def load_page_1b(p, devices, pins):
+def load_page_1b(p, pins):
 
     if "devices" in p:
         for device in p["devices"]:
@@ -107,7 +108,6 @@ def load_page_1b(p, devices, pins):
                         if not (connection in pins):
                             target_pin = Pin(connection, True)
                             pins[target_pin.get_name()] = target_pin
-
                         else:
                             target_pin = pins[connection]
                         # Cross-connect
@@ -117,15 +117,15 @@ def load_page_1b(p, devices, pins):
 unique_id = 1
 
 # Second phase: create electrical nodes
-def load_page_2(p, devices, pins, nodes):
+def load_page_2(p, pins, nodes):
     
     global unique_id 
 
-    # Now start from every pin and traverse the electrical connectivity
-    for _, pin in pins.items():
+    # Now start from every pin and traverse the graph to establish
+    # electrical connectivity
+    for pin in pins.values():
         # If the pin is connected then we've already traversed it
         if pin.get_node() == None:
-
             # Assemble a list of everything that is connected to the pin 
             connected_pins = set()
 
@@ -145,7 +145,7 @@ def load_page_2(p, devices, pins, nodes):
                         name_list.append(p.get_name())
                 if len(name_list) > 1:
                     print("Multiple names: ", name_list)
-                    raise Exception("Multiple fixed names on same net")
+                    raise Exception("Multiple fixed names on same net " + str(name_list))
 
                 # Check to see if any of the pins have fixed names, if 
                 # so that has priority in node naming
@@ -176,15 +176,15 @@ def load_page_from_file_1a(infile: str, devices, pins):
         p = yaml.safe_load(file)
     load_page_1a(p, devices, pins)
 
-def load_page_from_file_1b(infile: str, devices, pins):
+def load_page_from_file_1b(infile: str, pins):
     with open(indir + "/" + infile) as file:
         p = yaml.safe_load(file)
-    load_page_1b(p, devices, pins)
+    load_page_1b(p, pins)
 
-def load_page_from_file_2(infile: str, devices, pins, nodes):
+def load_page_from_file_2(infile: str, pins, nodes):
     with open(indir + "/" + infile) as file:
         p = yaml.safe_load(file)
-    load_page_2(p, devices, pins, nodes)
+    load_page_2(p, pins, nodes)
    
 def get_conn(pins, device, pin_name):
     full_pin_name = device.get_name().upper() + "." + pin_name.upper()
@@ -228,9 +228,9 @@ for infile in infiles:
         raise ex
         quit()
 for infile in infiles:    
-    load_page_from_file_1b(infile, devices, pins)
+    load_page_from_file_1b(infile, pins)
 for infile in infiles:    
-    load_page_from_file_2(infile, devices, pins, nodes)
+    load_page_from_file_2(infile, pins, nodes)
 
 # Diag
 for _, pin in pins.items():

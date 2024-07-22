@@ -8,7 +8,7 @@ ec: 404750C
 pdf: 90
 notes: "Part of cascading clock registers"
 
-blocks:
+devices:
 
   - note: "Input chained from C6"
     gate: 01BA
