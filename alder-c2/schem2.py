@@ -138,12 +138,13 @@ class Machine:
 
                     # Register the pins
                     for pin_name, _ in yaml_device["inp"].items():
-                        local_pin_name = pin_name.upper()
-                        if local_pin_name in device.pins:
-                            raise Exception("Duplicate definition of pin " + local_pin_name + \
-                                            " on device " + device_name)
-                        local_pin = Pin(device, local_pin_name)
-                        device.pins[local_pin_name] = local_pin
+                        # Multiple pins can be encoded 
+                        for local_pin_name in list(pin_name.upper()):
+                            if local_pin_name in device.pins:
+                                raise Exception("Duplicate definition of pin " + local_pin_name + \
+                                                " on device " + device_name)
+                            local_pin = Pin(device, local_pin_name)
+                            device.pins[local_pin_name] = local_pin
 
                 # Second pass, establish the connections
                 for yaml_device in p["devices"]:
@@ -155,35 +156,41 @@ class Machine:
                     device = self.devices[device_name]
 
                     for pin_name, pin_connections in yaml_device["inp"].items():
-                        local_pin_name = pin_name.upper()
-                        local_pin = device.get_or_create_pin(local_pin_name)
-                        if pin_connections:
-                            # Get the list of connection targets
-                            if pin_connections.__class__ == list:
-                                connections = [x.upper() for x in pin_connections]
-                            else:
-                                connections = [ pin_connections.upper() ]
-                            for connection in connections:
-                                # Dotted connections are assumed to reference another 
-                                # pin directly
-                                if "." in connection:
-                                    tokens = connection.upper().split(".")
-                                    if len(tokens) != 2:
-                                        raise Exception("Connection syntax error " + connection)
-                                    target_coordinate = tokens[0]
-                                    # Convert the target location to a target device
-                                    if not target_coordinate in coordinates:
-                                        raise Exception("Pin on device " + device_name + " references " + \
-                                                        "unrecognized coordinate " + target_coordinate)
-                                    target_device = coordinates[target_coordinate]
-                                    target_pin = target_device.get_or_create_pin(tokens[1])
-                                # Otherwise, associate a net alias with the pin
+                        # Multiple pins can be encoded
+                        for local_pin_name in list(pin_name.upper()):
+                            local_pin = device.get_or_create_pin(local_pin_name)
+                            if pin_connections:
+                                # Get the list of connection targets
+                                if pin_connections.__class__ == list:
+                                    connections = [x.upper() for x in pin_connections]
                                 else:
-                                    target_device = self.alias_device
-                                    target_pin = target_device.get_or_create_pin(connection.upper())
-                                # Cross-connect
-                                local_pin.add_connection(target_pin)
-                                target_pin.add_connection(local_pin)
+                                    connections = [ pin_connections.upper() ]
+                                for connection in connections:
+                                    # Dotted connections are assumed to reference another 
+                                    # pin directly
+                                    if "." in connection:
+                                        tokens = connection.upper().split(".")
+                                        if len(tokens) != 2:
+                                            raise Exception("Connection syntax error " + connection)
+                                        target_coordinate = tokens[0]
+                                        # Convert the target location to a target device
+                                        if not target_coordinate in coordinates:
+                                            raise Exception("Pin on device " + device_name + " references " + \
+                                                            "unrecognized coordinate " + target_coordinate)
+                                        target_device = coordinates[target_coordinate]
+                                        # Multiple pins can be encoded:
+                                        for target_pin_name in list(tokens[1].upper()):
+                                            target_pin = target_device.get_or_create_pin(target_pin_name)
+                                            # Cross-connect
+                                            local_pin.add_connection(target_pin)
+                                            target_pin.add_connection(local_pin)
+                                    # Otherwise, associate a net alias with the pin
+                                    else:
+                                        target_device = self.alias_device
+                                        target_pin = target_device.get_or_create_pin(connection.upper())
+                                        # Cross-connect
+                                        local_pin.add_connection(target_pin)
+                                        target_pin.add_connection(local_pin)
 
             # Pick up some additional net aliases
             if "aliases" in p:
@@ -209,15 +216,20 @@ class Machine:
                                 raise Exception("Pin on device " + device_name + " references " + \
                                                 "unrecognized coordinate " + target_coordinate)
                             target_device = coordinates[target_coordinate]
-                            target_pin = target_device.get_or_create_pin(tokens[1])
+                            # Multiple pins can be encoded
+                            for target_pin_name in list(tokens[1].upper()):
+                                target_pin = target_device.get_or_create_pin(target_pin_name)
+                                # Cross-connect
+                                target_pin.add_connection(alias_pin)
+                                alias_pin.add_connection(target_pin)
                         # Everything else (i.e. non-dotted names) are the strange case
                         # where an alias points to a different alias.
                         else:
                             target_device = self.alias_device
                             target_pin = target_device.get_or_create_pin(connection)
-                        # Cross-connect
-                        target_pin.add_connection(alias_pin)
-                        alias_pin.add_connection(target_pin)
+                            # Cross-connect
+                            target_pin.add_connection(alias_pin)
+                            alias_pin.add_connection(target_pin)
 
     def load_from_ald2(self, ald_fn):
 
