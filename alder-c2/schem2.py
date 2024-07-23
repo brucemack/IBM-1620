@@ -119,6 +119,24 @@ class Device:
     def get_pin_meta(self, local_pin_id) -> PinMeta:
         return self.type.get_pin_meta(local_pin_id)
 
+    def generate_verilog(self, ostr):
+        s = "  SMS_CARD_" + self.get_type_name() + " D_" + make_verilog_id(self.get_name()) + "("
+        first = True
+        for _, pin in self.pins.items():
+            if not first:
+                s = s + ", "
+                s = s + "." + pin.get_id() + "("
+                # For multi-driver nets, the driver nets use their own wires 
+                if pin.get_node().is_multidriver() and pin.is_driver():
+                    s = s + "_W" + make_verilog_id(pin.get_global_id())
+                # Otherwise, connect to the wire that represents the node
+                else:
+                    s = s + "_W" + make_verilog_id(pin.get_node().get_name())
+                s = s + ")"
+            first = False
+        s = s + ");\n"
+        ostr.write(s)
+
 class SMSCard(Device):
 
     def __init__(self, type: DeviceType, gate_id: str, loc_id: str):
@@ -196,13 +214,13 @@ class Node:
                 passive_pins.append(pin)
 
         # Setup a final wire for this node
-        s = "wire _W" + make_verilog_id(self.get_name()) + ";\n"
+        s = "  wire _W" + make_verilog_id(self.get_name()) + ";\n"
         ostr.write(s)
 
         if self.is_multidriver():
 
             # Setup a final wire for this node
-            s = "// START: Multi-driver node\n"
+            s = "  // START: Multi-driver node\n"
             ostr.write(s)
 
             # Figure out what we've got on the line
@@ -214,7 +232,7 @@ class Node:
             # Look at the driver/active pins
             for driver_pin in driver_pins:
                 # Create a wire for each of the drivers
-                s = "wire _W" + make_verilog_id(driver_pin.get_global_id()) + ";\n"
+                s = "  wire _W" + make_verilog_id(driver_pin.get_global_id()) + ";\n"
                 ostr.write(s)
 
                 dt = driver_pin.get_meta().drivetype 
@@ -266,9 +284,9 @@ class Node:
                 else:
                     default_value = 0
                     desc = "active high with pull down"
-                s = "// Automatically generated DOT-OR (" + desc + ")\n"
+                s = "  // Automatically generated DOT-OR (" + desc + ")\n"
                 ostr.write(s)
-                s = "_W" + make_verilog_id(self.get_name()) + " = "
+                s = "  _W" + make_verilog_id(self.get_name()) + " = "
                 first = True
                 s = s + "("
                 for driver_pin in driver_pins:
@@ -289,9 +307,9 @@ class Node:
                     default_value = 1
                     desc = "active low with pull up"
                 driven_name = "W_DOT_" + make_verilog_id(driver_pin.get_global_id()) 
-                s = "// Automatically generated DOT-OR (" + desc + ")\n"
+                s = "  // Automatically generated DOT-OR (" + desc + ")\n"
                 ostr.write(s)
-                s = "_W" + make_verilog_id(self.get_name()) + " = "
+                s = "  _W" + make_verilog_id(self.get_name()) + " = "
                 first = True
                 s = s + "("
                 for driver_pin in driver_pin:
@@ -302,7 +320,7 @@ class Node:
                 s = s + ") ? 0 : " + str(default_value) + ";\n"
                 ostr.write(s)
 
-            s = "// END: Multi-driver node\n"
+            s = "  // END: Multi-driver node\n"
             ostr.write(s)
 
 def recursive_traverse(visited_pins: set[str], start_pin: Pin, visitor = None):
@@ -343,6 +361,9 @@ class Machine:
 
     def visit_devices(self, visitor):
         for device in self.devices.values(): visitor(device)
+
+    def visit_nodes(self, visitor):
+        for node in self.nodes: visitor(node)
 
     def get_nodes(self): return self.nodes
 

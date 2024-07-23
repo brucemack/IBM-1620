@@ -29,5 +29,18 @@ for node in machine.get_nodes():
             if pin.is_driver():
                 print("  ", pin.get_global_id(), pin.device.get_type_name())
         
-for node in machine.get_nodes():
-    node.generate_verilog(sys.stdout)
+# Dump verilog
+ostr = sys.stdout
+s = "module machine();\n"
+ostr.write(s)
+
+machine.visit_nodes(lambda node: node.generate_verilog(ostr))
+
+def device_visitor(device):
+    if device.get_name() != "_ALIASES": 
+        device.generate_verilog(ostr)
+
+machine.visit_devices(device_visitor)
+
+s = "endmodule;\n"
+ostr.write(s)
