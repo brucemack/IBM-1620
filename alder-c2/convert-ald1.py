@@ -5,14 +5,29 @@ import sys
 # Load up the ALD1 pages
 ald_dir = "../daves-1f/pages"
 sms_meta_dir = "../../IBM1620/hardware/sms-cards"
+util_dir = "../../IBM1620/hardware/sms-cards/util"
 
-machine = schem2.Machine(sms_meta_dir)
+#pages_file = "core-pages.yaml"
+pages_file = "typewriter-pages.yaml"
 
-with open(ald_dir + "/core-pages.yaml") as file:
+machine = schem2.Machine(sms_meta_dir, util_dir)
+
+with open(ald_dir + "/" + pages_file) as file:
     p = yaml.safe_load(file)
     for ald_fn in p["pages"]:
         print(ald_fn)
         machine.load_from_ald1(ald_dir + "/" + ald_fn + ".yaml")
+
+def v2(pin):
+    print("  ", pin.get_id())
+    for c in pin.get_connections():
+        print("       Conn :", c.get_global_id())
+
+def v1(device):
+    print(device.get_id())
+    device.visit_pins(v2)
+
+machine.visit_devices(v1)        
 
 machine.create_nodes()
 

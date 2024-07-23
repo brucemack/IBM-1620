@@ -1,0 +1,20 @@
+part: 1
+title: "Test Controls"
+num: 00.00.00.0 
+pdf: None
+
+devices:
+  - gate: ZZZZ
+    loc: 9991
+    typ: ONE
+    cir: 01
+    coo: 1A
+    out: 
+      A: [ "-S OP 36 RN", "-S OP 35 DN P", "+S NOT STORE", "+S NOT WR NUM INTLK" ]
+  - gate: ZZZZ
+    loc: 9990
+    typ: ZERO
+    cir: 01
+    coo: 1A
+    out: 
+      A: [ "-S OP 38 WN", "+S STORE", "+S STORE INT", "+S WR NUM INTLK" ]

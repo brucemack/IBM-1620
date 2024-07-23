@@ -125,14 +125,14 @@ class Device:
         for _, pin in self.pins.items():
             if not first:
                 s = s + ", "
-                s = s + "." + pin.get_id() + "("
-                # For multi-driver nets, the driver nets use their own wires 
-                if pin.get_node().is_multidriver() and pin.is_driver():
-                    s = s + "_W" + make_verilog_id(pin.get_global_id())
-                # Otherwise, connect to the wire that represents the node
-                else:
-                    s = s + "_W" + make_verilog_id(pin.get_node().get_name())
-                s = s + ")"
+            s = s + "." + pin.get_id() + "("
+            # For multi-driver nets, the driver nets use their own wires 
+            if pin.get_node().is_multidriver() and pin.is_driver():
+                s = s + "_W" + make_verilog_id(pin.get_global_id())
+            # Otherwise, connect to the wire that represents the node
+            else:
+                s = s + "_W" + make_verilog_id(pin.get_node().get_name())
+            s = s + ")"
             first = False
         s = s + ");\n"
         ostr.write(s)
@@ -333,18 +333,29 @@ def recursive_traverse(visited_pins: set[str], start_pin: Pin, visitor = None):
 
 class Machine:
 
-    def __init__(self, device_meta_dir = None):
+    def __init__(self, device_meta_dir = None, util_dir = None):
         self.device_meta_dir = device_meta_dir
+        self.util_dir = util_dir
         self.device_types = {}
         self.devices = {}
         # A list of tuples
         self.alias_links = []
+        self.nodes = []
+
         # A special device type
         self.device_types["_alias"] = AliasDeviceType()
         # A special device used for managing named nets
         self.alias_device = Device(self.get_device_type("_alias"), "_ALIASES")
         self.devices["_ALIASES"] = self.alias_device
-        self.nodes = []
+
+        # Special devices
+        if util_dir:
+            with open(util_dir + "/ZERO/ZERO.yaml") as file:
+                p = yaml.safe_load(file)
+                self.device_types["ZERO"] = DeviceType("ZERO", p)
+            with open(util_dir + "/ONE/ONE.yaml") as file:
+                p = yaml.safe_load(file)
+                self.device_types["ONE"] = DeviceType("ONE", p)
 
     def get_device_type(self, type_name: str) -> DeviceType:
         if not self.device_meta_dir:
@@ -384,9 +395,8 @@ class Machine:
 
                 # First pass registers all known devices/pins
                 for yaml_device in p["devices"]:
-
                     gate_id = yaml_device["gate"].upper()
-                    loc_id = yaml_device["loc"].upper()
+                    loc_id = str(yaml_device["loc"]).upper()
                     device_name = gate_id + "_" + loc_id
                     type_name = yaml_device["typ"].upper().replace("-", "")
 
@@ -409,53 +419,66 @@ class Machine:
                             # Multiple pins can be encoded 
                             for local_pin_name in list(pin_name.upper()):
                                 device.get_or_create_pin(local_pin_name)
+                    if "out" in yaml_device:
+                        for pin_name, _ in yaml_device["out"].items():
+                            # Multiple pins can be encoded 
+                            for local_pin_name in list(pin_name.upper()):
+                                device.get_or_create_pin(local_pin_name)
 
                 # Second pass, establish the connections
                 for yaml_device in p["devices"]:
 
                     gate_id = yaml_device["gate"].upper()
-                    loc_id = yaml_device["loc"].upper()
+                    loc_id = str(yaml_device["loc"]).upper()
                     device_name = gate_id + "_" + loc_id
                     # Device exists already
                     device = self.devices[device_name]
 
+                    pin_list = []
+
                     if "inp" in yaml_device:
                         for pin_name, pin_connections in yaml_device["inp"].items():
-                            # Multiple pins can be encoded
-                            for local_pin_name in list(pin_name.upper()):
-                                local_pin = device.get_or_create_pin(local_pin_name)
-                                if pin_connections:
-                                    # Get the list of connection targets
-                                    if pin_connections.__class__ == list:
-                                        connections = [x.upper() for x in pin_connections]
-                                    else:
-                                        connections = [ pin_connections.upper() ]
-                                    for connection in connections:
-                                        # Dotted connections are assumed to reference another 
-                                        # pin directly
-                                        if "." in connection:
-                                            tokens = connection.upper().split(".")
-                                            if len(tokens) != 2:
-                                                raise Exception("Connection syntax error " + connection)
-                                            target_coordinate = tokens[0]
-                                            # Convert the target location to a target device
-                                            if not target_coordinate in coordinates:
-                                                raise Exception("Pin on device " + device_name + " references " + \
-                                                                "unrecognized coordinate " + target_coordinate)
-                                            target_device = coordinates[target_coordinate]
-                                            # Multiple pins can be encoded:
-                                            for target_pin_name in list(tokens[1].upper()):
-                                                target_pin = target_device.get_or_create_pin(target_pin_name)
-                                                # Cross-connect
-                                                local_pin.add_connection(target_pin)
-                                                target_pin.add_connection(local_pin)
-                                        # Otherwise, associate a net alias with the pin
-                                        else:
-                                            target_device = self.alias_device
-                                            target_pin = target_device.get_or_create_pin(connection.upper())
+                            pin_list.append((pin_name, pin_connections))
+                    if "out" in yaml_device:
+                        for pin_name, pin_connections in yaml_device["out"].items():
+                            pin_list.append((pin_name, pin_connections))
+
+                    for pin_name, pin_connections in pin_list:
+                        # Multiple pins can be encoded
+                        for local_pin_name in list(pin_name.upper()):
+                            local_pin = device.get_or_create_pin(local_pin_name)
+                            if pin_connections:
+                                # Get the list of connection targets
+                                if pin_connections.__class__ == list:
+                                    connections = [x.upper() for x in pin_connections]
+                                else:
+                                    connections = [ pin_connections.upper() ]
+                                for connection in connections:
+                                    # Dotted connections are assumed to reference another 
+                                    # pin directly
+                                    if "." in connection:
+                                        tokens = connection.upper().split(".")
+                                        if len(tokens) != 2:
+                                            raise Exception("Connection syntax error " + connection)
+                                        target_coordinate = tokens[0]
+                                        # Convert the target location to a target device
+                                        if not target_coordinate in coordinates:
+                                            raise Exception("Pin on device " + device_name + " references " + \
+                                                            "unrecognized coordinate " + target_coordinate)
+                                        target_device = coordinates[target_coordinate]
+                                        # Multiple pins can be encoded:
+                                        for target_pin_name in list(tokens[1].upper()):
+                                            target_pin = target_device.get_or_create_pin(target_pin_name)
                                             # Cross-connect
                                             local_pin.add_connection(target_pin)
                                             target_pin.add_connection(local_pin)
+                                    # Otherwise, associate a net alias with the pin
+                                    else:
+                                        target_device = self.alias_device
+                                        target_pin = target_device.get_or_create_pin(connection.upper())
+                                        # Cross-connect
+                                        local_pin.add_connection(target_pin)
+                                        target_pin.add_connection(local_pin)
 
             # Pick up some additional net aliases
             if "aliases" in p:

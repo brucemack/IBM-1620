@@ -1,0 +1,66 @@
+# IBM-1620 Logic Reproduction Project
+# COPYRIGHT (C) 2024 - Bruce MacKinnon
+
+part: 2129194
+ec: 404650C
+title: TYPEWRITER OPERATIONAL CONTROL
+num: 01.82.62.1
+
+devices:
+  - gate: 01DA
+    loc: 1D07
+    typ: CD--
+    cir: 03
+    coo: 3E
+    inp:
+      P: "-S OP 36 RN"
+      Q: "-S OP 38 WN"
+      R: "-S OP 35 DN P"
+  - gate: 01DA
+    loc: 1D06
+    typ: MX--
+    cir: 04
+    coo: 4F
+    inp: 
+      Q: 3E.D
+  - gate: 01DA
+    loc: 1D24
+    typ: NP--
+    cir: 02
+    coo: 5B
+    inp:
+      E: "+S STORE"
+  - gate: 01DA
+    loc: 1D24
+    typ: NP--
+    cir: 03
+    coo: 5C
+    inp:
+      F: "+S NOT STORE"
+      P: "+S STORE INT"
+  - gate: 01DA
+    loc: 1D25
+    typ: NP--
+    cir: 01
+    coo: 5E
+    inp:
+      A: 3E.D
+      B: "+S NOT WR NUM INTLK"
+  - gate: 01DA
+    loc: 1D25
+    typ: NP--
+    cir: 02
+    coo: 5F
+    inp:
+      D: 4F.K
+      E: "+S WR NUM INTLK"
+aliases:
+  - name: "STORE DRIVE"
+    inp: 5B.H
+  - name: "NOT STORE DRIVE"
+    inp: 5C.G  
+  - name: "WR NUM DR"
+    inp: 5E.C
+  - name: "NOT WR NUM DR"
+    inp: 5F.H
+    
