@@ -230,6 +230,10 @@ machine = schem2.Machine()
 machine.load_from_ald2s(indir, infiles)
 machine.create_nodes()
 
+# Look for single-pin nodes
+for node in machine.get_nodes():
+    if node.get_pin_count() == 1:
+        print("Single pin node", node.get_name(), " -> ", node.get_pins()[0].get_global_id())
 
 # Setup devices
 out_devices = []
@@ -269,10 +273,6 @@ machine.visit_devices(device_internal_setup)
 #for c in out_devices:
 #    print(c)
 
-# Look for single-pin nodes
-for node in machine.get_nodes():
-    if node.get_pin_count() == 1:
-        print("Single pin node", node.get_name(), " -> ", node.get_pins()[0].get_global_id())
 
 c1 = schem.Circuit(out_devices, [ ])
 

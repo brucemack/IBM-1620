@@ -10,12 +10,77 @@ use or sale of any part is prohibited.
 """
 import yaml
 
+
+class PinMeta:
+
+    def __init__(self, name: str, type: str, drivetype: str, tietype: str):
+        self.name = name
+        if type == None or type == "UNKNOWN":
+            self.type = "PASSIVE"
+        elif type == "INPUT" or type == "OUTPUT" or type == "PASSIVE" or type == "GND" or \
+            type == "VN12" or type == "VP12" or type == "SYSCLOCK":
+            self.type = type
+        else:
+            raise Exception("Invalid pin type " + type)
+        
+        if drivetype == None or drivetype == "AH" or drivetype == "AL" or \
+            drivetype == "AH_PD" or drivetype == "AL_PU":
+            self.drivetype = drivetype 
+        else:
+            raise Exception("Invalid drive type " + drivetype)
+        
+        if tietype == None or tietype == "NONE":
+            self.tietype = "NONE" 
+        elif tietype == "VN12" or tietype == "VP12":
+            self.tietype = tietype 
+        else:
+            raise Exception("Invalid tie type " + tietype)
+
+    def is_driver(self) -> bool:
+        return self.type == "OUTPUT"
+
+    def is_driven(self) -> bool:
+        return self.type == "INPUT"
+
+    def is_passive(self) -> bool:
+        return self.type == "PASSIVE"
+
 class DeviceType:
 
-    def __init__(self, type_name):
+    def __init__(self, type_name, meta_yaml):
+        
         self.type_name = type_name
+        self.pin_metas = {}
+
+        if meta_yaml:
+            for pin_name, pin_yaml in meta_yaml["pins"].items():
+                type = None
+                if "type" in pin_yaml:
+                    type = pin_yaml["type"]
+                    if type == "NC":
+                        continue
+                drivetype = None
+                if "drivetype" in pin_yaml:
+                    drivetype = pin_yaml["drivetype"]
+                tie = None
+                if "tie" in pin_yaml:
+                    tie = pin_yaml["tie"]
+                self.pin_metas[pin_name] = PinMeta(pin_name, type, drivetype, tie)
+
 
     def get_name(self) -> str: return self.type_name
+
+    def get_pin_meta(self, local_id) -> PinMeta:
+        if not local_id in self.pin_metas:
+            raise Exception("Device type " + self.type_name + " does not have pin " + local_id)
+        return self.pin_metas[local_id]
+
+class AliasDeviceType():
+
+    def get_name(self) -> str: return "_alias"
+
+    def get_pin_meta(self, local_id) -> PinMeta:
+        return PinMeta(local_id, "PASSIVE", None, None)
 
 class Device:
 
@@ -35,7 +100,7 @@ class Device:
 
     def get_or_create_pin(self, id: str):
         if not id in self.pins:
-            self.pins[id] = Pin(self, id.upper())
+            self.pins[id] = Pin(self, id.upper(), self.get_pin_meta(id.upper()))
         return self.pins[id.upper()]
 
     def get_pins(self): return self.pins.values()
@@ -51,6 +116,9 @@ class Device:
             raise Exception("No node for pin " + local_pin_id + " on " + self.id)
         return pin.get_node().get_name()
 
+    def get_pin_meta(self, local_pin_id) -> PinMeta:
+        return self.type.get_pin_meta(local_pin_id)
+
 class SMSCard(Device):
 
     def __init__(self, type: DeviceType, gate_id: str, loc_id: str):
@@ -60,13 +128,15 @@ class SMSCard(Device):
 
 class Pin:
 
-    def __init__(self, device: Device, id: str):
+    def __init__(self, device: Device, id: str, meta: PinMeta):
         self.device: Device = device
         self.id: str = id
+        self.meta = meta
         self.connections: list[Pin] = []
         self.node = None
 
-    def get_id(self): return self.id
+    def get_id(self) -> str: return self.id
+    def get_device(self) -> Device: return self.device
 
     def get_global_id(self): return self.device.get_id() + "." + self.id
 
@@ -80,6 +150,18 @@ class Pin:
     def get_node(self): return self.node 
     def set_node(self, n): self.node = n
 
+    def get_meta(self): return self.meta
+    def is_driver(self): return self.meta.is_driver()
+    def is_driven(self): return self.meta.is_driven()
+    def is_passive(self): return self.meta.is_passive()
+
+def make_verilog_id(i: str) -> str:
+    i = i.replace("+S", "PS")
+    i = i.replace("-S", "NS")
+    i = i.replace(".", "_")
+    i = i.replace(" ", "_")
+    return i
+
 class Node:
 
     def __init__(self, name, pins):
@@ -92,6 +174,137 @@ class Node:
 
     def get_pin_count(self): return len(self.pins)
 
+    def is_multidriver(self) -> bool:
+        driver_count = 0
+        for pin in self.pins:
+            if pin.is_driver():
+                driver_count = driver_count + 1
+        return driver_count > 1
+
+    def generate_verilog(self, ostr):
+
+        # Organize the pins into drivers, driven, and passive
+        driver_pins = []
+        driven_pins = []
+        passive_pins = []
+        for pin in self.pins:
+            if pin.is_driver():
+                driver_pins.append(pin)
+            elif pin.is_driven():
+                driven_pins.append(pin)
+            elif pin.is_passive():
+                passive_pins.append(pin)
+
+        # Setup a final wire for this node
+        s = "wire _W" + make_verilog_id(self.get_name()) + ";\n"
+        ostr.write(s)
+
+        if self.is_multidriver():
+
+            # Setup a final wire for this node
+            s = "// START: Multi-driver node\n"
+            ostr.write(s)
+
+            # Figure out what we've got on the line
+            active_pull_up = False
+            active_pull_down = False
+            passive_pull_up = False
+            passive_pull_down = False
+
+            # Look at the driver/active pins
+            for driver_pin in driver_pins:
+                # Create a wire for each of the drivers
+                s = "wire _W" + make_verilog_id(driver_pin.get_global_id()) + ";\n"
+                ostr.write(s)
+
+                dt = driver_pin.get_meta().drivetype 
+                if dt == "AH" or dt == "AH_PD":
+                    active_pull_up = True
+                    if dt == "AH_PD":
+                        passive_pull_down = True
+                elif dt == "AL" or dt == "AL_PU":
+                    active_pull_down = True
+                    if dt == "AL_PU":
+                        passive_pull_up = True
+                elif dt == None:
+                    pass
+                else:
+                    raise Exception("Invalid drive type " + dt)
+
+            # Check what the passives are doing
+            for passive_pin in passive_pins:
+                tt = passive_pin.get_meta().tietype
+                if tt == "GND" or tt == "VP12":
+                    passive_pull_up = True
+                elif tt == "VN12":
+                    passive_pull_down = True
+                elif tt == "NONE":
+                    pass
+                else:
+                    raise Exception("Invalid tie type: " + tt)
+
+            # Look for problem combinations
+            if active_pull_down and active_pull_up:
+                raise Exception("Conflicting drive types on wire: " + self.get_name())
+            if active_pull_up and passive_pull_up:
+                raise Exception("Active and passive pull up on wire: " + self.get_name())
+            if active_pull_down and passive_pull_down:
+                raise Exception("Active and passive pull down on wire: " + self.get_name())
+            # This case is a problem because there is nothing to pull down.
+            # In the oppose case (activePullDown) we have the benefit of the input pull up
+            if active_pull_up and not passive_pull_down:
+                raise Exception("Active pull up with no pull down on wire: " + self.get_name())
+
+            # The pull up case looks for any 1's driving the wire
+            if active_pull_up:
+                # Generate a suitable net. Any of the drivers can pull the net high with a 1.
+                # The default value depends on whether there is a pull down amongst the
+                # driving nets.
+                if not passive_pull_down:
+                    default_value = 1
+                    desc = "active high, no pull down"
+                else:
+                    default_value = 0
+                    desc = "active high with pull down"
+                s = "// Automatically generated DOT-OR (" + desc + ")\n"
+                ostr.write(s)
+                s = "_W" + make_verilog_id(self.get_name()) + " = "
+                first = True
+                s = s + "("
+                for driver_pin in driver_pins:
+                    if not first:
+                        s = s + " | "
+                    s = s + "_W" + make_verilog_id(driver_pin.get_global_id()) + " === 1"
+                    first = False
+                s = s + ") ? 1 : " + str(default_value) + ";\n"
+                ostr.write(s)
+            else:                
+                # Generate a suitable net. Any of the drivers can pull the net low with a 0.
+                # The default value depends on whether there is a pull up amongst the
+                # driving nets.
+                if not passive_pull_up:
+                    default_value = 1
+                    desc = "active low, no pull up"
+                else:
+                    default_value = 1
+                    desc = "active low with pull up"
+                driven_name = "W_DOT_" + make_verilog_id(driver_pin.get_global_id()) 
+                s = "// Automatically generated DOT-OR (" + desc + ")\n"
+                ostr.write(s)
+                s = "_W" + make_verilog_id(self.get_name()) + " = "
+                first = True
+                s = s + "("
+                for driver_pin in driver_pin:
+                    if not first:
+                        s = s + " | "
+                    s = s + "W_" + make_verilog_id(driver_pin.get_global_id()) + " === 0"
+                    first = False
+                s = s + ") ? 0 : " + str(default_value) + ";\n"
+                ostr.write(s)
+
+            s = "// END: Multi-driver node\n"
+            ostr.write(s)
+
 def recursive_traverse(visited_pins: set[str], start_pin: Pin, visitor = None):
     if not start_pin.get_global_id() in visited_pins:
         if visitor:
@@ -102,17 +315,29 @@ def recursive_traverse(visited_pins: set[str], start_pin: Pin, visitor = None):
 
 class Machine:
 
-    def __init__(self):
+    def __init__(self, device_meta_dir = None):
+        self.device_meta_dir = device_meta_dir
+        self.device_types = {}
         self.devices = {}
         # A list of tuples
         self.alias_links = []
+        # A special device type
+        self.device_types["_alias"] = AliasDeviceType()
         # A special device used for managing named nets
         self.alias_device = Device(self.get_device_type("_alias"), "_ALIASES")
         self.devices["_ALIASES"] = self.alias_device
         self.nodes = []
 
     def get_device_type(self, type_name: str) -> DeviceType:
-        return DeviceType(type_name)   
+        if not self.device_meta_dir:
+            return DeviceType(type_name, None)   
+        if not type_name in self.device_types:
+            # Load device meta from a file
+            with open(self.device_meta_dir + "/" + type_name + "/" + 
+                    type_name + ".yaml") as file:
+                p = yaml.safe_load(file)
+                self.device_types[type_name] = DeviceType(type_name, p)
+        return self.device_types[type_name]
     
     def get_device_names(self): return list(self.devices.keys())
 
@@ -142,7 +367,7 @@ class Machine:
                     gate_id = yaml_device["gate"].upper()
                     loc_id = yaml_device["loc"].upper()
                     device_name = gate_id + "_" + loc_id
-                    type_name = yaml_device["typ"].upper()
+                    type_name = yaml_device["typ"].upper().replace("-", "")
 
                     if not device_name in self.devices:
                         device = SMSCard(self.get_device_type(type_name), gate_id, loc_id)
@@ -157,15 +382,12 @@ class Machine:
                     # Keep track of the page-local coordinates
                     coordinates[yaml_device["coo"]] = device
 
-                    # Register the pins
-                    for pin_name, _ in yaml_device["inp"].items():
-                        # Multiple pins can be encoded 
-                        for local_pin_name in list(pin_name.upper()):
-                            if local_pin_name in device.pins:
-                                raise Exception("Duplicate definition of pin " + local_pin_name + \
-                                                " on device " + device_name)
-                            local_pin = Pin(device, local_pin_name)
-                            device.pins[local_pin_name] = local_pin
+                    # Register the pins (if any)
+                    if "inp" in yaml_device:
+                        for pin_name, _ in yaml_device["inp"].items():
+                            # Multiple pins can be encoded 
+                            for local_pin_name in list(pin_name.upper()):
+                                device.get_or_create_pin(local_pin_name)
 
                 # Second pass, establish the connections
                 for yaml_device in p["devices"]:
@@ -176,42 +398,43 @@ class Machine:
                     # Device exists already
                     device = self.devices[device_name]
 
-                    for pin_name, pin_connections in yaml_device["inp"].items():
-                        # Multiple pins can be encoded
-                        for local_pin_name in list(pin_name.upper()):
-                            local_pin = device.get_or_create_pin(local_pin_name)
-                            if pin_connections:
-                                # Get the list of connection targets
-                                if pin_connections.__class__ == list:
-                                    connections = [x.upper() for x in pin_connections]
-                                else:
-                                    connections = [ pin_connections.upper() ]
-                                for connection in connections:
-                                    # Dotted connections are assumed to reference another 
-                                    # pin directly
-                                    if "." in connection:
-                                        tokens = connection.upper().split(".")
-                                        if len(tokens) != 2:
-                                            raise Exception("Connection syntax error " + connection)
-                                        target_coordinate = tokens[0]
-                                        # Convert the target location to a target device
-                                        if not target_coordinate in coordinates:
-                                            raise Exception("Pin on device " + device_name + " references " + \
-                                                            "unrecognized coordinate " + target_coordinate)
-                                        target_device = coordinates[target_coordinate]
-                                        # Multiple pins can be encoded:
-                                        for target_pin_name in list(tokens[1].upper()):
-                                            target_pin = target_device.get_or_create_pin(target_pin_name)
+                    if "inp" in yaml_device:
+                        for pin_name, pin_connections in yaml_device["inp"].items():
+                            # Multiple pins can be encoded
+                            for local_pin_name in list(pin_name.upper()):
+                                local_pin = device.get_or_create_pin(local_pin_name)
+                                if pin_connections:
+                                    # Get the list of connection targets
+                                    if pin_connections.__class__ == list:
+                                        connections = [x.upper() for x in pin_connections]
+                                    else:
+                                        connections = [ pin_connections.upper() ]
+                                    for connection in connections:
+                                        # Dotted connections are assumed to reference another 
+                                        # pin directly
+                                        if "." in connection:
+                                            tokens = connection.upper().split(".")
+                                            if len(tokens) != 2:
+                                                raise Exception("Connection syntax error " + connection)
+                                            target_coordinate = tokens[0]
+                                            # Convert the target location to a target device
+                                            if not target_coordinate in coordinates:
+                                                raise Exception("Pin on device " + device_name + " references " + \
+                                                                "unrecognized coordinate " + target_coordinate)
+                                            target_device = coordinates[target_coordinate]
+                                            # Multiple pins can be encoded:
+                                            for target_pin_name in list(tokens[1].upper()):
+                                                target_pin = target_device.get_or_create_pin(target_pin_name)
+                                                # Cross-connect
+                                                local_pin.add_connection(target_pin)
+                                                target_pin.add_connection(local_pin)
+                                        # Otherwise, associate a net alias with the pin
+                                        else:
+                                            target_device = self.alias_device
+                                            target_pin = target_device.get_or_create_pin(connection.upper())
                                             # Cross-connect
                                             local_pin.add_connection(target_pin)
                                             target_pin.add_connection(local_pin)
-                                    # Otherwise, associate a net alias with the pin
-                                    else:
-                                        target_device = self.alias_device
-                                        target_pin = target_device.get_or_create_pin(connection.upper())
-                                        # Cross-connect
-                                        local_pin.add_connection(target_pin)
-                                        target_pin.add_connection(local_pin)
 
             # Pick up some additional net aliases
             if "aliases" in p:
