@@ -17,7 +17,7 @@ with open(ald_dir + "/" + pages_file) as file:
     for ald_fn in p["pages"]:
         print(ald_fn)
         machine.load_from_ald1(ald_dir + "/" + ald_fn + ".yaml")
-
+"""
 def v2(pin):
     print("  ", pin.get_id())
     for c in pin.get_connections():
@@ -28,6 +28,7 @@ def v1(device):
     device.visit_pins(v2)
 
 machine.visit_devices(v1)        
+"""
 
 machine.create_nodes()
 
@@ -45,17 +46,19 @@ for node in machine.get_nodes():
                 print("  ", pin.get_global_id(), pin.device.get_type_name())
         
 # Dump verilog
-ostr = sys.stdout
-s = "module machine();\n"
-ostr.write(s)
+with open("./typewriter-control.v", "w+") as ostr:
 
-machine.visit_nodes(lambda node: node.generate_verilog(ostr))
+    #ostr = sys.stdout
+    s = "module machine();\n"
+    ostr.write(s)
 
-def device_visitor(device):
-    if device.get_name() != "_ALIASES": 
-        device.generate_verilog(ostr)
+    machine.visit_nodes(lambda node: node.generate_verilog(ostr))
 
-machine.visit_devices(device_visitor)
+    def device_visitor(device):
+        if device.get_name() != "_ALIASES": 
+            device.generate_verilog(ostr)
 
-s = "endmodule;\n"
-ostr.write(s)
+    machine.visit_devices(device_visitor)
+
+    s = "endmodule;\n"
+    ostr.write(s)
