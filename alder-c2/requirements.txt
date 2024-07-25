@@ -1,0 +1,6 @@
+numpy 
+matplotlib 
+tk 
+pytest 
+pyyaml 
+lark
