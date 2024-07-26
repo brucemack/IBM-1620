@@ -1,29 +1,19 @@
 
 from enum import Enum
 
-class ValueMode(Enum):
-    NORMAL = 0
-    X = 1
-    Z = 2
-
 class Value:    
 
     def __init__(self, v):
-        self.value_mode = ValueMode.NORMAL
         self.value = v
 
-    def __init__(self, vm: ValueMode):
-        self.value_mode = vm
-        self.value = 0
-
     def __eq__(self, other):
-        return self.value_mode == other.value_mode and self.value == other.value     
+        return self.value == other.value     
 
     def is_x(self):
-        return self.value_mode == ValueMode.X
+        return self.value == "X"
     
     def is_z(self):
-        return self.value_mode == ValueMode.Z
+        return self.value == "Z"
 
     def get_bool(self):
         return bool(self.value)
@@ -39,6 +29,56 @@ class Value:
 
     def __repr__(self) -> str:
         return str(self.value)
+
+LOGIC_0 = Value(0)
+LOGIC_1 = Value(1)
+LOGIC_X = Value("X")
+LOGIC_Z = Value("Z")
+
+# See IEEE Standard Section 5.1.10
+def logic_eval_or(a, b):
+    if a == LOGIC_0:
+        if   (b == LOGIC_0): return LOGIC_0
+        elif (b == LOGIC_1): return LOGIC_1
+        elif (b == LOGIC_X): return LOGIC_X
+        elif (b == LOGIC_Z): return LOGIC_X
+    elif a == LOGIC_1:
+        if   (b == LOGIC_0): return LOGIC_1
+        elif (b == LOGIC_1): return LOGIC_1
+        elif (b == LOGIC_X): return LOGIC_1
+        elif (b == LOGIC_Z): return LOGIC_1
+    elif a == LOGIC_X or a == LOGIC_Z:
+        if   (b == LOGIC_0): return LOGIC_X
+        elif (b == LOGIC_1): return LOGIC_1
+        elif (b == LOGIC_X): return LOGIC_X
+        elif (b == LOGIC_Z): return LOGIC_X
+
+# See IEEE Standard Section 5.1.10
+def logic_eval_and(a: Value, b: Value) -> Value:
+    if a == LOGIC_0:
+        if   (b == LOGIC_0): return LOGIC_0
+        elif (b == LOGIC_1): return LOGIC_0
+        elif (b == LOGIC_X): return LOGIC_0
+        elif (b == LOGIC_Z): return LOGIC_0
+    elif a == LOGIC_1:
+        if   (b == LOGIC_0): return LOGIC_0
+        elif (b == LOGIC_1): return LOGIC_1
+        elif (b == LOGIC_X): return LOGIC_X
+        elif (b == LOGIC_Z): return LOGIC_X
+    elif a == LOGIC_X or a == LOGIC_Z:
+        if   (b == LOGIC_0): return LOGIC_0
+        elif (b == LOGIC_1): return LOGIC_X
+        elif (b == LOGIC_X): return LOGIC_X
+        elif (b == LOGIC_Z): return LOGIC_X
+
+# See Table 5-16
+def logic_eval_not(a: Value) -> Value:
+    if a == LOGIC_0:
+        return LOGIC_1
+    elif a == LOGIC_1:
+        return LOGIC_0
+    else:
+        return LOGIC_X
 
 # ----- Expression Related ----------------------------------------------
 
@@ -95,9 +135,9 @@ class BinaryExpression(Expression):
     
     def eval(self, lhs: Value, rhs: Value) -> Value:
         if self.type == "|":
-            return Value(lhs.get_bool() or rhs.get_bool())
+            return logic_eval_or(lhs, rhs)
         elif self.type == "&":
-            return Value(lhs.get_bool() and rhs.get_bool())
+            return logic_eval_and(lhs, rhs)
         elif self.type == "<":
             return Value(lhs.get_float() < rhs.get_float())
         elif self.type == "<=":
@@ -129,7 +169,7 @@ class UnaryExpression(Expression):
     
     def eval(self, lhs: Value)-> Value:
         if self.type == "!":
-            return Value(not lhs.get_bool())
+            return logic_eval_not(lhs)
         else:
             raise Exception("Invalid operation type")
 
@@ -156,47 +196,6 @@ class NetType(Enum):
     WOR = 3
     WAND = 4
 
-LOGIC_0 = Value(0)
-LOGIC_1 = Value(1)
-LOGIC_X = Value(ValueMode.X)
-LOGIC_Z = Value(ValueMode.Z)
-
-# See IEEE Standard Section 5.1.10
-def logic_eval_or(a, b):
-    if a == LOGIC_0:
-        if   (b == LOGIC_0): return LOGIC_0
-        elif (b == LOGIC_1): return LOGIC_1
-        elif (b == LOGIC_X): return LOGIC_X
-        elif (b == LOGIC_Z): return LOGIC_X
-    elif a == LOGIC_1:
-        if   (b == LOGIC_0): return LOGIC_1
-        elif (b == LOGIC_1): return LOGIC_1
-        elif (b == LOGIC_X): return LOGIC_1
-        elif (b == LOGIC_Z): return LOGIC_1
-    elif a == LOGIC_X or a == LOGIC_Z:
-        if   (b == LOGIC_0): return LOGIC_X
-        elif (b == LOGIC_1): return LOGIC_1
-        elif (b == LOGIC_X): return LOGIC_X
-        elif (b == LOGIC_Z): return LOGIC_X
-
-# See IEEE Standard Section 5.1.10
-def logic_eval_and(a, b):
-    if a == LOGIC_0:
-        if   (b == LOGIC_0): return LOGIC_0
-        elif (b == LOGIC_1): return LOGIC_0
-        elif (b == LOGIC_X): return LOGIC_0
-        elif (b == LOGIC_Z): return LOGIC_0
-    elif a == LOGIC_1:
-        if   (b == LOGIC_0): return LOGIC_0
-        elif (b == LOGIC_1): return LOGIC_1
-        elif (b == LOGIC_X): return LOGIC_X
-        elif (b == LOGIC_Z): return LOGIC_X
-    elif a == LOGIC_X or a == LOGIC_Z:
-        if   (b == LOGIC_0): return LOGIC_0
-        elif (b == LOGIC_1): return LOGIC_X
-        elif (b == LOGIC_X): return LOGIC_X
-        elif (b == LOGIC_Z): return LOGIC_X
-
 def wire_logic_eval(drivers: list[Value], net_type: NetType):
     if net_type == NetType.SUPPLY0:
         if len(drivers) > 0:
@@ -221,7 +220,22 @@ def wire_logic_eval(drivers: list[Value], net_type: NetType):
             l = logic_eval_and(l, drivers[i])
         return l
 
-class SymbolDeclaration:
+class ValueState:
+
+    def __init__(self):
+        self.state: dict[str, Value] = {}
+
+    def set_value(self, name, value: Value): self.state[name] = value
+    def get_value(self, name) -> Value: 
+        if not name in self.state:
+            return LOGIC_X
+        else:
+            return self.state[name]
+    def is_value_available(self, name) -> bool: return name in self.state
+    def is_value_changed(self, name, value: Value) -> bool:
+        return (not name in self.state) or (not self.state[name] == value)
+
+class SignalDeclaration:
 
     def __init__(self, name: str, type: DataType):
         self.name = name 
@@ -230,13 +244,18 @@ class SymbolDeclaration:
     def get_name(self): return self.name 
     def get_data_type(self): return self.data_type
 
-class NetDeclaration(SymbolDeclaration):
+class NetDeclaration(SignalDeclaration):
 
     def __init__(self, name: str, net_type: NetType):
         super().__init__(name, DataType.NET)
         self.net_type = net_type
 
     def get_net_type(self): return self.net_type
+
+class VariableDeclaration(SignalDeclaration):
+
+    def __init__(self, name: str):
+        super().__init__(name, DataType.VARIABLE)
 
 class PortDeclaration(NetDeclaration):
 
@@ -258,19 +277,21 @@ class Statement:
         raise Exception("Not implemented")
 
 class ProcedureAssignment(Statement):
+
     def __init__(self, lhs: str, rhs: Expression):
+
         self.lhs = lhs
         self.rhs = rhs
 
     def execute(self, context):
-        
-        # Make sure the LHS is a variable (i.e. it's illegal to assign
-        # to nets).
 
+        # TODO: Make sure the LHS is a variable (i.e. it's illegal to assign
+        # to nets).
+        
         # Evaluate the RHS
         rhs_value = self.rhs.evaluate(context)
         # Assign the result to the LHS
-        context.assign(self.lhs, rhs_value)
+        context.set_value(self.lhs, rhs_value)
 
     def get_references(self):
         return self.rhs.get_references()
@@ -290,20 +311,18 @@ class ProcedureBlock:
             result.extend(statement.get_references())
         return result
 
-class Function(Expression):
+class FunctionDefinition:
     
     def __init__(self, name: str, 
                  params: list[FunctionParameter], 
-                 local_variables: list, 
+                 local_variables: list[VariableDeclaration], 
                  procedure_block: ProcedureBlock):
 
         self.name = name
+        self.params = params
 
-        self.params: dict = {}
-        for param in params:
-            self.params[param.get_name()] = param
-
-        self.local_variables: dict = {}
+        # Convert the list of local variable definitions to a map
+        self.local_variables: dict[str, VariableDeclaration] = {}
         for local_variable in local_variables:
             self.local_variables[local_variable.get_name()] = local_variable
 
@@ -311,30 +330,87 @@ class Function(Expression):
 
     def get_name(self) -> str: return self.name
 
-    def evaluate(self, context) -> Value:
-        # Setup the context:
-        # 1. Connect to local variables
-        # 2. Any reference to a variable that isn't local gets forwarded out 
-        #    to the calling context.
-        # 3. Any reference to a variable with the same name of the function 
-        #    is assumed to be the return value 
+    def is_local_variable(self, name: str): return name in self.local_variables
 
-        # Run the procedure block
-        self.procedure_block.execute(context)
-        # Extract the return value
-        result = None
-        return result
+    def is_param_name(self, name: str):
+        # TODO: FASTER
+        for param in self.params:
+            if name == param.get_name(): return True
+        return False
 
     def get_references(self) -> list[str]:
         # Get the references made by the procedure block
         refs = self.procedure_block.get_references()
-        # Remove any ports since they aren't external
-        for param in self.params.values():
+        # Remove any parameter names since they aren't external
+        for param in self.params:
             refs.remove(param.get_name())
         # Remove any local variables since they aren't external
         for lv in self.local_variables.values():
             refs.remove(lv.get_name())
         return refs
+
+class FunctionEvalContext:
+
+    def __init__(self, function_def: FunctionDefinition, value_state, param_values: list[Value]):
+
+        self.value_state = value_state
+        self.function_def = function_def
+
+        # Here is where the local variables are stored
+        self.local_value_state: dict[str, Value] = {}
+
+        # Move the parameter values into the local variable store
+        if len(param_values) != len(self.function_def.params):
+            raise Exception("Wrong number of parameters passed to " + self.function_def.get_name())
+        i = 0
+        for param in self.function_def.params:
+            self.local_value_state[param.get_name()] = param_values[i]
+            i = i + 1
+    
+    def is_local_name(self, name:str) -> bool:
+        return name == self.function_def.get_name() or \
+           self.function_def.is_local_variable(name) or \
+           self.function_def.is_param_name(name)
+
+    def get_value(self, name: str) -> Value:
+        # Figure out if this is a reference to a parameter, a local variable, or to the 
+        # function name itself (which is treated like a local)
+        if self.is_local_name(name):
+            # Default unset variables to X
+            if not name in self.local_value_state:
+                return LOGIC_X
+            else:
+                return self.local_value_state[name]
+        # Otherwise, forward out to the wider context
+        else:
+            return self.value_state.get_value(name)
+
+    def set_value(self, name: str, value: Value):
+        # Figure out if this is a reference to a local variable or to the function 
+        # name itself, which is treated like a local
+        if self.is_local_name(name):
+            self.local_value_state[name] = value
+        # Otherwise, forward out to the wider context
+        else:
+            self.value_state.set_value(name, value)
+
+class FunctionExpression(Expression):
+
+    def __init__(self, function_def: FunctionDefinition, params: list[Expression]):
+
+        self.function_def = function_def
+        self.params = params
+
+    def evaluate(self, global_context) -> Value:
+
+        # Evaluate the parameters to the function
+        param_values = [arg.evaluate(global_context) for arg in self.params]
+        # Setup the context for use INSIDE of the function execution
+        function_context = FunctionEvalContext(self.function_def, global_context, param_values)
+        # Run the procedure block
+        self.function_def.procedure_block.execute(function_context)
+        # Extract the return value based on the name of the function
+        return function_context.get_value(self.function_def.get_name())
 
 class NetAssignment:
 
@@ -352,7 +428,7 @@ class ModuleDefinition:
         self.name = name
 
         # Move the list of net declarations into a map
-        self.net_declarations: dict[str, SymbolDeclaration] = {}
+        self.net_declarations: dict[str, NetDeclaration] = {}
         for declaration in net_declarations:
             if declaration.get_name() in self.net_declarations:
                 raise Exception("Redundant declaration " + declaration.get_name())
@@ -365,17 +441,6 @@ class ModuleDefinition:
                 self.net_assignments[assignment.get_name()] = []
             self.net_assignments[assignment.get_name()].append(assignment)
       
-class ValueState:
-
-    def __init__(self):
-        self.state: dict[str, Value] = {}
-
-    def set_value(self, name, value: Value): self.state[name] = value
-    def get_value(self, name) -> Value: return self.state[name]
-    def is_value_available(self, name) -> bool: return name in self.state
-    def is_value_changed(self, name, value: Value) -> bool:
-        return (not name in self.state) or (not self.state[name] == value)
-
 class ModuleEvalContext:
 
     def __init__(self, value_state: ValueState):
@@ -405,7 +470,7 @@ class ModuleInstance:
 
     def init(self):
         for nd in self.mod_def.net_declarations.values():
-            self.value_state.set_value(nd.get_name(), Value(ValueMode.X))
+            self.value_state.set_value(nd.get_name(), LOGIC_X)
 
     def set_value(self, name: str, value: Value, active_queue: list[UpdateEvent]):
         print("Setting value of symbol:", name)
