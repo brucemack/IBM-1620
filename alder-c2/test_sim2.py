@@ -18,6 +18,13 @@ def test_1():
     assert sorted(b0.get_references()) == [ "a", "e" ]
 
     # Put the procedure block into a function
+    #
+    # function b(a);
+    #   begin
+    #     b = !(a & e)
+    #   end
+    # endfunction 
+
     a0 = [ sim2.FunctionParameter("a") ]
     a1 = [ ]
     fd0 = sim2.FunctionDefinition("b", a0, a1, b0)
@@ -25,30 +32,45 @@ def test_1():
     # handled by the caller of the function.
     assert sorted(fd0.get_references()) == [ "e" ]
 
-    # Now execute the function a few ways
-    value_state = sim2.ValueState()
+    # Elaborate the function
+    fd1 = fd0.elaborate("root")
+    
+    # Setup the context
+    eval_context = sim2.EvalContext()
+    eval_context.func_def_reg.add_function("root.b", fd1)
 
-    f0 = sim2.FunctionExpression(fd0, [ sim2.ConstantExpression(sim2.Value(True)) ])
-    result = f0.evaluate(value_state)
+    # Now execute the function a few ways
+    eval_context.value_state.set_value("root.e", sim2.Value("X"))
+    f0 = sim2.FunctionExpression("root.b", [ sim2.ConstantExpression(sim2.Value(True)) ])
+    result = f0.evaluate(eval_context)
     assert result == sim2.Value("X")
 
-    value_state.set_value("e", sim2.LOGIC_0)
-    f0 = sim2.FunctionExpression(fd0, [ sim2.ConstantExpression(sim2.Value(True)) ])
-    result = f0.evaluate(value_state)
+    eval_context.value_state.set_value("root.e", sim2.LOGIC_0)
+    f0 = sim2.FunctionExpression("root.b", [ sim2.ConstantExpression(sim2.Value(True)) ])
+    result = f0.evaluate(eval_context)
     assert result == sim2.Value(True)
 
-    f0 = sim2.FunctionExpression(fd0, [ sim2.ConstantExpression(sim2.Value(False)) ])
-    value_state.set_value("e", sim2.LOGIC_1)
-    result = f0.evaluate(value_state)
+    eval_context.value_state.set_value("root.e", sim2.LOGIC_1)
+    f0 = sim2.FunctionExpression("root.b", [ sim2.ConstantExpression(sim2.Value(False)) ])
+    result = f0.evaluate(eval_context)
     assert result == sim2.Value(True)
 
-    f0 = sim2.FunctionExpression(fd0, [ sim2.ConstantExpression(sim2.Value(True)) ])
-    value_state.set_value("e", sim2.LOGIC_1)
-    result = f0.evaluate(value_state)
+    eval_context.value_state.set_value("root.e", sim2.LOGIC_1)
+    f0 = sim2.FunctionExpression("root.b", [ sim2.ConstantExpression(sim2.Value(True)) ])
+    result = f0.evaluate(eval_context)
     assert result == sim2.Value(False)
 
 # A basic wire demonstration
 def test_2():
+
+    """
+    module mod0();
+      wire a;
+      wire b;
+      assign a = b | 0;
+      assign b = 1;
+    endmodule;
+    """
 
     # List of net declarations
     nds = [ sim2.NetDeclaration("a", sim2.NetType.WIRE), 
@@ -62,30 +84,33 @@ def test_2():
             sim2.NetAssignment("b", e1) ]
      
     # Define a module 
-    md0 = sim2.ModuleDefinition("mod0", nds, nas)
+    module_defs: dict[str, sim2.ModuleDefinition] = {}
+    module_defs["mod0"] = sim2.ModuleDefinition("mod0", [ ], nds, nas, [ ], [ ])
 
-    # Create a module instance
-    value_state = sim2.ValueState()
-    mi0 = sim2.ModuleInstance("m0", md0, value_state)
-    mi0.init()
+    # Elaborate a module instance
+    eval_context = sim2.EvalContext()
 
-    active_queue = []
+    param_map = {}
+    module_defs["mod0"].elaborate("root", 
+                                  "main", 
+                                  param_map, 
+                                  module_defs, 
+                                  eval_context.net_reg, 
+                                  eval_context.func_def_reg, 
+                                  eval_context.value_state)
+    
+    eval_context.net_reg.debug()
 
-    # Change the value of "b"
-    mi0.set_value("b", sim2.Value(0), active_queue)
-
-    # Apply the events
-    for event in active_queue:
-        value_state.set_value(event.name, event.value)
-    active_queue.clear()
-
-    assert value_state.get_value("a") == sim2.Value(0)
+    # Change the value of "b" and demonstrate that "a" is changed as well
+    eval_context.set_value("root.main.b", sim2.Value(0)) 
+    eval_context.flush_active_queue()
+    assert eval_context.value_state.get_value("root.main.a") == sim2.Value(0)
 
     # Set the same value again, nothing should happen
-    mi0.set_value("b", sim2.Value(0), active_queue)
+    eval_context.set_value("root.main.b", sim2.Value(0))
 
     # We should have no events at this point
-    assert len(active_queue) == 0
+    assert len(eval_context.active_queue) == 0
 
 # Logic level tests
 def test_3():
@@ -120,11 +145,11 @@ def test_4():
             sim2.NetAssignment("a", e1) ]
 
     # Define a module 
-    md0 = sim2.ModuleDefinition("mod0", nds, nas)
+    md0 = sim2.ModuleDefinition("mod0", [ ], nds, nas, [ ], [ ])
 
     # Create a module instance
     value_state = sim2.ValueState()
-    mi0 = sim2.ModuleInstance("m0", md0, value_state)
+    mi0 = sim2.ModuleInstance("m0", md0, {}, value_state)
     mi0.init()
 
     active_queue = []
@@ -149,7 +174,67 @@ def test_4():
     # Should see wire-OR
     assert value_state.get_value("a") == sim2.Value(1)
 
+# A module with a sub-module
+def test_5():
+
+    """
+    module main();
+      wire a = 1;
+      wire b = 0;
+      wire c;
+      and m0(.x(a), .y(b), .z(c));
+    endmodule;
+    module and(input x, input y, output z);
+      z = x & y;
+    endmodule;
+    """
+
+    module_defs = {}
+
+    # Port declarations
+    ports = []
+    # Net definitions
+    nds = [ sim2.NetDeclaration("a", sim2.NetType.WIRE),
+            sim2.NetDeclaration("b", sim2.NetType.WIRE),
+            sim2.NetDeclaration("c", sim2.NetType.WIRE) ]
+    # Net assignments
+    nas = [ sim2.NetAssignment("a", sim2.ConstantExpression(sim2.Value(True))),
+            sim2.NetAssignment("b", sim2.ConstantExpression(sim2.Value(False))) ]
+    # Module instantiations
+    mis = [ sim2.ModuleInstantiation("and", "m0", [ sim2.PortAssignment("x", "a"), 
+                                                    sim2.PortAssignment("y", "b"),                                                sim2.PortAssignment("z", "c") ] ) ]
+    # Function definitions 
+    fds = []
+    # Define a module 
+    module_defs["main"] = sim2.ModuleDefinition("main", ports, nds, nas, mis, fds)
+
+    # Port declarations
+    ports = [ sim2.PortDeclaration("x", sim2.PortType.INPUT),
+              sim2.PortDeclaration("y", sim2.PortType.INPUT),
+              sim2.PortDeclaration("z", sim2.PortType.OUTPUT) ]
+    # Net definitions
+    nds = [ ]
+    # Net assignments
+    nas = [ sim2.NetAssignment("z", 
+                               sim2.BinaryExpression("&",
+                                                     sim2.VariableExpression("x"), 
+                                                     sim2.VariableExpression("y"))) ]
+    # Module instantiations
+    mis = [ ]
+    # Function definitions 
+    fds = []
+    # Define a module 
+    module_defs["and"] = sim2.ModuleDefinition("and", ports, nds, nas, mis, fds)
+
+    # Elaboration
+    param_map = {}
+    nar = sim2.NetAssignmentRegistry()
+    fdr = sim2.FunctionDefinitionRegistry()
+    value_state = sim2.ValueState()
+    module_defs["main"].elaborate("main", param_map, module_defs, nar, fdr, value_state)
+
 test_1()
 test_2()
 test_3()
 test_4()
+test_5()
