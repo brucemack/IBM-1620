@@ -63,13 +63,15 @@ def test_1():
 # A basic wire demonstration
 def test_2():
 
+    print("----- test_2 ------------------------------------------------------")
+
     """
     module mod0();
       wire a;
       wire b;
       assign a = b | 0;
       assign b = 1;
-    endmodule;
+    endmodule
     """
 
     # List of net declarations
@@ -89,7 +91,6 @@ def test_2():
 
     # Elaborate a module instance
     eval_context = sim2.EvalContext()
-
     param_map = {}
     module_defs["mod0"].elaborate("root", 
                                   "main", 
@@ -99,7 +100,7 @@ def test_2():
                                   eval_context.func_def_reg, 
                                   eval_context.value_state)
     
-    eval_context.net_reg.debug()
+    eval_context.start()
 
     # Change the value of "b" and demonstrate that "a" is changed as well
     eval_context.set_value("root.main.b", sim2.Value(0)) 
@@ -129,8 +130,18 @@ def test_3():
 # A wire-OR example
 def test_4():
 
-    print("----- test_3 ------------------------------------------------------")
+    print("----- test_4 ------------------------------------------------------")
 
+    """
+    module mod0();
+      wor a;
+      wire b;
+      wire c;
+      // Notice here we are assigning to the same net twice
+      assign a = b;
+      assign a = c;
+    endmodule
+    """
     # List of net declarations
     nds = [ sim2.NetDeclaration("a", sim2.NetType.WOR), 
             sim2.NetDeclaration("b", sim2.NetType.WIRE),
@@ -145,40 +156,43 @@ def test_4():
             sim2.NetAssignment("a", e1) ]
 
     # Define a module 
-    md0 = sim2.ModuleDefinition("mod0", [ ], nds, nas, [ ], [ ])
+    module_defs: dict[str, sim2.ModuleDefinition] = {}
+    module_defs["mod0"] = sim2.ModuleDefinition("mod0", [ ], nds, nas, [ ], [ ])
 
-    # Create a module instance
-    value_state = sim2.ValueState()
-    mi0 = sim2.ModuleInstance("m0", md0, {}, value_state)
-    mi0.init()
+    # Instantiate the module
 
-    active_queue = []
+    # Elaborate a module instance
+    eval_context = sim2.EvalContext()
+    param_map = {}
+    module_defs["mod0"].elaborate("root", 
+                                  "main", 
+                                  param_map, 
+                                  module_defs, 
+                                  eval_context.net_reg, 
+                                  eval_context.func_def_reg, 
+                                  eval_context.value_state)
+    eval_context.start()
+    
+    eval_context.set_value("root.main.b", sim2.Value(0))
+    eval_context.set_value("root.main.c", sim2.Value(0))
+    eval_context.flush_active_queue()
 
-    mi0.set_value("b", sim2.Value(0), active_queue)
-    mi0.set_value("c", sim2.Value(0), active_queue)
-
-    # Apply the events
-    for event in active_queue:
-        value_state.set_value(event.name, event.value)
-    active_queue.clear()
-
-    assert value_state.get_value("a") == sim2.Value(0)
+    assert eval_context.value_state.get_value("root.main.a") == sim2.Value(0)
 
     # Set one of the two drivers to 1
-    mi0.set_value("b", sim2.Value(1), active_queue)
-    # Apply the events
-    for event in active_queue:
-        value_state.set_value(event.name, event.value)
-    active_queue.clear()
+    eval_context.set_value("root.main.b", sim2.Value(1))
+    eval_context.flush_active_queue()
 
     # Should see wire-OR
-    assert value_state.get_value("a") == sim2.Value(1)
+    assert eval_context.value_state.get_value("root.main.a") == sim2.Value(1)
 
 # A module with a sub-module
 def test_5():
 
+    print("----- test_5 ------------------------------------------------------")
+
     """
-    module main();
+    module mod0();
       wire a = 1;
       wire b = 0;
       wire c;
@@ -206,7 +220,7 @@ def test_5():
     # Function definitions 
     fds = []
     # Define a module 
-    module_defs["main"] = sim2.ModuleDefinition("main", ports, nds, nas, mis, fds)
+    module_defs["mod0"] = sim2.ModuleDefinition("mod0", ports, nds, nas, mis, fds)
 
     # Port declarations
     ports = [ sim2.PortDeclaration("x", sim2.PortType.INPUT),
@@ -227,11 +241,25 @@ def test_5():
     module_defs["and"] = sim2.ModuleDefinition("and", ports, nds, nas, mis, fds)
 
     # Elaboration
+    eval_context = sim2.EvalContext()
     param_map = {}
-    nar = sim2.NetAssignmentRegistry()
-    fdr = sim2.FunctionDefinitionRegistry()
-    value_state = sim2.ValueState()
-    module_defs["main"].elaborate("main", param_map, module_defs, nar, fdr, value_state)
+
+    module_defs["mod0"].elaborate("root", 
+                                  "main", 
+                                  param_map, 
+                                  module_defs, 
+                                  eval_context.net_reg, 
+                                  eval_context.func_def_reg, 
+                                  eval_context.value_state)
+    eval_context.start()
+
+    # Test initial value
+    assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_0
+
+    # Set some values to show that the submodule is working
+    eval_context.set_value("root.main.b", sim2.Value(1))
+    eval_context.flush_active_queue()
+    assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_1
 
 test_1()
 test_2()

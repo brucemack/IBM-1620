@@ -549,12 +549,7 @@ class ModuleDefinition:
         for fd in self.function_definitions:
             global_function_registry.add_function(path + "." + name + "." + fd.get_name(), 
                 fd.elaborate(path + "." + name))
-            
-        # Register the net declarations into a global repository
-        for nd in self.net_declarations:
-            global_net_reg.declare(path + "." + name + "." + nd.get_name(), 
-                                   nd.get_net_type())
-
+        
         # Create some additional assignments to wire the module parameters. 
         # These assignments depend on the direction of the port.
         for inner_name, global_outer_name in param_map.items():
@@ -568,16 +563,25 @@ class ModuleDefinition:
 
             if pd.port_type == PortType.INPUT:
                 # Register the assignment: inner <- outer
+                # NOTE: We assume that the outer name is already declared
+                global_net_reg.declare(global_inner_name, NetType.WIRE)
                 global_net_reg.add_assignment(global_inner_name,
                                               VariableExpression(global_outer_name))                                                 
             elif pd.port_type == PortType.OUTPUT:
                 # Register the assignment: outer <- inner
+                # NOTE: We assume that the outer name is already declared
+                # TODO: THE PORT ASSIGNMENTS CAN BE VARIABLES OR WIRES
+                global_net_reg.declare(global_inner_name, NetType.WIRE)
                 global_net_reg.add_assignment(global_outer_name,
                                               VariableExpression(global_inner_name))                                                 
             else:
                 raise Exception("Invalid port type")
 
-        # Instantiate the required global net assignments
+        # Register the net declarations into a global repository
+        for nd in self.net_declarations:
+            global_net_reg.declare(path + "." + name + "." + nd.get_name(), nd.get_net_type())
+
+        # Instantiate the required global assignments
         for na in self.net_assignments:
             global_net_name = path + "." + name + "." + na.get_name()
             # Globalize the RHS of the assignment
@@ -598,8 +602,8 @@ class ModuleDefinition:
             for port in mi.ports:
                 child_param_map[port.inside_name] = path + "." + name + "." + port.outside_name
             module_def.elaborate(path + "." + name, mi.instance_name,
-                child_param_map, module_defs, global_function_registry, 
-                global_net_assignments, global_value_state)
+                child_param_map, module_defs, global_net_reg, global_function_registry, 
+                global_value_state)
 
 # ----- Simulation Engine ----------------------------------------------------
 
@@ -628,15 +632,22 @@ class NetInformation:
         self.name = name
         self.type = type 
         self.assignments: list[Expression] = []
+        self.dirty: bool = True  
+
+    def has_any_drivers(self) -> bool:
+        return len(self.assignments) > 0
 
 # Used for storing net types and assignments
 class NetRegistry:
 
-    def __init__(self):
+    def __init__(self, value_state: ValueState):
+        self.value_state = value_state
         self.reg: dict[str, NetInformation] = {}
 
     def declare(self, name: str, type: NetType):
         self.reg[name] = NetInformation(name, type)
+        # Initial value
+        self.value_state.set_value(name, LOGIC_X)
 
     def add_assignment(self, name: str, exp: Expression):
         if not name in self.reg:
@@ -645,7 +656,7 @@ class NetRegistry:
 
     def debug(self):
         for name, decl in self.reg.items():
-            print(name, "<-", str(decl.assignments))
+            print(name, "[", str(decl.type), "]", "<-", str(decl.assignments))
 
 
 class FunctionDefinitionRegistry:
@@ -666,9 +677,15 @@ class EvalContext:
     def __init__(self):
         self.value_state: ValueState = ValueState()
         self.func_def_reg = FunctionDefinitionRegistry()
-        self.net_reg = NetRegistry()
+        self.net_reg = NetRegistry(self.value_state)
         self.active_queue: list[UpdateEvent] = []
     
+    def start(self):
+        # Evaluate everything once to make sure all initial conditions are
+        # reflected properly.
+        self.update_dirty_nets()
+        self.flush_active_queue()
+
     def get_value(self, name: str):
         if not self.value_state.is_value_available(name):
             raise Exception("No value available for " + name)
@@ -685,33 +702,42 @@ class EvalContext:
             # Save value
             self.value_state.set_value(name, value)
 
-            # Figure out which nets need to be recomputed now
-            dirty_nets = set()
-            # Go through every registered assignment
+            # Figure out which nets need to be recomputed now as a result
             for net_name, net_info in self.net_reg.reg.items():
                 # Each signal can have multiple assignments contributing to it
                 for assignment in net_info.assignments:
                     if name in assignment.get_references():
-                        dirty_nets.add(net_name)
+                        net_info.dirty = True
 
-            # Do the recomputation for each dirty symbol
-            for dirty_net in dirty_nets:
-                print("Dirty Net", dirty_net)
+            # Trigger all recomputes
+            self.update_dirty_nets()
 
-                # The net may have more than one driver, so evaluate them all
-                driving_values = []
-                for assignment in self.net_reg.reg[dirty_net].assignments:
-                    print("   Driving Expression:", str(assignment))
-                    driving_value = assignment.evaluate(self)
-                    driving_values.append(driving_value)
-
-                new_value = wire_logic_eval(driving_values, self.net_reg.reg[dirty_net].type)
-
-                # Create an event to store back the new value
-                self.active_queue.append(UpdateEvent(dirty_net, new_value))
-                # TODO: COLLAPSE REDUNDANT ASSIGNMENTS
         else:
             print("Value has not changed, ignoring")
+    
+    def update_dirty_nets(self):
+
+        for net_name, net_info in self.net_reg.reg.items():
+            if net_info.dirty:
+                print("Dirty Net", net_name)
+
+                if net_info.has_any_drivers():
+
+                    # The net may have more than one driver, so evaluate them all
+                    driving_values = []
+                    for assignment in net_info.assignments:
+                        print("   Driving Expression:", str(assignment))
+                        driving_value = assignment.evaluate(self)
+                        driving_values.append(driving_value)
+
+                    new_value = wire_logic_eval(driving_values, net_info.type)
+
+                    # Create an event to store back the new value
+                    # TODO: COLLAPSE REDUNDANT ASSIGNMENTS
+                    self.active_queue.append(UpdateEvent(net_name, new_value))
+
+                # Clear dirty flag
+                net_info.dirty = False
 
     def flush_active_queue(self):
 
