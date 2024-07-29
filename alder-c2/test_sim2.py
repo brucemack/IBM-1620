@@ -261,8 +261,108 @@ def test_5():
     eval_context.flush_active_queue()
     assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_1
 
-test_1()
-test_2()
-test_3()
-test_4()
-test_5()
+# A module with a sub-module that contains a function
+def test_6():
+
+    print("----- test_6 ------------------------------------------------------")
+
+    """
+    module mod0();
+      wire a = 1;
+      wire b = 0;
+      wire c;
+      and m0(.x(a), .y(b), .z(c));
+    endmodule;
+    module and(input x, input y, output z);
+      function p(input q, input r);
+        begin
+          p = q & r;
+        end
+      endfunction
+      z = p(x, y);
+    endmodule;
+    """
+
+    module_defs = {}
+
+    # Port declarations
+    ports = []
+    # Net definitions
+    nds = [ sim2.NetDeclaration("a", sim2.NetType.WIRE),
+            sim2.NetDeclaration("b", sim2.NetType.WIRE),
+            sim2.NetDeclaration("c", sim2.NetType.WIRE) ]
+    # Net assignments
+    nas = [ sim2.NetAssignment("a", sim2.ConstantExpression(sim2.Value(True))),
+            sim2.NetAssignment("b", sim2.ConstantExpression(sim2.Value(False))) ]
+    # Module instantiations
+    mis = [ sim2.ModuleInstantiation("and1", "m0", [ sim2.PortAssignment("x", "a"), 
+                                                    sim2.PortAssignment("y", "b"),                                                sim2.PortAssignment("z", "c") ] ) ]
+    # Function definitions 
+    fds = []
+    # Define a module 
+    module_defs["mod0"] = sim2.ModuleDefinition("mod0", ports, nds, nas, mis, fds)
+
+    # Port declarations
+    ports = [ sim2.PortDeclaration("x", sim2.PortType.INPUT),
+              sim2.PortDeclaration("y", sim2.PortType.INPUT),
+              sim2.PortDeclaration("z", sim2.PortType.OUTPUT) ]
+    # Net definitions
+    nds = [ ]
+    # Net assignments
+    nas = [ sim2.NetAssignment("z", sim2.FunctionExpression("p", [
+                sim2.VariableExpression("x"), 
+                sim2.VariableExpression("y") 
+            ]))
+        ]
+    # Module instantiations
+    mis = [ ]
+    # Function definitions 
+    fds = [ sim2.FunctionDefinition("p", 
+                [ sim2.FunctionParameterDeclaration("q", sim2.PortType.INPUT), 
+                  sim2.FunctionParameterDeclaration("r", sim2.PortType.INPUT) ], 
+                [], 
+                sim2.ProcedureBlock( [ sim2.ProcedureAssignment("p",
+                                            sim2.BinaryExpression("&", 
+                                                                  sim2.VariableExpression("q"),
+                                                                  sim2.VariableExpression("r"))) ] ) )
+          ]
+    # Define a module 
+    module_defs["and1"] = sim2.ModuleDefinition("and1", ports, nds, nas, mis, fds)
+
+    # Elaboration
+    eval_context = sim2.EvalContext()
+    param_map = {}
+
+    module_defs["mod0"].elaborate("root", 
+                                  "main", 
+                                  param_map, 
+                                  module_defs, 
+                                  eval_context.net_reg, 
+                                  eval_context.func_def_reg,     
+                                  eval_context.value_state)
+    #print(module_defs["mod0"])
+    #print(module_defs["and1"])
+
+    eval_context.net_reg.debug()
+
+    eval_context.start()
+
+    # Test initial value
+    print(eval_context.value_state.get_value("root.main.c"))
+    assert eval_context.value_state.get_value("root.main.a") == sim2.LOGIC_1
+    assert eval_context.value_state.get_value("root.main.b") == sim2.LOGIC_0
+    #assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_0
+
+    quit()
+
+    # Set some values to show that the submodule is working
+    eval_context.set_value("root.main.b", sim2.Value(1))
+    eval_context.flush_active_queue()
+    assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_1
+
+#test_1()
+#test_2()
+#test_3()
+#test_4()
+#test_5()
+test_6()

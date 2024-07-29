@@ -29,7 +29,16 @@ class Value:
         return self.value
 
     def __repr__(self) -> str:
-        return str(self.value)
+        if self.is_x():
+            return "1'bx"
+        elif self.is_z():
+            return "1'bz"
+        elif self.value == 0:
+            return "1'b0"
+        elif self.value == 1:
+            return "1'b1"
+        else:
+            return str(self.value)
 
 LOGIC_0 = Value(0)
 LOGIC_1 = Value(1)
@@ -225,10 +234,27 @@ class FunctionExpression(Expression):
         # Extract the return value based on the name of the function
         return function_context.get_value(function_def.get_name())
 
+    def get_references(self) -> list[str]:
+        result = []
+        for param in self.params:
+            result.extend(param.get_references())
+        return result
+
     def globalize(self, name_prefix: str, local_variables: list[str]) -> Expression:
         # Globalize the parameter list
         return FunctionExpression(name_prefix + "." + self.name, 
                 [p.globalize(name_prefix, local_variables) for p in self.params])
+
+    def __repr__(self):
+        s = self.name + "("
+        first = True
+        for param in self.params:
+            if not first:
+                s = s + ", "
+            s = s + str(param)
+            first = False
+        s = s + ")"
+        return s
 
 # --------------------------------------------------------------------------
 
@@ -274,7 +300,6 @@ def wire_logic_eval(drivers: list[Value], net_type: NetType):
 
 # ----- Declarations -----------------------------------------------------
 
-
 class SignalDeclaration:
 
     def __init__(self, name: str, type: DataType):
@@ -292,6 +317,9 @@ class NetDeclaration(SignalDeclaration):
 
     def get_net_type(self): return self.net_type
 
+    def __repr__(self):       
+        return self.net_type.name.lower() + " " + self.name
+
 class VariableDeclaration(SignalDeclaration):
 
     def __init__(self, name: str):
@@ -303,14 +331,35 @@ class PortDeclaration(NetDeclaration):
         super().__init__(name, NetType.WIRE)
         self.port_type = port_type
 
-class FunctionParameter:
+    def get_port_type(self): return self.port_type
 
-    def __init__(self, name: str):
-        self.name = name
+    def __repr__(self):
+        if self.port_type == PortType.INPUT:
+            s = "input "
+        elif self.port_type == PortType.OUTPUT:
+            s = "output "
+        else:
+            raise Exception("Invalid type")
+        s = s + self.get_name()
+        return s
+
+class FunctionParameterDeclaration:
+
+    def __init__(self, name: str, port_type: PortType):
+        self.name = name 
+        self.port_type = port_type
 
     def get_name(self): return self.name
 
-    def __repr__(self) -> str: return self.name
+    def __repr__(self) -> str: 
+        if self.port_type == PortType.INPUT:
+            s = "input "
+        elif self.port_type == PortType.OUTPUT:
+            s = "output "
+        else:
+            raise Exception("Invalid type")
+        s = s + self.name
+        return s
 
 class Statement:
 
@@ -380,7 +429,7 @@ class FunctionDefinition:
     
     def __init__(self, 
                  name: str, 
-                 params: list[FunctionParameter], 
+                 params: list[FunctionParameterDeclaration], 
                  local_variables: list[VariableDeclaration], 
                  procedure_block: ProcedureBlock):
 
@@ -493,12 +542,18 @@ class NetAssignment:
     def get_name(self): return self.name 
     def get_exp(self): return self.exp
 
+    def __repr__(self):
+        return "assign " + self.name + " = " + str(self.exp)
+
 class PortAssignment:
 
     def __init__(self, inside_name: str, outside_name: str):
 
         self.inside_name = inside_name
         self.outside_name = outside_name
+
+    def __repr__(self):
+        return "." + self.inside_name + "(" + self.outside_name + ")"
 
 class ModuleInstantiation:
 
@@ -511,6 +566,17 @@ class ModuleInstantiation:
         self.instance_name = instance_name 
         self.ports = ports
 
+    def __repr__(self):
+        s = self.name + " " + self.instance_name + "("
+        first = True
+        for port in self.ports:
+            if not first:
+                s = s + ", "                
+            s = s + str(port)
+            first = False
+        s = s + ")"
+        return s
+    
 class ModuleDefinition:
 
     def __init__(self, 
@@ -524,15 +590,9 @@ class ModuleDefinition:
         self.name = name
         self.module_instantiations = module_instantiations
         self.function_definitions: list[FunctionDefinition] = function_definitions
-        self.port_declarations: dict[str, PortDeclaration] = {} 
+        self.port_declarations: list[PortDeclaration] = port_declarations
         self.net_declarations: list[NetDeclaration] = net_declarations
         self.net_assignments: list[NetAssignment] = net_assignments
-
-        # Move the port declarations into a map 
-        for pd in port_declarations:
-            if pd.get_name() in self.port_declarations:
-                raise Exception("Redundant port declaration " + pd.get_name())
-            self.port_declarations[pd.get_name()] = pd
 
     def elaborate(self, 
                   path: str, 
@@ -557,9 +617,14 @@ class ModuleDefinition:
             # Globalize the names involved in the port assignment
             global_inner_name = path + "." + name + "." + inner_name
 
-            if not inner_name in self.port_declarations:
+            # Find the appropriate port 
+            pd = None
+            for potential_pd in self.port_declarations:
+                if potential_pd.get_name() == inner_name:
+                    pd = potential_pd
+                    break
+            if not pd:
                 raise Exception("Port not defined " + inner_name)
-            pd = self.port_declarations[inner_name]
 
             if pd.port_type == PortType.INPUT:
                 # Register the assignment: inner <- outer
@@ -592,7 +657,6 @@ class ModuleDefinition:
             # Set the initial value
             global_value_state.set_value(global_net_name, LOGIC_X)
 
-
         # Deal with next level down of modules
         for mi in self.module_instantiations:
             module_def = module_defs[mi.name]
@@ -604,6 +668,26 @@ class ModuleDefinition:
             module_def.elaborate(path + "." + name, mi.instance_name,
                 child_param_map, module_defs, global_net_reg, global_function_registry, 
                 global_value_state)
+
+    def __repr__(self):
+        s = "module " + self.name + "("
+        first = True
+        for pd in self.port_declarations:
+            if not first:
+                s = s + ","
+            s = s + str(pd)
+            first = False
+        s = s + ");\n"
+        for nd in self.net_declarations:
+            s = s + str(nd) + ";\n"
+        for fd in self.function_definitions:
+            s = s + str(fd)
+        for na in self.net_assignments:
+            s = s + str(na) + ";\n"
+        for mi in self.module_instantiations:
+            s = s + str(mi) + ";\n"
+        s = s + "endmodule"
+        return s
 
 # ----- Simulation Engine ----------------------------------------------------
 
