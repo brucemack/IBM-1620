@@ -341,20 +341,13 @@ def test_6():
                                   eval_context.net_reg, 
                                   eval_context.func_def_reg,     
                                   eval_context.value_state)
-    #print(module_defs["mod0"])
-    #print(module_defs["and1"])
-
-    eval_context.net_reg.debug()
 
     eval_context.start()
 
     # Test initial value
-    print(eval_context.value_state.get_value("root.main.c"))
     assert eval_context.value_state.get_value("root.main.a") == sim2.LOGIC_1
     assert eval_context.value_state.get_value("root.main.b") == sim2.LOGIC_0
-    #assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_0
-
-    quit()
+    assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_0
 
     # Set some values to show that the submodule is working
     eval_context.set_value("root.main.b", sim2.Value(1))
@@ -385,14 +378,42 @@ module and(input x, input y, output z);
 endmodule
 """
     )
-
+    
     result = sim2.Transformer().transform(tree)
-    print("result", result)
+
+    # Move the modules into a map
+    module_defs = {}
+    for module_def in result:
+        module_defs[module_def.get_name()] = module_def
+
+    # Elaboration
+    eval_context = sim2.EvalContext()
+    param_map = {}
+
+    module_defs["mod0"].elaborate("root", 
+                                  "main", 
+                                  param_map, 
+                                  module_defs, 
+                                  eval_context.net_reg, 
+                                  eval_context.func_def_reg,     
+                                  eval_context.value_state)
+
+    eval_context.start()
+
+    # Test initial values
+    assert eval_context.value_state.get_value("root.main.a") == sim2.LOGIC_1
+    assert eval_context.value_state.get_value("root.main.b") == sim2.LOGIC_0
+    assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_0
+
+    # Set some values to show that the submodule is working
+    eval_context.set_value("root.main.b", sim2.Value(1))
+    eval_context.flush_active_queue()
+    assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_1
 
 #test_1()
 #test_2()
 #test_3()
 #test_4()
 #test_5()
-#test_6()
+test_6()
 test_7()

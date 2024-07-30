@@ -608,6 +608,8 @@ class ModuleDefinition:
         self.net_declarations: list[NetDeclaration] = net_declarations
         self.net_assignments: list[NetAssignment] = net_assignments
 
+    def get_name(self): return self.name
+
     def elaborate(self, 
                   path: str, 
                   name: str,
@@ -616,8 +618,6 @@ class ModuleDefinition:
                   global_net_reg: NetRegistry,
                   global_function_registry: FunctionDefinitionRegistry,
                   global_value_state: ValueState):
-
-        print("Elaborating", path + "." + name, "with", param_map)
 
         # Register the function definitions into a global repository
         for fd in self.function_definitions:
@@ -1045,9 +1045,9 @@ class Transformer(lark.visitors.Transformer):
         return VariableExpression(items[0])
 
     def exp_binary_constant(self, items):
-        return ConstantExpression(items)
+        return ConstantExpression(items[0])
     
     def exp_signed_number(self, items):
-        return ConstantExpression(Value(items))
+        return ConstantExpression(Value(items[0]))
 
 
