@@ -19,22 +19,22 @@ modulestatement: netdeclaration
 netdeclaration: nettype IDENTIFIER ";" 
               | nettype IDENTIFIER "=" exp ";" -> netdeclaration_assign
 
-nettype: (WIRE | TRI | WAND | WOR)
+nettype: (WIRE | TRI | WAND | WOR | SUPPLY0 | SUPPLY1)
 
-functiondeclaration: "function" IDENTIFIER "(" paramdeclarations ")" ";" functionstatements "endfunction"
+functiondeclaration: "function" IDENTIFIER "(" paramdeclarations ")" ";" functionbody "endfunction"
 
 // IMPORTANT: This allows an empty list (i.e. optional)
 paramdeclarations: (paramdeclaration ("," paramdeclaration)*)?
 
-paramdeclaration: paramtype IDENTIFIER
+paramdeclaration: porttype IDENTIFIER
 
-paramtype: (INPUT | OUTPUT)
+functionbody: functionstatement -> functionbody_single
+            | "begin" functionstatements "end" -> functionbody_block 
+            | -> functionbody_none 
 
 functionstatements: functionstatement*
 
-functionstatement: variabledeclaration
-                 | procedureassignment
-                 | "begin" functionstatements "end"
+functionstatement: procedureassignment
 
 variabledeclaration: variabletype IDENTIFIER ";"
 
@@ -44,13 +44,13 @@ procedureassignment: IDENTIFIER "=" exp ";"
 
 netassignment: IDENTIFIER "=" exp ";"
 
-moduleinstantiation: IDENTIFIER IDENTIFIER "(" ports ")" ";"
+moduleinstantiation: IDENTIFIER IDENTIFIER "(" port_assignments ")" ";"
 
 // IMPORTANT: This allows for an empty list of ports
-ports: (port ("," port)*)?
+port_assignments: (port_assignment ("," port_assignment)*)?
 
-port: "." IDENTIFIER "(" exp ")"
-    | "." IDENTIFIER "(" IDENTIFIER ")"
+port_assignment: "." IDENTIFIER "(" IDENTIFIER ")" -> port_assignment_id
+               | "." IDENTIFIER "(" exp ")" -> port_assignment_exp
 
 exp: exp "|" exp -> exp_or
    | exp "&" exp -> exp_and
@@ -63,21 +63,27 @@ exp: exp "|" exp -> exp_or
    | "(" exp ")" -> exp_paren
    | IDENTIFIER "(" exps ")" -> exp_func
    | IDENTIFIER -> exp_id
-   | SIGNED_NUMBER -> exp_number
+   | BINARY_CONSTANT -> exp_binary_constant
+   | SIGNED_NUMBER -> exp_signed_number
 
 // IMPORTANT: Supports an empty list
 exps: (exp ("," exp)* )?
 
-
+// Using regular expression syntax
 IDENTIFIER: /[A-Za-z_][A-Za-z_0-9]*/
+
 WIRE: "wire"
 TRI: "tri"
 WAND: "wand"
 WOR: "wor"
+SUPPLY0: "supply0"
+SUPPLY1: "supply1"
+
 REG: "reg"
 INTEGER: "integer"
 INPUT: "input"
 OUTPUT: "output"
+BINARY_CONSTANT: ("0".."9")+"'b"("0" | "1" | "x" | "z")
 
 %import common.ESCAPED_STRING
 %import common.SIGNED_NUMBER
@@ -88,4 +94,3 @@ OUTPUT: "output"
 %ignore WS
 %ignore CPP_COMMENT
 %ignore C_COMMENT
-

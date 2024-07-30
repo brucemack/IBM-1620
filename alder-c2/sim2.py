@@ -321,14 +321,18 @@ class SignalDeclaration:
 
 class NetDeclaration(SignalDeclaration):
 
-    def __init__(self, name: str, net_type: NetType):
+    def __init__(self, name: str, net_type: NetType, assign_exp: Expression = None):
         super().__init__(name, DataType.NET)
         self.net_type = net_type
+        self.exp = assign_exp
 
     def get_net_type(self): return self.net_type
 
-    def __repr__(self):       
-        return self.net_type.name.lower() + " " + self.name
+    def __repr__(self):      
+        s = self.net_type.name.lower() + " " + self.name
+        if self.exp:
+            s = s + " = " + str(self.exp)
+        return s
 
 class VariableDeclaration(SignalDeclaration):
 
@@ -349,7 +353,7 @@ class PortDeclaration(NetDeclaration):
         elif self.port_type == PortType.OUTPUT:
             s = "output "
         else:
-            raise Exception("Invalid type")
+            raise Exception("Invalid type " + self.port_type)
         s = s + self.get_name()
         return s
 
@@ -653,10 +657,17 @@ class ModuleDefinition:
                 raise Exception("Invalid port type")
 
         # Register the net declarations into a global repository
+        # Ex:
+        #   wire a;
         for nd in self.net_declarations:
-            global_net_reg.declare(path + "." + name + "." + nd.get_name(), nd.get_net_type())
+            global_net_name = path + "." + name + "." + nd.get_name()
+            global_net_reg.declare(global_net_name, nd.get_net_type())
+            # Set the initial value
+            global_value_state.set_value(global_net_name, LOGIC_X)
 
-        # Instantiate the required global assignments
+        # Instantiate the required global assignments (stand-alone assignments)
+        # Ex:
+        #   assign a = (b | c);
         for na in self.net_assignments:
             global_net_name = path + "." + name + "." + na.get_name()
             # Globalize the RHS of the assignment
@@ -664,8 +675,18 @@ class ModuleDefinition:
             global_exp = na.exp.globalize(path + "." + name, [])
             # Add the assignment to the global registry
             global_net_reg.add_assignment(global_net_name, global_exp)
-            # Set the initial value
-            global_value_state.set_value(global_net_name, LOGIC_X)
+
+        # Instantiate the required global assignments (assignments that are part of the declarations)
+        # Ex: 
+        #   wire a = (b | c);
+        for nd in self.net_declarations:
+            if nd.exp:
+                global_net_name = path + "." + name + "." + nd.get_name()
+                # Globalize the RHS of the assignment
+                # TODO: DEAL WITH LOCAL VARIABLE LIST
+                global_exp = nd.exp.globalize(path + "." + name, [])
+                # Add the assignment to the global registry
+                global_net_reg.add_assignment(global_net_name, global_exp)
 
         # Deal with next level down of modules
         for mi in self.module_instantiations:
@@ -857,23 +878,176 @@ class UpdateEvent:
 
 # ===== Lark Transformer ======================================================
 
+def parse_binary_constant(c):
+    # TODO: COMPLETE
+    if c.startswith("1'b"):
+        s = c[3:]
+        if s == "0":
+            return LOGIC_0
+        elif s == "1":
+            return LOGIC_1
+        elif s == "x":
+            return LOGIC_X
+        elif s == "z":
+            return LOGIC_Z
+        else:
+            raise Exception("Binary constant format error " + c)
+    else:
+        raise Exception("Binary constant format error " + c)
+
 class Transformer(lark.visitors.Transformer):
-    def start(self, items):
-        return "hello?"
-    def module(self, items):
-        print("module", items)
-    def portdeclarations(self, items):
-        return [str(x) for x in items]
-    def modulestatements(self, items):
-        return [str(x) for x in items]
-    def modulestatement(self, items):
-        return "a"
+
     def IDENTIFIER(self, items):
         return str(items)
+
+    def BINARY_CONSTANT(self, items):
+        return parse_binary_constant(str(items))
+
+    def SIGNED_NUMBER(self, items):
+        return int(str(items))
+
+    def WIRE(self, items): return NetType.WIRE
+    def TRI(self, items): return NetType.WIRE
+    def WAND(self, items): return NetType.WAND
+    def WOR(self, items): return NetType.WOR
+    def SUPPLY0(self, items): return NetType.SUPPLY0
+    def SUPPLY1(self, items): return NetType.SUPPLY1
+
+    def INPUT(self, items): return PortType.INPUT
+    def OUTPUT(self, items): return PortType.OUTPUT
+
+    def start(self, items) -> list[ModuleDefinition]:
+        # Return an array of ModuleDefinitions
+        return items
+
+    def module(self, items) -> ModuleDefinition:
+        nds = []
+        nas = []
+        mis = []
+        fds = []
+        # Distribute the module statements into the proper buckets
+        for statement in items[2]:
+            if type(statement) is NetDeclaration:
+                nds.append(statement)
+            elif type(statement) is NetAssignment:
+                nas.append(statement)
+            elif type(statement) is ModuleInstantiation:
+                mis.append(statement)
+            elif type(statement) is FunctionDefinition:
+                fds.append(statement)
+            else:
+                raise Exception("Unrecognized statement type " + str(type(statement)))
+        return ModuleDefinition(items[0], items[1], nds, nas, mis, fds)
+
+    def portdeclarations(self, items):
+        return items
+
+    def portdeclaration(self, items):
+        return PortDeclaration(items[1], items[0])
+
+    def porttype(self, items):
+        return items[0]
+
+    def modulestatements(self, items):
+        return items
+
+    def modulestatement(self, items):
+        return items[0]
+
+    def netdeclaration(self, items):
+        return NetDeclaration(items[1], items[0], None) 
     
+    def netdeclaration_assign(self, items):
+        return NetDeclaration(items[1], items[0], items[2]) 
+
+    def netassignment(self, items):
+        return NetAssignment(items[0], items[1])
+
+    def functiondeclaration(self, items):
+        local_variables = []
+        return FunctionDefinition(items[0], items[1], local_variables, ProcedureBlock(items[2]))
+
+    def paramdeclarations(self, items):
+        return items
+
+    def paramdeclaration(self, items):
+        return FunctionParameterDeclaration(items[1], items[0])
+
+    def moduleinstantiation(self, items):
+        return ModuleInstantiation(items[0], items[1], items[2])
+
+    def nettype(self, items):
+        return items[0]
+
+    def port_assignments(self, items):
+        return items
+
+    def port_assignment_id(self, items):
+        return PortAssignment(items[0], items[1])
+
+    def port_assignment_exp(self, items):
+        raise Exception("Not supported yet")   
+
+    def functionbody_single(self, items):
+        return [ items[0] ]
+    
+    def functionbody_block(self, items):
+        return items[0]
+    
+    def functionbody_none(self, items):
+        return [ ]
+
+    def functionstatements(self, items):
+        return items
+
+    def functionstatement(self, items):
+        return items[0]
+    
+    def procedureassignment(self, items):
+        return ProcedureAssignment(items[0], items[1])
+
     # ----- Expression Stuff --------------------------------------------------
 
-    
+    def exps(self, items):
+        return items
 
+    def exp_or(self, tree):
+        return BinaryExpression("|", tree[0], tree[1])
+
+    def exp_and(self, tree):
+        return BinaryExpression("&", tree[0], tree[1])
+
+    def exp_xor(self, tree):
+        return BinaryExpression("^", tree[0], tree[1])
+
+    def exp_lt(self, tree):
+        return BinaryExpression("<", tree[0], tree[1])
+
+    def exp_lte(self, tree):
+        return BinaryExpression("<=", tree[0], tree[1])
+
+    def exp_gt(self, tree):
+        return BinaryExpression(">", tree[0], tree[1])
+
+    def exp_gte(self, tree):
+        return BinaryExpression(">=", tree[0], tree[1])
+
+    def exp_not(self, tree):
+        return UnaryExpression("!", tree)
+
+    def exp_paren(self, tree):
+        return tree
+
+    def exp_func(self, items):
+        return FunctionExpression(items[0], items[1])
+
+    def exp_id(self, items):
+        return VariableExpression(items[0])
+
+    def exp_binary_constant(self, items):
+        return ConstantExpression(items)
     
-    
+    def exp_signed_number(self, items):
+        return ConstantExpression(Value(items))
+
+

@@ -370,8 +370,8 @@ def test_7():
 """
 // Test
 module mod0();
-  wire a = 1;
-  wire b = 0;
+  wire a = 1'b1;
+  wire b = 1'b0;
   wire c;
   and m0(.x(a), .y(b), .z(c));
 endmodule
