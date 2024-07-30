@@ -1,0 +1,91 @@
+start: module*
+
+module: "module" IDENTIFIER "(" portdeclarations ")" ";" modulestatements "endmodule"
+
+// IMPORTANT: This allows an empty list (i.e. optional)
+portdeclarations: (portdeclaration ("," portdeclaration)*)?
+
+portdeclaration: porttype IDENTIFIER
+
+porttype: (INPUT | OUTPUT)
+
+modulestatements: modulestatement*
+
+modulestatement: netdeclaration
+               | functiondeclaration
+               | netassignment
+               | moduleinstantiation
+
+netdeclaration: nettype IDENTIFIER ";" 
+              | nettype IDENTIFIER "=" exp ";" -> netdeclaration_assign
+
+nettype: (WIRE | TRI | WAND | WOR)
+
+functiondeclaration: "function" IDENTIFIER "(" paramdeclarations ")" ";" functionstatements "endfunction"
+
+// IMPORTANT: This allows an empty list (i.e. optional)
+paramdeclarations: (paramdeclaration ("," paramdeclaration)*)?
+
+paramdeclaration: paramtype IDENTIFIER
+
+paramtype: (INPUT | OUTPUT)
+
+functionstatements: functionstatement*
+
+functionstatement: variabledeclaration
+                 | procedureassignment
+                 | "begin" functionstatements "end"
+
+variabledeclaration: variabletype IDENTIFIER ";"
+
+variabletype: ( REG | INTEGER )
+
+procedureassignment: IDENTIFIER "=" exp ";"
+
+netassignment: IDENTIFIER "=" exp ";"
+
+moduleinstantiation: IDENTIFIER IDENTIFIER "(" ports ")" ";"
+
+// IMPORTANT: This allows for an empty list of ports
+ports: (port ("," port)*)?
+
+port: "." IDENTIFIER "(" exp ")"
+    | "." IDENTIFIER "(" IDENTIFIER ")"
+
+exp: exp "|" exp -> exp_or
+   | exp "&" exp -> exp_and
+   | exp "^" exp -> exp_xor
+   | ("!" | "~") exp -> exp_not
+   | exp ">" exp -> exp_gt
+   | exp ">=" exp -> exp_gte
+   | exp "<" exp -> exp_lt
+   | exp "<=" exp -> exp_lte
+   | "(" exp ")" -> exp_paren
+   | IDENTIFIER "(" exps ")" -> exp_func
+   | IDENTIFIER -> exp_id
+   | SIGNED_NUMBER -> exp_number
+
+// IMPORTANT: Supports an empty list
+exps: (exp ("," exp)* )?
+
+
+IDENTIFIER: /[A-Za-z_][A-Za-z_0-9]*/
+WIRE: "wire"
+TRI: "tri"
+WAND: "wand"
+WOR: "wor"
+REG: "reg"
+INTEGER: "integer"
+INPUT: "input"
+OUTPUT: "output"
+
+%import common.ESCAPED_STRING
+%import common.SIGNED_NUMBER
+%import common.WS
+%import common.CPP_COMMENT
+%import common.C_COMMENT
+
+%ignore WS
+%ignore CPP_COMMENT
+%ignore C_COMMENT
+

@@ -1,6 +1,16 @@
-from __future__ import annotations 
+"""
+Simple Verilog Simulator
+Copyright (C) 2024 - Bruce MacKinnon
+ 
+This work is covered under the terms of the GNU Public License (V3). Please consult the 
+LICENSE file for more information.
 
+This work is being made available for non-commercial use. Redistribution, commercial 
+use or sale of any part is prohibited.
+"""
+from __future__ import annotations 
 from enum import Enum
+import lark 
 
 class Value:    
 
@@ -782,7 +792,7 @@ class EvalContext:
         # Check to see if this value has changed since the last time
         changed = self.value_state.is_value_changed(name, value)
         if changed:
-            print("Value has changed")
+            #print("Value has changed")
             # Save value
             self.value_state.set_value(name, value)
 
@@ -795,22 +805,19 @@ class EvalContext:
 
             # Trigger all recomputes
             self.update_dirty_nets()
-
-        else:
-            print("Value has not changed, ignoring")
     
     def update_dirty_nets(self):
 
         for net_name, net_info in self.net_reg.reg.items():
             if net_info.dirty:
-                print("Dirty Net", net_name)
+                #print("Dirty Net", net_name)
 
                 if net_info.has_any_drivers():
 
                     # The net may have more than one driver, so evaluate them all
                     driving_values = []
                     for assignment in net_info.assignments:
-                        print("   Driving Expression:", str(assignment))
+                        #print("   Driving Expression:", str(assignment))
                         driving_value = assignment.evaluate(self)
                         driving_values.append(driving_value)
 
@@ -847,3 +854,26 @@ class UpdateEvent:
 
     def __repr__(self) -> str:
         return "UpdateEvent: " + self.name + " = " + str(self.value)
+
+# ===== Lark Transformer ======================================================
+
+class Transformer(lark.visitors.Transformer):
+    def start(self, items):
+        return "hello?"
+    def module(self, items):
+        print("module", items)
+    def portdeclarations(self, items):
+        return [str(x) for x in items]
+    def modulestatements(self, items):
+        return [str(x) for x in items]
+    def modulestatement(self, items):
+        return "a"
+    def IDENTIFIER(self, items):
+        return str(items)
+    
+    # ----- Expression Stuff --------------------------------------------------
+
+    
+
+    
+    

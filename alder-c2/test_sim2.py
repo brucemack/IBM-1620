@@ -1,3 +1,4 @@
+import lark
 import sim2 
 
 def test_1():
@@ -25,7 +26,7 @@ def test_1():
     #   end
     # endfunction 
 
-    a0 = [ sim2.FunctionParameter("a") ]
+    a0 = [ sim2.FunctionParameterDeclaration("a", sim2.PortType.INPUT) ]
     a1 = [ ]
     fd0 = sim2.FunctionDefinition("b", a0, a1, b0)
     # "a" is no longer a reference because it is assumed to be 
@@ -360,9 +361,38 @@ def test_6():
     eval_context.flush_active_queue()
     assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_1
 
+def test_7():
+
+    print("----- test_7 ------------------------------------------------------")
+
+    parser = lark.Lark.open("./sim2.lark")
+    tree = parser.parse(
+"""
+// Test
+module mod0();
+  wire a = 1;
+  wire b = 0;
+  wire c;
+  and m0(.x(a), .y(b), .z(c));
+endmodule
+module and(input x, input y, output z);
+  function p(input q, input r);
+    begin
+      p = q & r;
+    end
+  endfunction
+  z = p(x, y);
+endmodule
+"""
+    )
+
+    result = sim2.Transformer().transform(tree)
+    print("result", result)
+
 #test_1()
 #test_2()
 #test_3()
 #test_4()
 #test_5()
-test_6()
+#test_6()
+test_7()
