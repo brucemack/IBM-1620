@@ -40,7 +40,8 @@ variabledeclaration: variabletype IDENTIFIER ";"
 
 variabletype: ( REG | INTEGER )
 
-procedureassignment: IDENTIFIER "=" exp ";"
+procedureassignment: IDENTIFIER "=" exp ";" -> procedureassignment_blocking
+                   | IDENTIFIER "<=" exp ";" -> procedureassignment_non_blocking
 
 netassignment: IDENTIFIER "=" exp ";"
 

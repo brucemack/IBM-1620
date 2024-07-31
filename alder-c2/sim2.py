@@ -422,10 +422,10 @@ class Statement:
 
 class ProcedureAssignment(Statement):
 
-    def __init__(self, lhs: str, rhs: Expression):
-
+    def __init__(self, lhs: str, rhs: Expression, blocking: bool):
         self.lhs = lhs
         self.rhs = rhs
+        self.blocking = blocking
 
     def execute(self, context):
 
@@ -435,20 +435,30 @@ class ProcedureAssignment(Statement):
         # Evaluate the RHS
         rhs_value = self.rhs.evaluate(context)
         # Assign the result to the LHS
-        context.set_value(self.lhs, rhs_value)
+        if self.blocking:
+            context.set_value_blocking(self.lhs, rhs_value)
+        else:
+            context.set_value_non_blocking(self.lhs, rhs_value)
 
     def get_references(self):
         return self.rhs.get_references()
 
     def __repr__(self):
-        return self.lhs + "=" + str(self.rhs) + ";"
+        s = self.lhs
+        if self.blocking:
+            s = s + " = "
+        else:
+            s = s + " <= "
+        s = s + str(self.rhs) + ";"
+        return s
 
     def elaborate(self, base_name: str, local_variables: list[str]) -> ProcedureAssignment:
         if self.lhs in local_variables:
             elaborated_lhs = self.lhs
         else:
             elaborated_lhs = base_name + "." + self.lhs
-        return ProcedureAssignment(elaborated_lhs, self.rhs.globalize(base_name, local_variables))
+        return ProcedureAssignment(elaborated_lhs, 
+                                   self.rhs.globalize(base_name, local_variables), self.blocking)
 
 class ProcedureBlock:
 
@@ -541,10 +551,11 @@ class FunctionDefinition:
 
 class FunctionEvalContext:
 
-    def __init__(self, function_def: FunctionDefinition, value_state, param_values: list[Value]):
+    def __init__(self, function_def: FunctionDefinition, parent_eval_context: EvalContext, 
+                 param_values: list[Value]):
 
-        self.value_state = value_state
         self.function_def = function_def
+        self.parent_eval_context = parent_eval_context
 
         # Here is where the local variables are stored (transient)
         self.local_value_state: dict[str, Value] = {}
@@ -573,16 +584,16 @@ class FunctionEvalContext:
                 return self.local_value_state[name]
         # Otherwise, forward out to the wider context
         else:
-            return self.value_state.get_value(name)
+            return self.parent_eval_context.get_value(name)
 
-    def set_value(self, name: str, value: Value):
+    def set_value_blocking(self, name: str, value: Value):
         # Figure out if this is a reference to a local variable or to the function 
         # name itself, which is treated like a local
         if self.is_local_name(name):
             self.local_value_state[name] = value
         # Otherwise, forward out to the wider context
         else:
-            self.value_state.set_value(name, value)
+            self.parent_eval_context.set_value_blocking(name, value)
 
 class NetAssignment:
 
@@ -628,6 +639,15 @@ class ModuleInstantiation:
         s = s + ")"
         return s
     
+def join_name(path: str, name: str, name2: str = None) -> str:
+    if path:
+        s = path + "." + name 
+    else:
+        s = name
+    if name2:
+        s = s + "." + name2
+    return s
+
 class ModuleDefinition:
 
     def __init__(self, 
@@ -658,15 +678,15 @@ class ModuleDefinition:
 
         # Register the function definitions into a global repository
         for fd in self.function_definitions:
-            global_function_registry.add_function(path + "." + name + "." + fd.get_name(), 
-                fd.elaborate(path + "." + name))
+            global_function_registry.add_function(join_name(path, name, fd.get_name()), 
+                fd.elaborate(join_name(path, name)))
         
         # Create some additional assignments to wire the module parameters. 
         # These assignments depend on the direction of the port.
         for inner_name, global_outer_name in param_map.items():
 
             # Globalize the names involved in the port assignment
-            global_inner_name = path + "." + name + "." + inner_name
+            global_inner_name = join_name(path, name, inner_name)
 
             # Find the appropriate port 
             pd = None
@@ -697,7 +717,7 @@ class ModuleDefinition:
         # Ex:
         #   wire a;
         for nd in self.net_declarations:
-            global_net_name = path + "." + name + "." + nd.get_name()
+            global_net_name = join_name(path, name, nd.get_name())
             global_net_reg.declare(global_net_name, nd.get_net_type())
             # Set the initial value
             global_value_state.set_value(global_net_name, LOGIC_X)
@@ -706,10 +726,10 @@ class ModuleDefinition:
         # Ex:
         #   assign a = (b | c);
         for na in self.net_assignments:
-            global_net_name = path + "." + name + "." + na.get_name()
+            global_net_name = join_name(path, name, na.get_name())
             # Globalize the RHS of the assignment
             # TODO: DEAL WITH LOCAL VARIABLE LIST
-            global_exp = na.exp.globalize(path + "." + name, [])
+            global_exp = na.exp.globalize(join_name(path, name), [])
             # Add the assignment to the global registry
             global_net_reg.add_assignment(global_net_name, global_exp)
 
@@ -718,10 +738,10 @@ class ModuleDefinition:
         #   wire a = (b | c);
         for nd in self.net_declarations:
             if nd.exp:
-                global_net_name = path + "." + name + "." + nd.get_name()
+                global_net_name = join_name(path, name, nd.get_name())
                 # Globalize the RHS of the assignment
                 # TODO: DEAL WITH LOCAL VARIABLE LIST
-                global_exp = nd.exp.globalize(path + "." + name, [])
+                global_exp = nd.exp.globalize(join_name(path, name), [])
                 # Add the assignment to the global registry
                 global_net_reg.add_assignment(global_net_name, global_exp)
 
@@ -732,8 +752,8 @@ class ModuleDefinition:
             # actual signal names.
             child_param_map = {}
             for port in mi.ports:
-                child_param_map[port.inside_name] = path + "." + name + "." + port.outside_name
-            module_def.elaborate(path + "." + name, mi.instance_name,
+                child_param_map[port.inside_name] = join_name(path, name, port.outside_name)
+            module_def.elaborate(join_name(path, name), mi.instance_name,
                 child_param_map, module_defs, global_net_reg, global_function_registry, 
                 global_value_state)
 
@@ -757,26 +777,28 @@ class ModuleDefinition:
         s = s + "endmodule"
         return s
 
-# ----- Simulation Engine ----------------------------------------------------
+# ===== Simulation Engine =====================================================
 
 class ValueState:
 
     def __init__(self):
         self.state: dict[str, Value] = {}
 
-    def set_value(self, name, value: Value): 
+    # Sets a value and returns an indication of whether the value was changed
+    # as a result.
+    def set_value(self, name: str, value: Value) -> bool:
+        changed = (not name in self.state) or (not self.state[name] == value)
         self.state[name] = value
+        return changed
 
-    def get_value(self, name) -> Value: 
+    def get_value(self, name: str) -> Value: 
         if not name in self.state:
             return LOGIC_X
         else:
             return self.state[name]
 
-    def is_value_available(self, name) -> bool: return name in self.state
-
-    def is_value_changed(self, name, value: Value) -> bool:
-        return (not name in self.state) or (not self.state[name] == value)
+    def is_value_available(self, name: str) -> bool: 
+        return name in self.state
 
 class NetInformation:
 
@@ -830,76 +852,73 @@ class EvalContext:
         self.value_state: ValueState = ValueState()
         self.func_def_reg = FunctionDefinitionRegistry()
         self.net_reg = NetRegistry(self.value_state)
-        self.active_queue: list[UpdateEvent] = []
+        self.non_blocking_queue: list[UpdateEvent] = []
     
     def start(self):
         # Evaluate everything once to make sure all initial conditions are
         # reflected properly.
-        self.update_dirty_nets()
-        self.flush_active_queue()
+        self.update_dirty_signals()
 
     def get_value(self, name: str):
         if not self.value_state.is_value_available(name):
             raise Exception("No value available for " + name)
         return self.value_state.get_value(name)
     
-    def set_value(self, name: str, value: Value):
+    def set_value_blocking(self, name: str, value: Value):
+        self.set_value_internal(name, value)
+        self.update_dirty_signals()
 
-        print("Setting value of:", name, "to", value)
+    def set_value_non_blocking(self, name: str, value: Value):
+        self.non_blocking_queue.append(UpdateEvent(name, value))
 
-        # Check to see if this value has changed since the last time
-        changed = self.value_state.is_value_changed(name, value)
+    def process_non_blocking_queue(self):
+        while len(self.non_blocking_queue) > 0:
+            non_blocking_queue = self.non_blocking_queue.copy()
+            self.non_blocking_queue.clear()
+            for event in non_blocking_queue:
+                self.set_value_internal(event.name, event.value)
+            self.update_dirty_signals()
+
+    def set_value_internal(self, name: str, value: Value):
+
+        print("Setting", name, "<-", value)
+
+        # Save and check to see if this value has changed since the last time
+        changed = self.value_state.set_value(name, value)
         if changed:
-            #print("Value has changed")
-            # Save value
-            self.value_state.set_value(name, value)
-
             # Figure out which nets need to be recomputed now as a result
             for net_name, net_info in self.net_reg.reg.items():
                 # Each signal can have multiple assignments contributing to it
                 for assignment in net_info.assignments:
                     if name in assignment.get_references():
                         net_info.dirty = True
-
-            # Trigger all recomputes
-            self.update_dirty_nets()
     
-    def update_dirty_nets(self):
+    def update_dirty_signals(self):
 
-        for net_name, net_info in self.net_reg.reg.items():
-            if net_info.dirty:
-                #print("Dirty Net", net_name)
+        # We keep looping here because each set may cause other signals to 
+        # require a recomputation.        
+        while True:
 
-                if net_info.has_any_drivers():
+            dirty_count = 0
 
-                    # The net may have more than one driver, so evaluate them all
-                    driving_values = []
-                    for assignment in net_info.assignments:
-                        #print("   Driving Expression:", str(assignment))
-                        driving_value = assignment.evaluate(self)
-                        driving_values.append(driving_value)
+            for net_name, net_info in self.net_reg.reg.items():
+                if net_info.dirty:
+                    dirty_count = dirty_count + 1
+                    if net_info.has_any_drivers():
+                        # The net may have more than one driver, so evaluate them all
+                        driving_values = []
+                        for assignment in net_info.assignments:
+                            driving_value = assignment.evaluate(self)
+                            driving_values.append(driving_value)
+                        # Combine the values of the drivers to a single value
+                        new_value = wire_logic_eval(driving_values, net_info.type)
+                        self.set_value_internal(net_name, new_value)
 
-                    new_value = wire_logic_eval(driving_values, net_info.type)
+                    # Clear dirty flag
+                    net_info.dirty = False
 
-                    # Create an event to store back the new value
-                    # TODO: COLLAPSE REDUNDANT ASSIGNMENTS
-                    self.active_queue.append(UpdateEvent(net_name, new_value))
-
-                # Clear dirty flag
-                net_info.dirty = False
-
-    def flush_active_queue(self):
-
-        # Keep doing this until the active queue is empty
-        while len(self.active_queue) > 0:
-
-            # Pull the active events to the side and flush the queue
-            active_events = self.active_queue.copy()
-            self.active_queue.clear()
-
-            # Apply the events
-            for event in active_events:
-                self.set_value(event.name, event.value)
+            if dirty_count == 0:
+                return
 
     def get_function_def(self, name:str):
         return self.func_def_reg.get_function_def(name)
@@ -912,6 +931,55 @@ class UpdateEvent:
 
     def __repr__(self) -> str:
         return "UpdateEvent: " + self.name + " = " + str(self.value)
+
+class Engine:
+
+    def __init__(self):
+        self.parser = lark.Lark.open("./sim2.lark")
+        self.module_defs: dict[str, ModuleDefinition] = {}
+        self.first_module_name = None 
+
+    def load_module_files(self, file_names: list[str]):
+        for name in file_names:
+            tree = self.parser.parse(open(name))
+            result = Transformer().transform(tree)
+            # Move the modules into a map
+            for module_def in result:
+                if self.first_module_name == None:
+                    self.first_module_name = module_def.get_name()
+                self.module_defs[module_def.get_name()] = module_def
+
+    def load_module_from_text(self, text: str):
+        tree = self.parser.parse(text)
+        result = Transformer().transform(tree)
+        # Move the modules into a map
+        for module_def in result:
+            if self.first_module_name == None:
+                self.first_module_name = module_def.get_name()
+            self.module_defs[module_def.get_name()] = module_def
+
+    def get_value(self, name: str) -> Value:
+        return self.eval_context.get_value(name)
+
+    def set_value(self, name: str, value: Value):
+        return self.eval_context.set_value_blocking(name, value)
+
+    def start(self):
+
+        self.eval_context = EvalContext()
+        # Elaboration
+        param_map = {}
+
+        self.module_defs[self.first_module_name].elaborate(None, 
+            self.first_module_name,
+            param_map, 
+            self.module_defs, 
+            self.eval_context.net_reg, 
+            self.eval_context.func_def_reg,     
+            self.eval_context.value_state)
+
+        self.eval_context.net_reg.debug()
+        self.eval_context.start()
 
 # ===== Lark Transformer ======================================================
 
@@ -1040,8 +1108,11 @@ class Transformer(lark.visitors.Transformer):
     def functionstatement(self, items):
         return items[0]
     
-    def procedureassignment(self, items):
-        return ProcedureAssignment(items[0], items[1])
+    def procedureassignment_blocking(self, items):
+        return ProcedureAssignment(items[0], items[1], True)
+
+    def procedureassignment_non_blocking(self, items):
+        return ProcedureAssignment(items[0], items[1], False)
 
     # ----- Expression Stuff --------------------------------------------------
 

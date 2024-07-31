@@ -11,7 +11,7 @@ def test_1():
     assert sorted(e4.get_references()) == [ "a", "e" ]
 
     # Put the expression into an assignment: b = !(a & e)
-    s0 = sim2.ProcedureAssignment("b", e4)
+    s0 = sim2.ProcedureAssignment("b", e4, True)
     assert sorted(s0.get_references()) == [ "a", "e" ]
 
     # Put the assignment into a procedure block
@@ -104,15 +104,11 @@ def test_2():
     eval_context.start()
 
     # Change the value of "b" and demonstrate that "a" is changed as well
-    eval_context.set_value("root.main.b", sim2.Value(0)) 
-    eval_context.flush_active_queue()
+    eval_context.set_value_blocking("root.main.b", sim2.Value(0)) 
     assert eval_context.value_state.get_value("root.main.a") == sim2.Value(0)
 
     # Set the same value again, nothing should happen
-    eval_context.set_value("root.main.b", sim2.Value(0))
-
-    # We should have no events at this point
-    assert len(eval_context.active_queue) == 0
+    eval_context.set_value_blocking("root.main.b", sim2.Value(0))
 
 # Logic level tests
 def test_3():
@@ -174,15 +170,13 @@ def test_4():
                                   eval_context.value_state)
     eval_context.start()
     
-    eval_context.set_value("root.main.b", sim2.Value(0))
-    eval_context.set_value("root.main.c", sim2.Value(0))
-    eval_context.flush_active_queue()
+    eval_context.set_value_blocking("root.main.b", sim2.Value(0))
+    eval_context.set_value_blocking("root.main.c", sim2.Value(0))
 
     assert eval_context.value_state.get_value("root.main.a") == sim2.Value(0)
 
     # Set one of the two drivers to 1
-    eval_context.set_value("root.main.b", sim2.Value(1))
-    eval_context.flush_active_queue()
+    eval_context.set_value_blocking("root.main.b", sim2.Value(1))
 
     # Should see wire-OR
     assert eval_context.value_state.get_value("root.main.a") == sim2.Value(1)
@@ -258,8 +252,7 @@ def test_5():
     assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_0
 
     # Set some values to show that the submodule is working
-    eval_context.set_value("root.main.b", sim2.Value(1))
-    eval_context.flush_active_queue()
+    eval_context.set_value_blocking("root.main.b", sim2.Value(1))
     assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_1
 
 # A module with a sub-module that contains a function
@@ -323,9 +316,10 @@ def test_6():
                   sim2.FunctionParameterDeclaration("r", sim2.PortType.INPUT) ], 
                 [], 
                 sim2.ProcedureBlock( [ sim2.ProcedureAssignment("p",
-                                            sim2.BinaryExpression("&", 
+                                                                sim2.BinaryExpression("&", 
                                                                   sim2.VariableExpression("q"),
-                                                                  sim2.VariableExpression("r"))) ] ) )
+                                                                  sim2.VariableExpression("r")),
+                                                                True) ] ) )
           ]
     # Define a module 
     module_defs["and1"] = sim2.ModuleDefinition("and1", ports, nds, nas, mis, fds)
@@ -350,8 +344,7 @@ def test_6():
     assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_0
 
     # Set some values to show that the submodule is working
-    eval_context.set_value("root.main.b", sim2.Value(1))
-    eval_context.flush_active_queue()
+    eval_context.set_value_blocking("root.main.b", sim2.Value(1))
     assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_1
 
 def test_7():
@@ -406,9 +399,44 @@ endmodule
     assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_0
 
     # Set some values to show that the submodule is working
-    eval_context.set_value("root.main.b", sim2.Value(1))
-    eval_context.flush_active_queue()
+    eval_context.set_value_blocking("root.main.b", sim2.Value(1))
     assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_1
+
+def test_7a():
+
+    print("----- test_7a ------------------------------------------------------")
+
+    engine = sim2.Engine()
+    engine.load_module_from_text(
+"""
+// Test
+module mod0();
+  wire a = 1'b1;
+  wire b = 1'b0;
+  wire c;
+  and m0(.x(a), .y(b), .z(c));
+endmodule
+module and(input x, input y, output z);
+  function p(input q, input r);
+    begin
+      p = q & r;
+    end
+  endfunction
+  z = p(x, y);
+endmodule
+"""
+    )
+
+    engine.start()
+
+    # Test initial values
+    assert engine.get_value("mod0.a") == sim2.LOGIC_1
+    assert engine.get_value("mod0.b") == sim2.LOGIC_0
+    assert engine.get_value("mod0.c") == sim2.LOGIC_0
+
+    # Set some values to show that the submodule is working
+    engine.set_value("mod0.b", sim2.Value(1))
+    assert engine.get_value("mod0.c") == sim2.LOGIC_1
 
 # Testing equality
 def test_8():
@@ -438,11 +466,12 @@ def test_8():
                               sim2.ConstantExpression(sim2.Value("Z")))
   assert exp.evaluate(None) == sim2.LOGIC_1
 
-#test_1()
-#test_2()
-#test_3()
-#test_4()
-#test_5()
-#test_6()
-#test_7()
+test_1()
+test_2()
+test_3()
+test_4()
+test_5()
+test_6()
+test_7()
+test_7a()
 test_8()
