@@ -55,8 +55,37 @@ LOGIC_1 = Value(1)
 LOGIC_X = Value("X")
 LOGIC_Z = Value("Z")
 
+# See IEEE standard section 5.1.8
+def logic_eval_eq(a: Value, b: Value):
+    if a == LOGIC_X or a == LOGIC_Z or b == LOGIC_X or b == LOGIC_Z:
+        return LOGIC_X
+    if a == b:
+        return LOGIC_1
+    else:
+        return LOGIC_0
+
+def logic_eval_neq(a: Value, b: Value):
+    if a == LOGIC_X or a == LOGIC_Z or b == LOGIC_X or b == LOGIC_Z:
+        return LOGIC_X
+    if a == b:
+        return LOGIC_0
+    else:
+        return LOGIC_1
+
+def case_eval_eq(a: Value, b: Value):
+    if a == b:
+        return LOGIC_1
+    else:
+        return LOGIC_0
+
+def case_eval_neq(a: Value, b: Value):
+    if a == b:
+        return LOGIC_0
+    else:
+        return LOGIC_1
+
 # See IEEE Standard Section 5.1.10
-def logic_eval_or(a, b):
+def logic_eval_or(a: Value, b: Value) -> Value:
     if a == LOGIC_0:
         if   (b == LOGIC_0): return LOGIC_0
         elif (b == LOGIC_1): return LOGIC_1
@@ -173,6 +202,14 @@ class BinaryExpression(Expression):
             return logic_eval_or(lhs, rhs)
         elif self.type == "&":
             return logic_eval_and(lhs, rhs)
+        elif self.type == "==":
+            return logic_eval_eq(lhs, rhs)
+        elif self.type == "!=":
+            return logic_eval_neq(lhs, rhs)
+        elif self.type == "===":
+            return case_eval_eq(lhs, rhs)
+        elif self.type == "!==":
+            return case_eval_neq(lhs, rhs)
         elif self.type == "<":
             return Value(lhs.get_float() < rhs.get_float())
         elif self.type == "<=":
@@ -1020,6 +1057,18 @@ class Transformer(lark.visitors.Transformer):
     def exp_xor(self, tree):
         return BinaryExpression("^", tree[0], tree[1])
 
+    def exp_eq(self, tree):
+        return BinaryExpression("==", tree[0], tree[1])
+
+    def exp_neq(self, tree):
+        return BinaryExpression("!=", tree[0], tree[1])
+
+    def exp_eq3(self, tree):
+        return BinaryExpression("===", tree[0], tree[1])
+
+    def exp_neq3(self, tree):
+        return BinaryExpression("!==", tree[0], tree[1])
+    
     def exp_lt(self, tree):
         return BinaryExpression("<", tree[0], tree[1])
 

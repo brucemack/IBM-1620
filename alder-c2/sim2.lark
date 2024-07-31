@@ -56,6 +56,10 @@ exp: exp "|" exp -> exp_or
    | exp "&" exp -> exp_and
    | exp "^" exp -> exp_xor
    | ("!" | "~") exp -> exp_not
+   | exp "==" exp -> exp_eq
+   | exp "!=" exp -> exp_neq
+   | exp "===" exp -> exp_eq3
+   | exp "!==" exp -> exp_neq3
    | exp ">" exp -> exp_gt
    | exp ">=" exp -> exp_gte
    | exp "<" exp -> exp_lt

@@ -378,7 +378,7 @@ module and(input x, input y, output z);
 endmodule
 """
     )
-    
+
     result = sim2.Transformer().transform(tree)
 
     # Move the modules into a map
@@ -410,10 +410,39 @@ endmodule
     eval_context.flush_active_queue()
     assert eval_context.value_state.get_value("root.main.c") == sim2.LOGIC_1
 
+# Testing equality
+def test_8():
+    
+  exp = sim2.BinaryExpression("==", 
+                              sim2.ConstantExpression(sim2.Value(0)), 
+                              sim2.ConstantExpression(sim2.Value(0)))
+  assert exp.evaluate(None) == sim2.LOGIC_1  
+
+  exp = sim2.BinaryExpression("==", 
+                              sim2.ConstantExpression(sim2.Value("Z")), 
+                              sim2.ConstantExpression(sim2.Value(0)))
+  assert exp.evaluate(None) == sim2.LOGIC_X
+
+  exp = sim2.BinaryExpression("!=", 
+                              sim2.ConstantExpression(sim2.Value("Z")), 
+                              sim2.ConstantExpression(sim2.Value(0)))
+  assert exp.evaluate(None) == sim2.LOGIC_X
+
+  exp = sim2.BinaryExpression("===", 
+                              sim2.ConstantExpression(sim2.Value("Z")), 
+                              sim2.ConstantExpression(sim2.Value(0)))
+  assert exp.evaluate(None) == sim2.LOGIC_0
+
+  exp = sim2.BinaryExpression("===", 
+                              sim2.ConstantExpression(sim2.Value("Z")), 
+                              sim2.ConstantExpression(sim2.Value("Z")))
+  assert exp.evaluate(None) == sim2.LOGIC_1
+
 #test_1()
 #test_2()
 #test_3()
 #test_4()
 #test_5()
-test_6()
-test_7()
+#test_6()
+#test_7()
+test_8()
