@@ -34,7 +34,7 @@ def test_1():
     assert sorted(fd0.get_references()) == [ "e" ]
 
     # Elaborate the function
-    fd1 = fd0.elaborate("root")
+    fd1 = fd0.elaborate("root", None)
     
     # Setup the context
     eval_context = sim2.EvalContext()
@@ -97,9 +97,7 @@ def test_2():
                                   "main", 
                                   param_map, 
                                   module_defs, 
-                                  eval_context.signal_reg, 
-                                  eval_context.func_def_reg, 
-                                  eval_context.value_state)
+                                  eval_context)
     
     eval_context.start()
 
@@ -165,9 +163,7 @@ def test_4():
                                   "main", 
                                   param_map, 
                                   module_defs, 
-                                  eval_context.signal_reg, 
-                                  eval_context.func_def_reg, 
-                                  eval_context.value_state)
+                                  eval_context)
     eval_context.start()
     
     eval_context.set_value_blocking("root.main.b", sim2.Value(0))
@@ -243,9 +239,7 @@ def test_5():
                                   "main", 
                                   param_map, 
                                   module_defs, 
-                                  eval_context.signal_reg, 
-                                  eval_context.func_def_reg, 
-                                  eval_context.value_state)
+                                  eval_context)
     eval_context.start()
 
     # Test initial value
@@ -332,9 +326,7 @@ def test_6():
                                   "main", 
                                   param_map, 
                                   module_defs, 
-                                  eval_context.signal_reg, 
-                                  eval_context.func_def_reg,     
-                                  eval_context.value_state)
+                                  eval_context)
 
     eval_context.start()
 
@@ -387,9 +379,7 @@ endmodule
                                   "main", 
                                   param_map, 
                                   module_defs, 
-                                  eval_context.signal_reg, 
-                                  eval_context.func_def_reg,     
-                                  eval_context.value_state)
+                                  eval_context)
 
     eval_context.start()
 
@@ -511,10 +501,58 @@ endmodule
 
 def test_10():
 
-    print("----- test_10 ------------------------------------------------------")
+  print("----- test_10 ------------------------------------------------------")
 
-    engine = sim2.Engine()
-    engine.load_module_files([ "../daves-1f/typewriter-mechanical.v" ])
+  engine = sim2.Engine()
+  engine.load_module_files([ "../daves-1f/typewriter-mechanical.v" ])
+  engine.start() 
+
+  # Test the angle
+  engine.set_value("typewriter._angle", sim2.Value(100))
+  assert engine.get_value("typewriter.crcb_3no_sw") == sim2.LOGIC_1
+
+  # Test a DUO Relay
+
+  # Pick the relay
+  engine.set_value("typewriter.r6_pick_coil", sim2.LOGIC_1)
+  engine.tick()
+  assert engine.get_value("typewriter.r6_1no_sw") == sim2.LOGIC_1
+
+  # Here we transition from the pick coil to the hold coil - no change
+  engine.set_value("typewriter.r6_pick_coil", sim2.LOGIC_0)
+  engine.set_value("typewriter.r6_hold_coil", sim2.LOGIC_1)
+  engine.tick()
+  assert engine.get_value("typewriter.r6_1no_sw") == sim2.LOGIC_1
+
+  # Here we release the hold
+  engine.set_value("typewriter.r6_hold_coil", sim2.LOGIC_0)
+  engine.tick()
+  assert engine.get_value("typewriter.r6_1no_sw") == sim2.LOGIC_0
+
+  # Test a latching relay
+
+  engine.set_value("typewriter.r1_pick_coil", sim2.LOGIC_0)
+  engine.set_value("typewriter.r1_trip_coil", sim2.LOGIC_0)
+
+  # Pick the relay
+  engine.set_value("typewriter.r1_pick_coil", sim2.LOGIC_1)
+  engine.tick()
+  assert engine.get_value("typewriter.r1_1no_sw") == sim2.LOGIC_1
+
+  # Remove pick power and show that latch remains
+  engine.set_value("typewriter.r1_pick_coil", sim2.LOGIC_0)
+  engine.tick()
+  assert engine.get_value("typewriter.r1_1no_sw") == sim2.LOGIC_1
+
+  # Trip the relay
+  engine.set_value("typewriter.r1_trip_coil", sim2.LOGIC_1)
+  engine.tick()
+  assert engine.get_value("typewriter.r1_1no_sw") == sim2.LOGIC_0
+
+  # Remove trip power
+  engine.set_value("typewriter.r1_trip_coil", sim2.LOGIC_0)
+  engine.tick()
+  assert engine.get_value("typewriter.r1_1no_sw") == sim2.LOGIC_0
 
 test_1()
 test_2()

@@ -130,6 +130,42 @@ def logic_eval_not(a: Value) -> Value:
     else:
         return LOGIC_X
 
+def logic_eval_lt(a: Value, b: Value) -> Value:
+    if a.is_x() or a.is_z() or b.is_x() or b.is_z():
+        return LOGIC_X
+    else:
+        if a.get_int() < b.get_int():
+            return LOGIC_1
+        else:
+            return LOGIC_0
+
+def logic_eval_lte(a: Value, b: Value) -> Value:
+    if a.is_x() or a.is_z() or b.is_x() or b.is_z():
+        return LOGIC_X
+    else:
+        if a.get_int() <= b.get_int():
+            return LOGIC_1
+        else:
+            return LOGIC_0
+
+def logic_eval_gt(a: Value, b: Value) -> Value:
+    if a.is_x() or a.is_z() or b.is_x() or b.is_z():
+        return LOGIC_X
+    else:
+        if a.get_int() > b.get_int():
+            return LOGIC_1
+        else:
+            return LOGIC_0
+    
+def logic_eval_gte(a: Value, b: Value) -> Value:
+    if a.is_x() or a.is_z() or b.is_x() or b.is_z():
+        return LOGIC_X
+    else:
+        if a.get_int() >= b.get_int():
+            return LOGIC_1
+        else:
+            return LOGIC_0
+
 # ----- Expression Related ----------------------------------------------
 
 def globalize_name_if_necessary(prefix, local_variables: list[str], name: str) -> str:
@@ -224,13 +260,13 @@ class BinaryExpression(Expression):
         elif self.type == "!==":
             return case_eval_neq(lhs, rhs)
         elif self.type == "<":
-            return Value(lhs.get_float() < rhs.get_float())
+            return logic_eval_lt(lhs, rhs)
         elif self.type == "<=":
-            return Value(lhs.get_float() <= rhs.get_float())
+            return logic_eval_lte(lhs, rhs)
         elif self.type == ">":
-            return Value(lhs.get_float() > rhs.get_float())
+            return logic_eval_gt(lhs, rhs)
         elif self.type == ">=":
-            return Value(lhs.get_float() >= rhs.get_float())
+            return logic_eval_gte(lhs, rhs)
         else:
             raise Exception("Invalid operation type")
         
@@ -243,6 +279,7 @@ class BinaryExpression(Expression):
         return result 
 
     def globalize(self, name_prefix: str, local_variables: list[str]) -> Expression:
+        print(self.lhs)
         return BinaryExpression(self.type, 
                                 self.lhs.globalize(name_prefix, local_variables),
                                 self.rhs.globalize(name_prefix, local_variables))
@@ -509,11 +546,15 @@ class ProcedureAssignment(ProcedureStatement):
         s = s + str(self.rhs)
         return s
 
-    def elaborate(self, base_name: str, local_variables: list[str]) -> ProcedureAssignment:
+    def elaborate(self, base_name: str, local_variables: list[str], context: EvalContext) -> ProcedureAssignment:
         if self.lhs in local_variables:
             elaborated_lhs = self.lhs
         else:
             elaborated_lhs = base_name + "." + self.lhs
+            # TODO: Make sure we are assigning to a variable
+            if not context.is_variable(elaborated_lhs):
+                raise Exception("Illegal assignment to " + elaborated_lhs)
+
         return ProcedureAssignment(elaborated_lhs, 
                                    self.rhs.globalize(base_name, local_variables), self.blocking)
 
@@ -538,9 +579,9 @@ class ProcedureBlock:
             r = r + str(statement) + ";\n"
         return r
 
-    def elaborate(self, base_name: str, local_variables: list[str]) -> ProcedureBlock:
+    def elaborate(self, base_name: str, local_variables: list[str], context: EvalContext) -> ProcedureBlock:
         return ProcedureBlock(
-            [statement.elaborate(base_name, local_variables) for statement in self.statements]
+            [statement.elaborate(base_name, local_variables, context) for statement in self.statements]
             )
 
 class FunctionDefinition:
@@ -588,7 +629,7 @@ class FunctionDefinition:
         r = r + "endfunction\n"
         return r
 
-    def elaborate(self, base_name: str) -> FunctionDefinition:
+    def elaborate(self, base_name: str, context: EvalContext) -> FunctionDefinition:
         # Make a list of the local variables that should not be elaborated
         local_variables = []        
         local_variables.append(self.name)
@@ -598,7 +639,7 @@ class FunctionDefinition:
         return FunctionDefinition(self.name,
                                   self.params,
                                   self.local_variables.values(),
-                                  self.procedure_block.elaborate(base_name, local_variables))
+                                  self.procedure_block.elaborate(base_name, local_variables, context))
 
     def get_references(self) -> list[str]:
         refs = self.procedure_block.get_references()
@@ -754,14 +795,12 @@ class ModuleDefinition:
                   name: str,
                   param_map: dict[str, str], 
                   module_defs: dict[str, ModuleDefinition], 
-                  global_signal_reg: SignalRegistry,
-                  global_function_registry: FunctionDefinitionRegistry,
-                  global_value_state: ValueState):
+                  context: EvalContext):
 
         # Register the function definitions into a global repository
         for fd in self.function_definitions:
-            global_function_registry.add_function(join_name(path, name, fd.get_name()), 
-                fd.elaborate(join_name(path, name)))
+            context.func_def_reg.add_function(join_name(path, name, fd.get_name()), 
+                fd.elaborate(join_name(path, name), context))
         
         # Create some additional assignments to wire the module parameters. 
         # These assignments depend on the direction of the port.
@@ -782,15 +821,15 @@ class ModuleDefinition:
             if pd.port_type == PortType.INPUT:
                 # Register the assignment: inner <- outer
                 # NOTE: We assume that the outer name is already declared
-                global_signal_reg.declare_net(global_inner_name, NetType.WIRE)
-                global_signal_reg.add_assignment(global_inner_name,
+                context.signal_reg.declare_net(global_inner_name, NetType.WIRE)
+                context.signal_reg.add_assignment(global_inner_name,
                                               VariableExpression(global_outer_name))                                                 
             elif pd.port_type == PortType.OUTPUT:
                 # Register the assignment: outer <- inner
                 # NOTE: We assume that the outer name is already declared
                 # TODO: THE PORT ASSIGNMENTS CAN BE VARIABLES OR WIRES
-                global_signal_reg.declare_net(global_inner_name, NetType.WIRE)
-                global_signal_reg.add_assignment(global_outer_name,
+                context.signal_reg.declare_net(global_inner_name, NetType.WIRE)
+                context.signal_reg.add_assignment(global_outer_name,
                                               VariableExpression(global_inner_name))                                                 
             else:
                 raise Exception("Invalid port type")
@@ -800,9 +839,9 @@ class ModuleDefinition:
         #   wire a;
         for nd in self.net_declarations:
             global_net_name = join_name(path, name, nd.get_name())
-            global_signal_reg.declare_net(global_net_name, nd.get_net_type())
+            context.signal_reg.declare_net(global_net_name, nd.get_net_type())
             # Set the initial value
-            global_value_state.set_value(global_net_name, LOGIC_X)
+            context.value_state.set_value(global_net_name, LOGIC_X)
 
         # Register the variable declarations into a global repository
         # Ex:
@@ -810,17 +849,17 @@ class ModuleDefinition:
         #   reg b = 1;
         for vd in self.var_declarations:
             global_signal_name = join_name(path, name, vd.get_name())
-            global_signal_reg.declare_variable(global_signal_name, vd.get_var_type())
+            context.signal_reg.declare_variable(global_signal_name, vd.get_var_type())
             # Set the initial value
             if vd.id.init_exp:
                 # Make sure the expression is a constant
                 if not vd.id.init_exp.is_constant():
                     raise Exception("Non-constant initialization of variable " + global_signal_name)
                 # No context is being passed - should not be needed for a constant!
-                global_value_state.set_value(global_signal_name, vd.id.init_exp.evaluate(None))
+                context.value_state.set_value(global_signal_name, vd.id.init_exp.evaluate(None))
             # Default initial value is X
             else:
-                global_value_state.set_value(global_signal_name, LOGIC_X)
+                context.value_state.set_value(global_signal_name, LOGIC_X)
 
         # Instantiate the required global assignments (stand-alone assignments)
         # Ex:
@@ -831,7 +870,7 @@ class ModuleDefinition:
             # TODO: DEAL WITH LOCAL VARIABLE LIST
             global_exp = na.exp.globalize(join_name(path, name), [])
             # Add the assignment to the global registry
-            global_signal_reg.add_assignment(global_net_name, global_exp)
+            context.signal_reg.add_assignment(global_net_name, global_exp)
 
         # Instantiate the required global assignments (assignments that are part of the declarations)
         # Ex: 
@@ -843,17 +882,17 @@ class ModuleDefinition:
                 # TODO: DEAL WITH LOCAL VARIABLE LIST
                 global_exp = nd.exp.globalize(join_name(path, name), [])
                 # Add the assignment to the global registry
-                global_signal_reg.add_assignment(global_net_name, global_exp)
+                context.signal_reg.add_assignment(global_net_name, global_exp)
 
         # Setup the triggers
         for tp in self.triggered_procedures:
             # Elaborate the procedure for this context
             # TODO: LOCAL VARIABLES?
-            elaborated_pb = tp.procedure_block.elaborate(join_name(path, name), [])      
+            elaborated_pb = tp.procedure_block.elaborate(join_name(path, name), [], context)      
             # Setup a trigger for each name in the sensitivity list
             for id in tp.identifiers:
                 global_net_name = join_name(path, name, id)
-                global_signal_reg.add_triggered_procedure(global_net_name, elaborated_pb)
+                context.signal_reg.add_triggered_procedure(global_net_name, elaborated_pb)
 
         # Deal with next level down of modules
         for mi in self.module_instantiations:
@@ -864,8 +903,7 @@ class ModuleDefinition:
             for port in mi.ports:
                 child_param_map[port.inside_name] = join_name(path, name, port.outside_name)
             module_def.elaborate(join_name(path, name), mi.instance_name,
-                child_param_map, module_defs, global_signal_reg, global_function_registry, 
-                global_value_state)
+                child_param_map, module_defs, context)
 
     def __repr__(self):
         s = "module " + self.name + "("
@@ -942,10 +980,16 @@ class SignalRegistry:
         # Initial value
         self.value_state.set_value(name, LOGIC_X)
 
+    def is_net(self, name: str) -> bool:
+        return name in self.reg and self.reg[name].data_type == DataType.NET
+
     def declare_variable(self, name: str, var_type: VariableType):
         self.reg[name] = SignalInformation(name, DataType.VARIABLE, None, var_type)
         # Initial value
         self.value_state.set_value(name, LOGIC_X)
+
+    def is_variable(self, name: str) -> bool:
+        return name in self.reg and self.reg[name].data_type == DataType.VARIABLE
 
     def add_assignment(self, name: str, exp: Expression):
         if not name in self.reg:
@@ -994,10 +1038,17 @@ class EvalContext:
         self.non_blocking_queue: list[UpdateEvent] = []
         self.triggered_queue: list[ProcedureBlock] = []
     
+    def is_variable(self, name) -> bool:
+        return self.signal_reg.is_variable(name)
+
+    def is_net(self, name) -> bool:
+        return self.signal_reg.is_net(name)
+
     def start(self):
         # Evaluate everything once to make sure all initial conditions are
         # reflected properly.
         self.update_dirty_signals()
+        self.process_non_blocking_queue()
 
     def get_value(self, name: str):
         if not self.value_state.is_value_available(name):
@@ -1021,11 +1072,10 @@ class EvalContext:
 
     def set_value_internal(self, name: str, value: Value):
 
-        print("Setting", name, "<-", value)
-
         # Save and check to see if this value has changed since the last time
         changed = self.value_state.set_value(name, value)
         if changed:
+            print("Setting", name, "<-", value)
             # Figure out which nets need to be recomputed now as a result
             for net_name, net_info in self.signal_reg.reg.items():
                 # Each signal can have multiple assignments contributing to it
@@ -1039,7 +1089,7 @@ class EvalContext:
             for pb in self.signal_reg.reg[name].triggered_procedure_blocks:
                 if not pb in self.triggered_queue:
                     self.triggered_queue.append(pb)
-    
+
     def update_dirty_signals(self):
 
         # We keep looping here because each set may cause other signals to 
@@ -1121,6 +1171,7 @@ class Engine:
     def start(self):     
 
         self.eval_context = EvalContext()
+
         # Elaboration
         param_map = {}
 
@@ -1128,12 +1179,14 @@ class Engine:
             self.first_module_name,
             param_map, 
             self.module_defs, 
-            self.eval_context.signal_reg, 
-            self.eval_context.func_def_reg,     
-            self.eval_context.value_state)
+            self.eval_context)
 
-        #self.eval_context.signal_reg.debug()
+        self.eval_context.signal_reg.debug()
         self.eval_context.start()
+        
+    def tick(self):
+        # Clean up from the previous cycle
+        self.eval_context.process_non_blocking_queue()
 
 # ===== Lark Transformer ======================================================
 
@@ -1372,10 +1425,10 @@ class Transformer(lark.visitors.Transformer):
         return BinaryExpression(">=", tree[0], tree[1])
 
     def exp_not(self, tree):
-        return UnaryExpression("!", tree)
+        return UnaryExpression("!", tree[0])
 
     def exp_paren(self, tree):
-        return tree
+        return tree[0]
 
     def exp_func(self, items):
         return FunctionExpression(items[0], items[1])
