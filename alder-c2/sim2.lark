@@ -15,9 +15,13 @@ modulestatement: netdeclaration
                | functiondeclaration
                | netassignment
                | moduleinstantiation
+               | variabledeclaration 
+               | always
 
-netdeclaration: nettype IDENTIFIER ";" 
+netdeclaration: nettype identifiers ";" 
               | nettype IDENTIFIER "=" exp ";" -> netdeclaration_assign
+
+identifiers: IDENTIFIER ("," IDENTIFIER)*
 
 nettype: (WIRE | TRI | WAND | WOR | SUPPLY0 | SUPPLY1)
 
@@ -36,14 +40,14 @@ functionstatements: functionstatement*
 
 functionstatement: procedureassignment
 
-variabledeclaration: variabletype IDENTIFIER ";"
+variabledeclaration: variabletype identifiers ";"
 
 variabletype: ( REG | INTEGER )
 
 procedureassignment: IDENTIFIER "=" exp ";" -> procedureassignment_blocking
                    | IDENTIFIER "<=" exp ";" -> procedureassignment_non_blocking
 
-netassignment: IDENTIFIER "=" exp ";"
+netassignment: "assign" IDENTIFIER "=" exp ";"
 
 moduleinstantiation: IDENTIFIER IDENTIFIER "(" port_assignments ")" ";"
 
@@ -52,6 +56,12 @@ port_assignments: (port_assignment ("," port_assignment)*)?
 
 port_assignment: "." IDENTIFIER "(" IDENTIFIER ")" -> port_assignment_id
                | "." IDENTIFIER "(" exp ")" -> port_assignment_exp
+
+always: "always" "@" "(" identifiers ")" "begin" procedurestatements "end"
+
+procedurestatements: procedurestatement*
+
+procedurestatement: procedureassignment 
 
 exp: exp "|" exp -> exp_or
    | exp "&" exp -> exp_and
@@ -86,6 +96,7 @@ SUPPLY1: "supply1"
 
 REG: "reg"
 INTEGER: "integer"
+
 INPUT: "input"
 OUTPUT: "output"
 BINARY_CONSTANT: ("0".."9")+"'b"("0" | "1" | "x" | "z")

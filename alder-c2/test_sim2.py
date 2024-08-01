@@ -88,7 +88,7 @@ def test_2():
      
     # Define a module 
     module_defs: dict[str, sim2.ModuleDefinition] = {}
-    module_defs["mod0"] = sim2.ModuleDefinition("mod0", [ ], nds, nas, [ ], [ ])
+    module_defs["mod0"] = sim2.ModuleDefinition("mod0", [ ], nds, nas, [ ], [ ], [ ], [ ])
 
     # Elaborate a module instance
     eval_context = sim2.EvalContext()
@@ -97,7 +97,7 @@ def test_2():
                                   "main", 
                                   param_map, 
                                   module_defs, 
-                                  eval_context.net_reg, 
+                                  eval_context.signal_reg, 
                                   eval_context.func_def_reg, 
                                   eval_context.value_state)
     
@@ -154,7 +154,7 @@ def test_4():
 
     # Define a module 
     module_defs: dict[str, sim2.ModuleDefinition] = {}
-    module_defs["mod0"] = sim2.ModuleDefinition("mod0", [ ], nds, nas, [ ], [ ])
+    module_defs["mod0"] = sim2.ModuleDefinition("mod0", [ ], nds, nas, [ ], [ ], [ ], [ ])
 
     # Instantiate the module
 
@@ -165,7 +165,7 @@ def test_4():
                                   "main", 
                                   param_map, 
                                   module_defs, 
-                                  eval_context.net_reg, 
+                                  eval_context.signal_reg, 
                                   eval_context.func_def_reg, 
                                   eval_context.value_state)
     eval_context.start()
@@ -215,7 +215,7 @@ def test_5():
     # Function definitions 
     fds = []
     # Define a module 
-    module_defs["mod0"] = sim2.ModuleDefinition("mod0", ports, nds, nas, mis, fds)
+    module_defs["mod0"] = sim2.ModuleDefinition("mod0", ports, nds, nas, mis, fds, [ ], [ ])
 
     # Port declarations
     ports = [ sim2.PortDeclaration("x", sim2.PortType.INPUT),
@@ -233,7 +233,7 @@ def test_5():
     # Function definitions 
     fds = []
     # Define a module 
-    module_defs["and"] = sim2.ModuleDefinition("and", ports, nds, nas, mis, fds)
+    module_defs["and"] = sim2.ModuleDefinition("and", ports, nds, nas, mis, fds, [], [])
 
     # Elaboration
     eval_context = sim2.EvalContext()
@@ -243,7 +243,7 @@ def test_5():
                                   "main", 
                                   param_map, 
                                   module_defs, 
-                                  eval_context.net_reg, 
+                                  eval_context.signal_reg, 
                                   eval_context.func_def_reg, 
                                   eval_context.value_state)
     eval_context.start()
@@ -294,7 +294,7 @@ def test_6():
     # Function definitions 
     fds = []
     # Define a module 
-    module_defs["mod0"] = sim2.ModuleDefinition("mod0", ports, nds, nas, mis, fds)
+    module_defs["mod0"] = sim2.ModuleDefinition("mod0", ports, nds, nas, mis, fds, [ ], [ ])
 
     # Port declarations
     ports = [ sim2.PortDeclaration("x", sim2.PortType.INPUT),
@@ -322,7 +322,7 @@ def test_6():
                                                                 True) ] ) )
           ]
     # Define a module 
-    module_defs["and1"] = sim2.ModuleDefinition("and1", ports, nds, nas, mis, fds)
+    module_defs["and1"] = sim2.ModuleDefinition("and1", ports, nds, nas, mis, fds, [ ], [ ])
 
     # Elaboration
     eval_context = sim2.EvalContext()
@@ -332,7 +332,7 @@ def test_6():
                                   "main", 
                                   param_map, 
                                   module_defs, 
-                                  eval_context.net_reg, 
+                                  eval_context.signal_reg, 
                                   eval_context.func_def_reg,     
                                   eval_context.value_state)
 
@@ -367,7 +367,7 @@ module and(input x, input y, output z);
       p = q & r;
     end
   endfunction
-  z = p(x, y);
+  assign z = p(x, y);
 endmodule
 """
     )
@@ -387,7 +387,7 @@ endmodule
                                   "main", 
                                   param_map, 
                                   module_defs, 
-                                  eval_context.net_reg, 
+                                  eval_context.signal_reg, 
                                   eval_context.func_def_reg,     
                                   eval_context.value_state)
 
@@ -411,8 +411,11 @@ def test_7a():
 """
 // Test
 module mod0();
-  wire a = 1'b1;
-  wire b = 1'b0;
+//  wire a = 1'b1;
+//  wire b = 1'b0;
+  wire a, b;
+  assign a = 1'b1;
+  assign b = 1'b0;
   wire c;
   and m0(.x(a), .y(b), .z(c));
 endmodule
@@ -422,7 +425,7 @@ module and(input x, input y, output z);
       p = q & r;
     end
   endfunction
-  z = p(x, y);
+  assign z = p(x, y);
 endmodule
 """
     )
@@ -466,6 +469,41 @@ def test_8():
                               sim2.ConstantExpression(sim2.Value("Z")))
   assert exp.evaluate(None) == sim2.LOGIC_1
 
+def test_9():
+
+    print("----- test_9 ------------------------------------------------------")
+
+    engine = sim2.Engine()
+    engine.load_module_from_text(
+"""
+// Test
+module mod0();
+  reg a;
+  reg b;
+  reg c, d;
+  always @ (a) begin
+    b = a;
+    // Since c isn't in the sensitivity list, this won't fire
+    // when c is changed.
+    d = c;
+  end
+endmodule
+"""
+    )
+
+    engine.start()
+
+    # Test initial values
+    assert engine.get_value("mod0.a") == sim2.LOGIC_X
+    assert engine.get_value("mod0.b") == sim2.LOGIC_X
+    assert engine.get_value("mod0.c") == sim2.LOGIC_X
+    assert engine.get_value("mod0.d") == sim2.LOGIC_X
+
+    # Set some values to show that the submodule is working
+    engine.set_value("mod0.a", sim2.Value(1))
+    assert engine.get_value("mod0.b") == sim2.LOGIC_1
+    assert engine.get_value("mod0.d") == sim2.LOGIC_X
+
 test_1()
 test_2()
 test_3()
@@ -475,3 +513,5 @@ test_6()
 test_7()
 test_7a()
 test_8()
+test_9()
+

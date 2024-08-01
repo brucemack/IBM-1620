@@ -1,3 +1,4 @@
+from __future__ import annotations 
 """
 Simple Verilog Simulator
 Copyright (C) 2024 - Bruce MacKinnon
@@ -8,7 +9,21 @@ LICENSE file for more information.
 This work is being made available for non-commercial use. Redistribution, commercial 
 use or sale of any part is prohibited.
 """
-from __future__ import annotations 
+
+"""
+TODOS:
+
+https://www.capsl.udel.edu/pub/courses/cpeg323/2002/verilog/chap_5.pdf
+
+Please note: There is a functional difference between a net
+declaration assignment and a continuous assignment statement. In
+net declaration assignments, all changes during a time unit in the
+expression on the right-hand side of the assignment operator (=)
+propagate to the net. In continuous assignment statements, the value
+in the expression on the right-hand side of the assignment operator (=)
+propagates to the net after the final change to the value of the
+expression.
+"""
 from enum import Enum
 import lark 
 
@@ -320,6 +335,10 @@ class NetType(Enum):
     WOR = 3
     WAND = 4
 
+class VariableType(Enum):
+    REG = 0
+    INTEGER = 1
+
 # TODO: WORK ON STRENGTH
 def wire_logic_eval(drivers: list[Value], net_type: NetType):
     if net_type == NetType.SUPPLY0:
@@ -373,8 +392,15 @@ class NetDeclaration(SignalDeclaration):
 
 class VariableDeclaration(SignalDeclaration):
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, var_type: VariableType):
         super().__init__(name, DataType.VARIABLE)
+        self.var_type = var_type
+
+    def get_var_type(self): return self.var_type
+
+    def __repr__(self):      
+        s = self.var_type.name.lower() + " " + self.name
+        return s
 
 class PortDeclaration(NetDeclaration):
 
@@ -420,7 +446,15 @@ class Statement:
     def elaborate(self, base_name):
         raise Exception("Not implemented")
 
-class ProcedureAssignment(Statement):
+class ProcedureStatement:
+
+    def execute(self, context):
+        raise Exception("Not implemented")
+
+    def elaborate(self, base_name):
+        raise Exception("Not implemented")
+
+class ProcedureAssignment(ProcedureStatement):
 
     def __init__(self, lhs: str, rhs: Expression, blocking: bool):
         self.lhs = lhs
@@ -449,7 +483,7 @@ class ProcedureAssignment(Statement):
             s = s + " = "
         else:
             s = s + " <= "
-        s = s + str(self.rhs) + ";"
+        s = s + str(self.rhs)
         return s
 
     def elaborate(self, base_name: str, local_variables: list[str]) -> ProcedureAssignment:
@@ -462,7 +496,7 @@ class ProcedureAssignment(Statement):
 
 class ProcedureBlock:
 
-    def __init__(self, statements: list[Statement]):
+    def __init__(self, statements: list[ProcedureStatement]):
         self.statements = statements
 
     def execute(self, context):
@@ -478,7 +512,7 @@ class ProcedureBlock:
     def __repr__(self):
         r = ""
         for statement in self.statements:
-            r = r + str(statement) + "\n"
+            r = r + str(statement) + ";\n"
         return r
 
     def elaborate(self, base_name: str, local_variables: list[str]) -> ProcedureBlock:
@@ -617,6 +651,27 @@ class PortAssignment:
     def __repr__(self):
         return "." + self.inside_name + "(" + self.outside_name + ")"
 
+# TODO: Create always/initial subclasses?
+class TriggeredProcedure:
+
+    def __init__(self, identifiers, procedure_block: ProcedureBlock):
+        self.identifiers = identifiers
+        self.procedure_block = procedure_block
+
+    def __repr__(self) -> str:
+        s = "always @ ("        
+        first = True
+        for id in self.identifiers:
+            if not first:
+                s = s + ", "
+            s = s + id 
+            first = False 
+        s = s + ")\n"
+        s = s + "begin\n"
+        s = s + str(self.procedure_block)
+        s = s + "end\n"
+        return s
+
 class ModuleInstantiation:
 
     def __init__(self, 
@@ -656,7 +711,9 @@ class ModuleDefinition:
                  net_declarations: list[NetDeclaration], 
                  net_assignments: list[NetAssignment], 
                  module_instantiations: list[ModuleInstantiation],
-                 function_definitions: list[FunctionDefinition]):
+                 function_definitions: list[FunctionDefinition],
+                 var_declarations: list[VariableDeclaration],
+                 triggered_procedures: list[TriggeredProcedure]):
 
         self.name = name
         self.module_instantiations = module_instantiations
@@ -664,6 +721,8 @@ class ModuleDefinition:
         self.port_declarations: list[PortDeclaration] = port_declarations
         self.net_declarations: list[NetDeclaration] = net_declarations
         self.net_assignments: list[NetAssignment] = net_assignments
+        self.var_declarations: list[VariableDeclaration] = var_declarations
+        self.triggered_procedures: list[TriggeredProcedure] = triggered_procedures
 
     def get_name(self): return self.name
 
@@ -672,7 +731,7 @@ class ModuleDefinition:
                   name: str,
                   param_map: dict[str, str], 
                   module_defs: dict[str, ModuleDefinition], 
-                  global_net_reg: NetRegistry,
+                  global_signal_reg: SignalRegistry,
                   global_function_registry: FunctionDefinitionRegistry,
                   global_value_state: ValueState):
 
@@ -700,15 +759,15 @@ class ModuleDefinition:
             if pd.port_type == PortType.INPUT:
                 # Register the assignment: inner <- outer
                 # NOTE: We assume that the outer name is already declared
-                global_net_reg.declare(global_inner_name, NetType.WIRE)
-                global_net_reg.add_assignment(global_inner_name,
+                global_signal_reg.declare_net(global_inner_name, NetType.WIRE)
+                global_signal_reg.add_assignment(global_inner_name,
                                               VariableExpression(global_outer_name))                                                 
             elif pd.port_type == PortType.OUTPUT:
                 # Register the assignment: outer <- inner
                 # NOTE: We assume that the outer name is already declared
                 # TODO: THE PORT ASSIGNMENTS CAN BE VARIABLES OR WIRES
-                global_net_reg.declare(global_inner_name, NetType.WIRE)
-                global_net_reg.add_assignment(global_outer_name,
+                global_signal_reg.declare_net(global_inner_name, NetType.WIRE)
+                global_signal_reg.add_assignment(global_outer_name,
                                               VariableExpression(global_inner_name))                                                 
             else:
                 raise Exception("Invalid port type")
@@ -718,9 +777,18 @@ class ModuleDefinition:
         #   wire a;
         for nd in self.net_declarations:
             global_net_name = join_name(path, name, nd.get_name())
-            global_net_reg.declare(global_net_name, nd.get_net_type())
+            global_signal_reg.declare_net(global_net_name, nd.get_net_type())
             # Set the initial value
             global_value_state.set_value(global_net_name, LOGIC_X)
+
+        # Register the variable declarations into a global repository
+        # Ex:
+        #   reg a;
+        for vd in self.var_declarations:
+            global_signal_name = join_name(path, name, vd.get_name())
+            global_signal_reg.declare_variable(global_signal_name, vd.get_var_type())
+            # Set the initial value
+            global_value_state.set_value(global_signal_name, LOGIC_X)
 
         # Instantiate the required global assignments (stand-alone assignments)
         # Ex:
@@ -731,7 +799,7 @@ class ModuleDefinition:
             # TODO: DEAL WITH LOCAL VARIABLE LIST
             global_exp = na.exp.globalize(join_name(path, name), [])
             # Add the assignment to the global registry
-            global_net_reg.add_assignment(global_net_name, global_exp)
+            global_signal_reg.add_assignment(global_net_name, global_exp)
 
         # Instantiate the required global assignments (assignments that are part of the declarations)
         # Ex: 
@@ -743,7 +811,17 @@ class ModuleDefinition:
                 # TODO: DEAL WITH LOCAL VARIABLE LIST
                 global_exp = nd.exp.globalize(join_name(path, name), [])
                 # Add the assignment to the global registry
-                global_net_reg.add_assignment(global_net_name, global_exp)
+                global_signal_reg.add_assignment(global_net_name, global_exp)
+
+        # Setup the triggers
+        for tp in self.triggered_procedures:
+            # Elaborate the procedure for this context
+            # TODO: LOCAL VARIABLES?
+            elaborated_pb = tp.procedure_block.elaborate(join_name(path, name), [])      
+            # Setup a trigger for each name in the sensitivity list
+            for id in tp.identifiers:
+                global_net_name = join_name(path, name, id)
+                global_signal_reg.add_triggered_procedure(global_net_name, elaborated_pb)
 
         # Deal with next level down of modules
         for mi in self.module_instantiations:
@@ -754,7 +832,7 @@ class ModuleDefinition:
             for port in mi.ports:
                 child_param_map[port.inside_name] = join_name(path, name, port.outside_name)
             module_def.elaborate(join_name(path, name), mi.instance_name,
-                child_param_map, module_defs, global_net_reg, global_function_registry, 
+                child_param_map, module_defs, global_signal_reg, global_function_registry, 
                 global_value_state)
 
     def __repr__(self):
@@ -768,12 +846,16 @@ class ModuleDefinition:
         s = s + ");\n"
         for nd in self.net_declarations:
             s = s + str(nd) + ";\n"
+        for vd in self.var_declarations:
+            s = s + str(vd) + ";\n"
         for fd in self.function_definitions:
             s = s + str(fd)
         for na in self.net_assignments:
             s = s + str(na) + ";\n"
         for mi in self.module_instantiations:
             s = s + str(mi) + ";\n"
+        for tp in self.triggered_procedures:
+            s = s + str(tp) 
         s = s + "endmodule"
         return s
 
@@ -800,38 +882,62 @@ class ValueState:
     def is_value_available(self, name: str) -> bool: 
         return name in self.state
 
-class NetInformation:
+class SignalInformation:
 
-    def __init__(self, name: str, type: NetType):
+    def __init__(self, name: str, data_type: DataType, net_type: NetType, var_type: VariableType):
         self.name = name
-        self.type = type 
+        self.data_type = data_type 
+        self.net_type = net_type
+        self.var_type = var_type
         self.assignments: list[Expression] = []
         self.dirty: bool = True  
+        # These are procedure blocks that should be executed 
+        # whenever the net is changed.
+        self.triggered_procedure_blocks: list[ProcedureBlock] = []
 
     def has_any_drivers(self) -> bool:
         return len(self.assignments) > 0
 
 # Used for storing net types and assignments
-class NetRegistry:
+class SignalRegistry:
 
     def __init__(self, value_state: ValueState):
         self.value_state = value_state
-        self.reg: dict[str, NetInformation] = {}
+        self.reg: dict[str, SignalInformation] = {}
 
-    def declare(self, name: str, type: NetType):
-        self.reg[name] = NetInformation(name, type)
+    def declare_net(self, name: str, net_type: NetType):
+        self.reg[name] = SignalInformation(name, DataType.NET, net_type, None)
+        # Initial value
+        self.value_state.set_value(name, LOGIC_X)
+
+    def declare_variable(self, name: str, var_type: VariableType):
+        self.reg[name] = SignalInformation(name, DataType.VARIABLE, None, var_type)
         # Initial value
         self.value_state.set_value(name, LOGIC_X)
 
     def add_assignment(self, name: str, exp: Expression):
         if not name in self.reg:
             raise Exception("Attempt to add assignment to undeclared net " + name)
+        if self.reg[name].data_type != DataType.NET:
+            raise Exception("Attempt to assign value to register")
         self.reg[name].assignments.append(exp)
+
+    def add_triggered_procedure(self, name: str, procedure_block: ProcedureBlock):
+        if not name in self.reg:
+            raise Exception("Attempt to add assignment to undeclared net " + name)
+        self.reg[name].triggered_procedure_blocks.append(procedure_block)
 
     def debug(self):
         for name, decl in self.reg.items():
-            print(name, "[", str(decl.type), "]", "<-", str(decl.assignments))
-
+            s = name + " [" + str(decl.data_type) + "] " 
+            if decl.data_type == DataType.NET:
+                s = s + " <- " + str(decl.assignments)
+            if len(decl.triggered_procedure_blocks) > 0:
+                for pb in decl.triggered_procedure_blocks:
+                    s = s + "\n"
+                    s = s + "Triggered Block:"
+                    s = s + str(pb)
+            print(s)
 
 class FunctionDefinitionRegistry:
 
@@ -846,13 +952,15 @@ class FunctionDefinitionRegistry:
     def get_function_def(self, name: str) -> FunctionDefinition:
         return self.reg[name]
 
+
 class EvalContext:
 
     def __init__(self):
         self.value_state: ValueState = ValueState()
         self.func_def_reg = FunctionDefinitionRegistry()
-        self.net_reg = NetRegistry(self.value_state)
+        self.signal_reg = SignalRegistry(self.value_state)
         self.non_blocking_queue: list[UpdateEvent] = []
+        self.triggered_queue: list[ProcedureBlock] = []
     
     def start(self):
         # Evaluate everything once to make sure all initial conditions are
@@ -887,11 +995,18 @@ class EvalContext:
         changed = self.value_state.set_value(name, value)
         if changed:
             # Figure out which nets need to be recomputed now as a result
-            for net_name, net_info in self.net_reg.reg.items():
+            for net_name, net_info in self.signal_reg.reg.items():
                 # Each signal can have multiple assignments contributing to it
                 for assignment in net_info.assignments:
                     if name in assignment.get_references():
                         net_info.dirty = True
+
+            # Figure out what blocks need to be triggered now as a result of 
+            # this change. There is no need to queue the same procedure block
+            # more than once.
+            for pb in self.signal_reg.reg[name].triggered_procedure_blocks:
+                if not pb in self.triggered_queue:
+                    self.triggered_queue.append(pb)
     
     def update_dirty_signals(self):
 
@@ -899,23 +1014,30 @@ class EvalContext:
         # require a recomputation.        
         while True:
 
+            # Fire off any triggers that are pending
+            triggered_queue = self.triggered_queue.copy()
+            self.triggered_queue.clear()
+            for triggered in triggered_queue:
+                triggered.execute(self)
+
+            # Now deal with propagation of values
             dirty_count = 0
 
-            for net_name, net_info in self.net_reg.reg.items():
-                if net_info.dirty:
+            for net_name, signal_info in self.signal_reg.reg.items():
+                if signal_info.data_type == DataType.NET and signal_info.dirty:
                     dirty_count = dirty_count + 1
-                    if net_info.has_any_drivers():
+                    if signal_info.has_any_drivers():
                         # The net may have more than one driver, so evaluate them all
                         driving_values = []
-                        for assignment in net_info.assignments:
+                        for assignment in signal_info.assignments:
                             driving_value = assignment.evaluate(self)
                             driving_values.append(driving_value)
                         # Combine the values of the drivers to a single value
-                        new_value = wire_logic_eval(driving_values, net_info.type)
+                        new_value = wire_logic_eval(driving_values, signal_info.net_type)
                         self.set_value_internal(net_name, new_value)
 
                     # Clear dirty flag
-                    net_info.dirty = False
+                    signal_info.dirty = False
 
             if dirty_count == 0:
                 return
@@ -957,6 +1079,7 @@ class Engine:
             if self.first_module_name == None:
                 self.first_module_name = module_def.get_name()
             self.module_defs[module_def.get_name()] = module_def
+            print(str(module_def))
 
     def get_value(self, name: str) -> Value:
         return self.eval_context.get_value(name)
@@ -964,7 +1087,7 @@ class Engine:
     def set_value(self, name: str, value: Value):
         return self.eval_context.set_value_blocking(name, value)
 
-    def start(self):
+    def start(self):     
 
         self.eval_context = EvalContext()
         # Elaboration
@@ -974,11 +1097,11 @@ class Engine:
             self.first_module_name,
             param_map, 
             self.module_defs, 
-            self.eval_context.net_reg, 
+            self.eval_context.signal_reg, 
             self.eval_context.func_def_reg,     
             self.eval_context.value_state)
 
-        self.eval_context.net_reg.debug()
+        self.eval_context.signal_reg.debug()
         self.eval_context.start()
 
 # ===== Lark Transformer ======================================================
@@ -1000,6 +1123,18 @@ def parse_binary_constant(c):
     else:
         raise Exception("Binary constant format error " + c)
 
+class MultiNetDeclaration:
+
+    def __init__(self, names: list[str], net_type: NetType):
+        self.names = names
+        self.net_type = net_type
+
+class MultiVariableDeclaration:
+
+    def __init__(self, names: list[str], var_type: VariableType):
+        self.names = names
+        self.var_type = var_type
+
 class Transformer(lark.visitors.Transformer):
 
     def IDENTIFIER(self, items):
@@ -1018,6 +1153,9 @@ class Transformer(lark.visitors.Transformer):
     def SUPPLY0(self, items): return NetType.SUPPLY0
     def SUPPLY1(self, items): return NetType.SUPPLY1
 
+    def REG(self, items): return VariableType.REG
+    def INTEGER(self, items): return VariableType.INTEGER
+
     def INPUT(self, items): return PortType.INPUT
     def OUTPUT(self, items): return PortType.OUTPUT
 
@@ -1030,19 +1168,32 @@ class Transformer(lark.visitors.Transformer):
         nas = []
         mis = []
         fds = []
+        vds = []
+        tps = []
         # Distribute the module statements into the proper buckets
         for statement in items[2]:
             if type(statement) is NetDeclaration:
                 nds.append(statement)
+            # The MutliNetDeclaration is expanded into a series of NetDeclarations
+            elif type(statement) is MultiNetDeclaration:
+                for name in statement.names:
+                    nds.append(NetDeclaration(name, statement.net_type))
             elif type(statement) is NetAssignment:
                 nas.append(statement)
             elif type(statement) is ModuleInstantiation:
                 mis.append(statement)
             elif type(statement) is FunctionDefinition:
                 fds.append(statement)
+            elif type(statement) is VariableDeclaration:
+                vds.append(statement)
+            elif type(statement) is MultiVariableDeclaration:
+                for name in statement.names:
+                    vds.append(VariableDeclaration(name, statement.var_type))
+            elif type(statement) is TriggeredProcedure:
+                tps.append(statement)
             else:
                 raise Exception("Unrecognized statement type " + str(type(statement)))
-        return ModuleDefinition(items[0], items[1], nds, nas, mis, fds)
+        return ModuleDefinition(items[0], items[1], nds, nas, mis, fds, vds, tps)
 
     def portdeclarations(self, items):
         return items
@@ -1060,8 +1211,16 @@ class Transformer(lark.visitors.Transformer):
         return items[0]
 
     def netdeclaration(self, items):
-        return NetDeclaration(items[1], items[0], None) 
+        # items[1] is a list of strings (the identifiers)
+        return MultiNetDeclaration(items[1], items[0])
+
+    def variabledeclaration(self, items):
+        # items[1] is a list of strings (the identifiers)
+        return MultiVariableDeclaration(items[1], items[0])
     
+    def identifiers(self, items) -> list[str]:
+        return items
+
     def netdeclaration_assign(self, items):
         return NetDeclaration(items[1], items[0], items[2]) 
 
@@ -1082,6 +1241,9 @@ class Transformer(lark.visitors.Transformer):
         return ModuleInstantiation(items[0], items[1], items[2])
 
     def nettype(self, items):
+        return items[0]
+
+    def variabletype(self, items):
         return items[0]
 
     def port_assignments(self, items):
@@ -1107,12 +1269,23 @@ class Transformer(lark.visitors.Transformer):
 
     def functionstatement(self, items):
         return items[0]
+      
+    def procedurestatements(self, items):
+        return items
     
+    def procedurestatement(self, items):
+        return items[0]
+
     def procedureassignment_blocking(self, items):
         return ProcedureAssignment(items[0], items[1], True)
 
     def procedureassignment_non_blocking(self, items):
         return ProcedureAssignment(items[0], items[1], False)
+
+    def always(self, items):
+        # items[0] - identifiers
+        # items[1] - procedurestatements
+        return TriggeredProcedure(items[0], ProcedureBlock(items[1]))        
 
     # ----- Expression Stuff --------------------------------------------------
 
@@ -1169,5 +1342,3 @@ class Transformer(lark.visitors.Transformer):
     
     def exp_signed_number(self, items):
         return ConstantExpression(Value(items[0]))
-
-
