@@ -10,20 +10,6 @@ This work is being made available for non-commercial use. Redistribution, commer
 use or sale of any part is prohibited.
 """
 
-"""
-TODOS:
-
-https://www.capsl.udel.edu/pub/courses/cpeg323/2002/verilog/chap_5.pdf
-
-Please note: There is a functional difference between a net
-declaration assignment and a continuous assignment statement. In
-net declaration assignments, all changes during a time unit in the
-expression on the right-hand side of the assignment operator (=)
-propagate to the net. In continuous assignment statements, the value
-in the expression on the right-hand side of the assignment operator (=)
-propagates to the net after the final change to the value of the
-expression.
-"""
 from enum import Enum
 import lark 
 
@@ -159,6 +145,9 @@ class Expression:
     def evaluate(self, contex: EvalContext) -> Value:
         raise Exception("Missing implementation")
 
+    def is_constant(self) -> bool:
+        raise Exception("Missing implementation")
+
     def get_references(self) -> list[str]:
         return [ ]
 
@@ -175,6 +164,9 @@ class VariableExpression(Expression):
     def evaluate(self, context: EvalContext) -> Value:
         return context.get_value(self.name)
 
+    def is_constant(self) -> bool:
+        return False
+    
     def __repr__(self) -> str:
         return self.name
 
@@ -192,6 +184,9 @@ class ConstantExpression(Expression):
 
     def evaluate(self, context) -> Value:
         return self.value
+
+    def is_constant(self) -> bool:
+        return True
 
     def __repr__(self):
         return str(self.value)
@@ -211,7 +206,10 @@ class BinaryExpression(Expression):
         lhs_value = self.lhs.evaluate(context)
         rhs_value = self.rhs.evaluate(context)
         return self.eval(lhs_value, rhs_value)
-    
+
+    def is_constant(self) -> bool:
+        return self.lhs.is_constant() and self.rhs.is_constant()
+        
     def eval(self, lhs: Value, rhs: Value) -> Value:
         if self.type == "|":
             return logic_eval_or(lhs, rhs)
@@ -259,6 +257,9 @@ class UnaryExpression(Expression):
     def evaluate(self, context: EvalContext) -> Value:
         lhs_value = self.lhs.evaluate(context)
         return self.eval(lhs_value)
+
+    def is_constant(self) -> bool:
+        return self.lhs.is_constant()
     
     def eval(self, lhs: Value)-> Value:
         if self.type == "!":
@@ -295,6 +296,12 @@ class FunctionExpression(Expression):
         function_def.procedure_block.execute(function_context)
         # Extract the return value based on the name of the function
         return function_context.get_value(function_def.get_name())
+
+    def is_constant(self) -> bool:
+        for param in self.params:
+            if not param.is_constant():
+                return False
+        return True
 
     def get_references(self) -> list[str]:
         result = []
@@ -390,17 +397,32 @@ class NetDeclaration(SignalDeclaration):
             s = s + " = " + str(self.exp)
         return s
 
-class VariableDeclaration(SignalDeclaration):
+class IdentifierWithInit:
 
-    def __init__(self, name: str, var_type: VariableType):
-        super().__init__(name, DataType.VARIABLE)
-        self.var_type = var_type
-
-    def get_var_type(self): return self.var_type
+    def __init__(self, name: str, init_exp: Expression):
+        self.name = name 
+        self.init_exp = init_exp
 
     def __repr__(self):      
-        s = self.var_type.name.lower() + " " + self.name
+        s = self.id.name
+        if self.id.init_exp:
+            s = s + " = " + str(self.id.init_exp)
         return s
+
+class VariableDeclaration:
+
+    def __init__(self, var_type: VariableType, id: IdentifierWithInit):
+        self.var_type = var_type
+        self.id = id
+
+    def get_var_type(self): 
+        return self.var_type
+
+    def get_name(self):
+        return self.id.name
+
+    def __repr__(self):      
+        return self.var_type.name.lower() + " " + str(self.id)
 
 class PortDeclaration(NetDeclaration):
 
@@ -408,7 +430,8 @@ class PortDeclaration(NetDeclaration):
         super().__init__(name, NetType.WIRE)
         self.port_type = port_type
 
-    def get_port_type(self): return self.port_type
+    def get_port_type(self): 
+        return self.port_type
 
     def __repr__(self):
         if self.port_type == PortType.INPUT:
@@ -784,11 +807,20 @@ class ModuleDefinition:
         # Register the variable declarations into a global repository
         # Ex:
         #   reg a;
+        #   reg b = 1;
         for vd in self.var_declarations:
             global_signal_name = join_name(path, name, vd.get_name())
             global_signal_reg.declare_variable(global_signal_name, vd.get_var_type())
             # Set the initial value
-            global_value_state.set_value(global_signal_name, LOGIC_X)
+            if vd.id.init_exp:
+                # Make sure the expression is a constant
+                if not vd.id.init_exp.is_constant():
+                    raise Exception("Non-constant initialization of variable " + global_signal_name)
+                # No context is being passed - should not be needed for a constant!
+                global_value_state.set_value(global_signal_name, vd.id.init_exp.evaluate(None))
+            # Default initial value is X
+            else:
+                global_value_state.set_value(global_signal_name, LOGIC_X)
 
         # Instantiate the required global assignments (stand-alone assignments)
         # Ex:
@@ -1063,7 +1095,7 @@ class Engine:
 
     def load_module_files(self, file_names: list[str]):
         for name in file_names:
-            tree = self.parser.parse(open(name))
+            tree = self.parser.parse(open(name).read())
             result = Transformer().transform(tree)
             # Move the modules into a map
             for module_def in result:
@@ -1079,7 +1111,6 @@ class Engine:
             if self.first_module_name == None:
                 self.first_module_name = module_def.get_name()
             self.module_defs[module_def.get_name()] = module_def
-            print(str(module_def))
 
     def get_value(self, name: str) -> Value:
         return self.eval_context.get_value(name)
@@ -1101,7 +1132,7 @@ class Engine:
             self.eval_context.func_def_reg,     
             self.eval_context.value_state)
 
-        self.eval_context.signal_reg.debug()
+        #self.eval_context.signal_reg.debug()
         self.eval_context.start()
 
 # ===== Lark Transformer ======================================================
@@ -1131,9 +1162,9 @@ class MultiNetDeclaration:
 
 class MultiVariableDeclaration:
 
-    def __init__(self, names: list[str], var_type: VariableType):
-        self.names = names
+    def __init__(self, var_type: VariableType, ids: list[IdentifierWithInit]):
         self.var_type = var_type
+        self.ids = ids
 
 class Transformer(lark.visitors.Transformer):
 
@@ -1186,9 +1217,11 @@ class Transformer(lark.visitors.Transformer):
                 fds.append(statement)
             elif type(statement) is VariableDeclaration:
                 vds.append(statement)
+            # This is a special class used to pass multiple variable declarations
+            # in a single object. We divide it into its individual parts here.
             elif type(statement) is MultiVariableDeclaration:
-                for name in statement.names:
-                    vds.append(VariableDeclaration(name, statement.var_type))
+                for id in statement.ids:
+                    vds.append(VariableDeclaration(statement.var_type, id))
             elif type(statement) is TriggeredProcedure:
                 tps.append(statement)
             else:
@@ -1215,9 +1248,22 @@ class Transformer(lark.visitors.Transformer):
         return MultiNetDeclaration(items[1], items[0])
 
     def variabledeclaration(self, items):
-        # items[1] is a list of strings (the identifiers)
-        return MultiVariableDeclaration(items[1], items[0])
+        # items[0] is the VariableType
+        # items[1] is a list of IdentifierWithInits
+        return MultiVariableDeclaration(items[0], items[1])
     
+    def identifier_with_inits(self, items):
+        return items
+    
+    def identifier_with_init(self, items):
+        # items[0] is the identifier name
+        return IdentifierWithInit(items[0], None)
+
+    def identifier_with_init_exp(self, items):
+        # items[0] is the identifier name
+        # items[1] is the expression
+        return IdentifierWithInit(items[0], items[1])
+
     def identifiers(self, items) -> list[str]:
         return items
 

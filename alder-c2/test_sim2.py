@@ -481,6 +481,10 @@ module mod0();
   reg a;
   reg b;
   reg c, d;
+  // Initial value
+  reg f = 1'b1;
+  // NOT ALLOWED, NON-CONSTANT
+  //reg g = f;
   always @ (a) begin
     b = a;
     // Since c isn't in the sensitivity list, this won't fire
@@ -498,11 +502,19 @@ endmodule
     assert engine.get_value("mod0.b") == sim2.LOGIC_X
     assert engine.get_value("mod0.c") == sim2.LOGIC_X
     assert engine.get_value("mod0.d") == sim2.LOGIC_X
+    assert engine.get_value("mod0.f") == sim2.LOGIC_1
 
     # Set some values to show that the submodule is working
     engine.set_value("mod0.a", sim2.Value(1))
     assert engine.get_value("mod0.b") == sim2.LOGIC_1
     assert engine.get_value("mod0.d") == sim2.LOGIC_X
+
+def test_10():
+
+    print("----- test_10 ------------------------------------------------------")
+
+    engine = sim2.Engine()
+    engine.load_module_files([ "../daves-1f/typewriter-mechanical.v" ])
 
 test_1()
 test_2()
@@ -514,4 +526,4 @@ test_7()
 test_7a()
 test_8()
 test_9()
-
+test_10()

@@ -18,6 +18,7 @@ modulestatement: netdeclaration
                | variabledeclaration 
                | always
 
+// TODO: Switch to IdentifierWithInit
 netdeclaration: nettype identifiers ";" 
               | nettype IDENTIFIER "=" exp ";" -> netdeclaration_assign
 
@@ -40,12 +41,24 @@ functionstatements: functionstatement*
 
 functionstatement: procedureassignment
 
-variabledeclaration: variabletype identifiers ";"
+// A variable declaration has the option of providing an 
+// initial value, but it must be a constant.
+
+variabledeclaration: variabletype identifier_with_inits ";"
 
 variabletype: ( REG | INTEGER )
 
+identifier_with_inits: identifier_with_init ("," identifier_with_init)*
+
+identifier_with_init: IDENTIFIER
+                    | IDENTIFIER "=" exp -> identifier_with_init_exp
+
+// Procedure assignments work for variables on the LHS
+
 procedureassignment: IDENTIFIER "=" exp ";" -> procedureassignment_blocking
                    | IDENTIFIER "<=" exp ";" -> procedureassignment_non_blocking
+
+// Continuous assignment. The LHS must be a net.
 
 netassignment: "assign" IDENTIFIER "=" exp ";"
 
