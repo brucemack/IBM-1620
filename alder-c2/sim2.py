@@ -56,6 +56,23 @@ LOGIC_1 = Value(1)
 LOGIC_X = Value("X")
 LOGIC_Z = Value("Z")
 
+def parse_binary_constant(c):
+    # TODO: COMPLETE
+    if c.startswith("1'b"):
+        s = c[3:]
+        if s == "0":
+            return LOGIC_0
+        elif s == "1":
+            return LOGIC_1
+        elif s == "x":
+            return LOGIC_X
+        elif s == "z":
+            return LOGIC_Z
+        else:
+            raise Exception("Binary constant format error " + c)
+    else:
+        raise Exception("Binary constant format error " + c)
+
 # See IEEE standard section 5.1.8
 def logic_eval_eq(a: Value, b: Value):
     if a == LOGIC_X or a == LOGIC_Z or b == LOGIC_X or b == LOGIC_Z:
@@ -168,13 +185,29 @@ def logic_eval_gte(a: Value, b: Value) -> Value:
 
 # ----- Expression Related ----------------------------------------------
 
+def join_name(path: str, name: str, name2: str = None) -> str:
+
+    s = None
+    if path and name:
+        s = path + "." + name 
+    elif name:
+        s = name
+
+    if name2:
+        if not s:
+            s = name2
+        else:
+            s = s + "." + name2
+
+    return s
+
 def globalize_name_if_necessary(prefix, local_variables: list[str], name: str) -> str:
     if "." in name: 
         return name 
     elif name in local_variables: 
         return name
     else:
-        return prefix + "." + name
+        return join_name(prefix, name)
 
 class Expression:
 
@@ -550,7 +583,7 @@ class ProcedureAssignment(ProcedureStatement):
         if self.lhs in local_variables:
             elaborated_lhs = self.lhs
         else:
-            elaborated_lhs = base_name + "." + self.lhs
+            elaborated_lhs = join_name(base_name, self.lhs)
             # TODO: Make sure we are assigning to a variable
             if not context.is_variable(elaborated_lhs):
                 raise Exception("Illegal assignment to " + elaborated_lhs)
@@ -758,15 +791,6 @@ class ModuleInstantiation:
         s = s + ")"
         return s
     
-def join_name(path: str, name: str, name2: str = None) -> str:
-    if path:
-        s = path + "." + name 
-    else:
-        s = name
-    if name2:
-        s = s + "." + name2
-    return s
-
 class ModuleDefinition:
 
     def __init__(self, 
@@ -1176,7 +1200,8 @@ class Engine:
         param_map = {}
 
         self.module_defs[self.first_module_name].elaborate(None, 
-            self.first_module_name,
+            #self.first_module_name,
+            None,
             param_map, 
             self.module_defs, 
             self.eval_context)
@@ -1189,23 +1214,6 @@ class Engine:
         self.eval_context.process_non_blocking_queue()
 
 # ===== Lark Transformer ======================================================
-
-def parse_binary_constant(c):
-    # TODO: COMPLETE
-    if c.startswith("1'b"):
-        s = c[3:]
-        if s == "0":
-            return LOGIC_0
-        elif s == "1":
-            return LOGIC_1
-        elif s == "x":
-            return LOGIC_X
-        elif s == "z":
-            return LOGIC_Z
-        else:
-            raise Exception("Binary constant format error " + c)
-    else:
-        raise Exception("Binary constant format error " + c)
 
 class MultiNetDeclaration:
 

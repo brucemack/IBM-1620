@@ -423,13 +423,13 @@ endmodule
     engine.start()
 
     # Test initial values
-    assert engine.get_value("mod0.a") == sim2.LOGIC_1
-    assert engine.get_value("mod0.b") == sim2.LOGIC_0
-    assert engine.get_value("mod0.c") == sim2.LOGIC_0
+    assert engine.get_value("a") == sim2.LOGIC_1
+    assert engine.get_value("b") == sim2.LOGIC_0
+    assert engine.get_value("c") == sim2.LOGIC_0
 
     # Set some values to show that the submodule is working
-    engine.set_value("mod0.b", sim2.Value(1))
-    assert engine.get_value("mod0.c") == sim2.LOGIC_1
+    engine.set_value("b", sim2.Value(1))
+    assert engine.get_value("c") == sim2.LOGIC_1
 
 # Testing equality
 def test_8():
@@ -488,71 +488,85 @@ endmodule
     engine.start()
 
     # Test initial values
-    assert engine.get_value("mod0.a") == sim2.LOGIC_X
-    assert engine.get_value("mod0.b") == sim2.LOGIC_X
-    assert engine.get_value("mod0.c") == sim2.LOGIC_X
-    assert engine.get_value("mod0.d") == sim2.LOGIC_X
-    assert engine.get_value("mod0.f") == sim2.LOGIC_1
+    assert engine.get_value("a") == sim2.LOGIC_X
+    assert engine.get_value("b") == sim2.LOGIC_X
+    assert engine.get_value("c") == sim2.LOGIC_X
+    assert engine.get_value("d") == sim2.LOGIC_X
+    assert engine.get_value("f") == sim2.LOGIC_1
 
     # Set some values to show that the submodule is working
-    engine.set_value("mod0.a", sim2.Value(1))
-    assert engine.get_value("mod0.b") == sim2.LOGIC_1
-    assert engine.get_value("mod0.d") == sim2.LOGIC_X
+    engine.set_value("a", sim2.Value(1))
+    assert engine.get_value("b") == sim2.LOGIC_1
+    assert engine.get_value("d") == sim2.LOGIC_X
 
+# Tests using the typewriter mechanical Verilog file
 def test_10():
 
   print("----- test_10 ------------------------------------------------------")
 
   engine = sim2.Engine()
-  engine.load_module_files([ "../daves-1f/typewriter-mechanical.v" ])
+  engine.load_module_files([ "../daves-1f/main.v", "../daves-1f/typewriter-mechanical.v" ])
   engine.start() 
 
   # Test the angle
-  engine.set_value("typewriter._angle", sim2.Value(100))
-  assert engine.get_value("typewriter.crcb_3no_sw") == sim2.LOGIC_1
+  engine.set_value("tw._angle", sim2.Value(100))
+  assert engine.get_value("tw.crcb_3no_sw") == sim2.LOGIC_1
 
   # Test a DUO Relay
 
   # Pick the relay
-  engine.set_value("typewriter.r6_pick_coil", sim2.LOGIC_1)
+  engine.set_value("tw.r6_pick_coil", sim2.LOGIC_1)
   engine.tick()
-  assert engine.get_value("typewriter.r6_1no_sw") == sim2.LOGIC_1
+  assert engine.get_value("tw.r6_1no_sw") == sim2.LOGIC_1
 
   # Here we transition from the pick coil to the hold coil - no change
-  engine.set_value("typewriter.r6_pick_coil", sim2.LOGIC_0)
-  engine.set_value("typewriter.r6_hold_coil", sim2.LOGIC_1)
+  engine.set_value("tw.r6_pick_coil", sim2.LOGIC_0)
+  engine.set_value("tw.r6_hold_coil", sim2.LOGIC_1)
   engine.tick()
-  assert engine.get_value("typewriter.r6_1no_sw") == sim2.LOGIC_1
+  assert engine.get_value("tw.r6_1no_sw") == sim2.LOGIC_1
 
   # Here we release the hold
-  engine.set_value("typewriter.r6_hold_coil", sim2.LOGIC_0)
+  engine.set_value("tw.r6_hold_coil", sim2.LOGIC_0)
   engine.tick()
-  assert engine.get_value("typewriter.r6_1no_sw") == sim2.LOGIC_0
+  assert engine.get_value("tw.r6_1no_sw") == sim2.LOGIC_0
 
   # Test a latching relay
 
-  engine.set_value("typewriter.r1_pick_coil", sim2.LOGIC_0)
-  engine.set_value("typewriter.r1_trip_coil", sim2.LOGIC_0)
+  engine.set_value("tw.r1_pick_coil", sim2.LOGIC_0)
+  engine.set_value("tw.r1_trip_coil", sim2.LOGIC_0)
 
   # Pick the relay
-  engine.set_value("typewriter.r1_pick_coil", sim2.LOGIC_1)
+  engine.set_value("tw.r1_pick_coil", sim2.LOGIC_1)
   engine.tick()
-  assert engine.get_value("typewriter.r1_1no_sw") == sim2.LOGIC_1
+  assert engine.get_value("tw.r1_1no_sw") == sim2.LOGIC_1
 
   # Remove pick power and show that latch remains
-  engine.set_value("typewriter.r1_pick_coil", sim2.LOGIC_0)
+  engine.set_value("tw.r1_pick_coil", sim2.LOGIC_0)
   engine.tick()
-  assert engine.get_value("typewriter.r1_1no_sw") == sim2.LOGIC_1
+  assert engine.get_value("tw.r1_1no_sw") == sim2.LOGIC_1
 
   # Trip the relay
-  engine.set_value("typewriter.r1_trip_coil", sim2.LOGIC_1)
+  engine.set_value("tw.r1_trip_coil", sim2.LOGIC_1)
   engine.tick()
-  assert engine.get_value("typewriter.r1_1no_sw") == sim2.LOGIC_0
+  assert engine.get_value("tw.r1_1no_sw") == sim2.LOGIC_0
 
   # Remove trip power
-  engine.set_value("typewriter.r1_trip_coil", sim2.LOGIC_0)
+  engine.set_value("tw.r1_trip_coil", sim2.LOGIC_0)
   engine.tick()
-  assert engine.get_value("typewriter.r1_1no_sw") == sim2.LOGIC_0
+  assert engine.get_value("tw.r1_1no_sw") == sim2.LOGIC_0
+
+# Tests using the typewriter mechanical Verilog file
+def test_11():
+
+  print("----- test_11 ------------------------------------------------------")
+
+  engine = sim2.Engine()
+  engine.load_module_files([ "../daves-1f/main.v", "../daves-1f/typewriter-mechanical.v" ])
+  engine.start() 
+
+  # Test the angle
+  engine.set_value("tw._angle", sim2.Value(100))
+  assert engine.get_value("tw.crcb_3no_sw") == sim2.LOGIC_1
 
 test_1()
 test_2()
@@ -565,3 +579,4 @@ test_7a()
 test_8()
 test_9()
 test_10()
+test_11()
