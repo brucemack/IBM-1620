@@ -999,6 +999,9 @@ class SignalRegistry:
         self.value_state = value_state
         self.reg: dict[str, SignalInformation] = {}
 
+    def get_names(self) -> list[str]:
+        return [x for x in self.reg.keys()]
+
     def declare_net(self, name: str, net_type: NetType):
         self.reg[name] = SignalInformation(name, DataType.NET, net_type, None)
         # Initial value
@@ -1189,8 +1192,17 @@ class Engine:
     def get_value(self, name: str) -> Value:
         return self.eval_context.get_value(name)
 
+    def get_int(self, name: str) -> int:
+        return self.eval_context.get_value(name).get_int()
+
+    def get_bool(self, name: str) -> int:
+        return self.eval_context.get_value(name).get_bool()
+
     def set_value(self, name: str, value: Value):
         return self.eval_context.set_value_blocking(name, value)
+
+    def get_signal_names(self) -> list[str]:
+        return self.eval_context.signal_reg.get_names()
 
     def start(self):     
 

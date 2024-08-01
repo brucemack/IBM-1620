@@ -394,10 +394,10 @@ endmodule
 
 def test_7a():
 
-    print("----- test_7a ------------------------------------------------------")
+  print("----- test_7a ------------------------------------------------------")
 
-    engine = sim2.Engine()
-    engine.load_module_from_text(
+  engine = sim2.Engine()
+  engine.load_module_from_text(
 """
 // Test
 module mod0();
@@ -420,17 +420,17 @@ endmodule
 """
     )
 
-    engine.start()
+  engine.start()
 
-    # Test initial values
-    assert engine.get_value("a") == sim2.LOGIC_1
-    assert engine.get_value("b") == sim2.LOGIC_0
-    assert engine.get_value("c") == sim2.LOGIC_0
+  # Test initial values
+  assert engine.get_value("a") == sim2.LOGIC_1
+  assert engine.get_value("b") == sim2.LOGIC_0
+  assert engine.get_value("c") == sim2.LOGIC_0
 
-    # Set some values to show that the submodule is working
-    engine.set_value("b", sim2.Value(1))
-    assert engine.get_value("c") == sim2.LOGIC_1
-
+  # Set some values to show that the submodule is working
+  engine.set_value("b", sim2.Value(1))
+  assert engine.get_value("c") == sim2.LOGIC_1
+ 
 # Testing equality
 def test_8():
     

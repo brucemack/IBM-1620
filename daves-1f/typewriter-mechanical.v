@@ -381,6 +381,7 @@ module typewriter();
     // ===== CRCB Cam Relay ======================================================
 
     integer _angle;
+    integer _cycle;
     wire crcb_1no_sw = (_angle >= 0) & (_angle < 51);
     wire crcb_2no_sw = (_angle >= 50) & (_angle < 100);
     wire crcb_3no_sw = (_angle >= 99) & (_angle < 309);
