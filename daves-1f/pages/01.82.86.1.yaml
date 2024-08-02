@@ -153,7 +153,7 @@ devices:
       9nc: [ r45.1nc, r22.11nc ]
       9no: [ r50.9no, r46.5no, r46.7no ]
 
-  - name: ps_21
+  - name: ps_2i
     type: solenoid
     pins: 
       a: [ r45.1nc, r22.11nc ]
@@ -163,6 +163,6 @@ devices:
     type: relay
     pins:
       1c: r46.9nc
-      1nc: [ ps_21.a, r22.11nc ]
+      1nc: [ ps_2i.a, r22.11nc ]
       1no: r42.4nc
 

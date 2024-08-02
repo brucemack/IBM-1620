@@ -34,9 +34,9 @@ devices:
     pins:
       3c: r28.4nc
       3nc: r8.4c
-      3no: sp_dash.a
+      3no: ps_dash.a
 
-  - name: sp_dash
+  - name: ps_dash
     type: solenoid
     pins:
       a: r22.3no
@@ -54,9 +54,9 @@ devices:
     pins: 
       4c: r22.3nc
       4nc: r6.1nc
-      4no: [ r22.4nc, sp_0.a ]
+      4no: [ r22.4nc, ps_0.a ]
 
-  - name: sp_0
+  - name: ps_0
     type: solenoid
     pins: 
       a: r22.4nc
@@ -66,10 +66,10 @@ devices:
     type: relay
     pins:
       4c: r28.4no
-      4nc: [ r8.4no, sp_0.a ]
-      4no: sp_plus.a
+      4nc: [ r8.4no, ps_0.a ]
+      4no: ps_plus.a
 
-  - name: sp_plus
+  - name: ps_plus
     type: solenoid
     pins: 
       a: r22.4no
@@ -87,9 +87,9 @@ devices:
     pins:
       5c: r28.5nc
       5nc: r42.7no
-      5no: sp_q.a 
+      5no: ps_q.a 
 
-  - name: sp_q
+  - name: ps_q
     type: solenoid
     pins:
       a: r22.5no
@@ -102,7 +102,7 @@ devices:
       5nc: r22.5c
       5no: r22.6c
 
-  - name: sp_y
+  - name: ps_y
     type: solenoid 
     pins: 
       a: r22.6nc
@@ -112,10 +112,10 @@ devices:
     type: relay
     pins:
       6c: r28.5no
-      6nc: sp_y.a
-      6no: sp_h.a
+      6nc: ps_y.a
+      6no: ps_h.a
 
-  - name: sp_h
+  - name: ps_h
     type: solenoid 
     pins: 
       a: r22.6no
@@ -147,9 +147,9 @@ devices:
     pins:
       8c: r28.6no
       8nc: r42.2nc
-      8no: sp_d.a
+      8no: ps_d.a
 
-  - name: sp_d
+  - name: ps_d
     type: solenoid 
     pins: 
       a: r22.8no
@@ -169,7 +169,7 @@ devices:
       7nc: r28.6c
       7no: r28.7c
 
-  - name: sp_at
+  - name: ps_at
     type: solenoid
     pins:
       a: r22.9nc
@@ -179,10 +179,10 @@ devices:
     type: relay 
     pins:
       9c: r28.7nc
-      9nc: sp_at.a
-      9no: sp_star.a
+      9nc: ps_at.a
+      9no: ps_star.a
 
-  - name: sp_star
+  - name: ps_star
     type: solenoid
     pins:
       a: r22.9no
@@ -195,7 +195,7 @@ devices:
       7nc: r22.9c
       7no: r22.10c
 
-  - name: sp_lparen
+  - name: ps_lparen
     type: solenoid
     pins:
       a: r22.10nc
@@ -205,10 +205,10 @@ devices:
     type: relay
     pins: 
       10c: r28.7no
-      10nc: sp_lparen.a
-      10no: sp_rparen.a
+      10nc: ps_lparen.a
+      10no: ps_rparen.a
 
-  - name: sp_rparen
+  - name: ps_rparen
     type: solenoid
     pins:
       a: r22.10no

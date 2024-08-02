@@ -27,8 +27,13 @@ class Value:
     def is_z(self):
         return self.value == "Z"
 
-    def get_bool(self):
-        return bool(self.value)
+    def get_bool(self) -> bool:
+        if self.value == 1:
+            return True
+        elif self.value == 0:
+            return False
+        else:
+            raise Exception("Unable to convert to boolean")
     
     def get_float(self):
         return float(self.value)
@@ -1002,6 +1007,9 @@ class SignalRegistry:
     def get_names(self) -> list[str]:
         return [x for x in self.reg.keys()]
 
+    def is_valid_signal(self, name: str) -> bool:
+        return name in self.reg
+
     def declare_net(self, name: str, net_type: NetType):
         self.reg[name] = SignalInformation(name, DataType.NET, net_type, None)
         # Initial value
@@ -1065,6 +1073,9 @@ class EvalContext:
         self.non_blocking_queue: list[UpdateEvent] = []
         self.triggered_queue: list[ProcedureBlock] = []
     
+    def is_valid_signal(self, name) -> bool:
+        return self.signal_reg.is_valid_signal(name)
+
     def is_variable(self, name) -> bool:
         return self.signal_reg.is_variable(name)
 
@@ -1099,10 +1110,13 @@ class EvalContext:
 
     def set_value_internal(self, name: str, value: Value):
 
+        if not self.is_valid_signal(name):
+            raise Exception("Signal not defined " + name)
+
         # Save and check to see if this value has changed since the last time
         changed = self.value_state.set_value(name, value)
         if changed:
-            print("Setting", name, "<-", value)
+            #print("Setting", name, "<-", value)
             # Figure out which nets need to be recomputed now as a result
             for net_name, net_info in self.signal_reg.reg.items():
                 # Each signal can have multiple assignments contributing to it
@@ -1195,7 +1209,7 @@ class Engine:
     def get_int(self, name: str) -> int:
         return self.eval_context.get_value(name).get_int()
 
-    def get_bool(self, name: str) -> int:
+    def get_bool(self, name: str) -> bool:
         return self.eval_context.get_value(name).get_bool()
 
     def set_value(self, name: str, value: Value):
@@ -1203,6 +1217,9 @@ class Engine:
 
     def get_signal_names(self) -> list[str]:
         return self.eval_context.signal_reg.get_names()
+    
+    def is_valid_signal(self, name: str) -> bool:
+        return self.eval_context.is_valid_signal(name)
 
     def start(self):     
 

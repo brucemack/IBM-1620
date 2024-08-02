@@ -1,13 +1,11 @@
-import util 
+import math
 import schem 
 import schem2
 import net3 as net
 import numpy as np
-import logicbox
+import sim2
 import time 
-
-indir = "../daves-1f/pages"
-  
+ 
 def get_conn(pins, device, pin_name):
     full_pin_name = device.get_name().upper() + "." + pin_name.upper()
     if not (full_pin_name in pins):
@@ -225,6 +223,9 @@ SHORT_R = 0.0000000001
 OPEN_R = 100000000
 COIL_R = 10
 
+indir = "../daves-1f/pages"
+meta_dir = "../daves-1f/hardware-meta"
+
 # Load machine
 machine = schem2.Machine()
 machine.load_from_ald2s(indir, infiles)
@@ -269,10 +270,6 @@ def device_internal_setup(device):
 
 # Convert the schem2 to schem 
 machine.visit_devices(device_internal_setup)
-
-#for c in out_devices:
-#    print(c)
-
 
 c1 = schem.Circuit(out_devices, [ ])
 
@@ -319,8 +316,11 @@ def net_setup_visitor(name, type, io_names, params):
 c1.visit_leaves({ }, None, [ ], net_setup_visitor)
 
 # Display net devices
+print("========================================================================")
+print("Net Devices")
 for nd in net_devices:
     print(nd.get_name(), nd)
+
 
 # Setup nodes and get device names
 mapper = net.Mapper()
@@ -331,16 +331,33 @@ for dev in net_devices:
     name_to_device[dev.get_name()] = dev
 
 # Setup digital logic
-
-fns = [ "../daves-1f/main.logic", "../daves-1f/typewriter-mechanical.logic" ]
-lb = logicbox.LogicBox(fns)    
+fns = [ "../daves-1f/main.v", "../daves-1f/typewriter-mechanical.v" ]
+lb = sim2.Engine()
+lb.load_module_files(fns)
+lb.start()
 
 max_iter = 50
 
 start = time.perf_counter()
 
+# We only process the angles that really matter    
+significant_angles = [ 0, 1, 2, 3,
+                    49, 50, 51, 52,
+                    98, 99, 100, 101, 
+                    170, 171, 172, 173,
+                    219, 220, 221, 222, 223,
+                    299, 300, 301, 302,
+                    309, 310, 311, 312,
+                    359 ]
+
 # Time steps
-for i in range(0, 30 * 5):
+for i in range(0, 3 * len(significant_angles)):
+
+    angle = significant_angles[i % len(significant_angles)]
+    cycle = math.floor(i / len(significant_angles))
+
+    lb.set_value("tw._cycle", sim2.Value(cycle))
+    lb.set_value("tw._angle", sim2.Value(angle))
 
     print("-----", i, lb.get_int("tw._cycle"), lb.get_int("tw._angle"), "---------")
 
@@ -415,21 +432,26 @@ for i in range(0, 30 * 5):
                 print(i, mapper.index_to_name(i), e[i])
 
     # Push coil/solenoid state into logic 
-    coil_values = {}
     for dev in net_devices:
         if dev.can_get_current() and ("_coil" in dev.get_name() or "_sol" in dev.get_name()):
-            i = dev.get_current(x)
-            if abs(i) > 0.1:
-                print("Current in device", dev.get_name(), i)
-                coil_values["tw." + dev.get_name()] = True
+            if lb.is_valid_signal("tw." + dev.get_name()):
+                i = dev.get_current(x)
+                if abs(i) > 0.1:
+                    #print("Current in device", dev.get_name(), i)
+                    lb.set_value("tw." + dev.get_name(), sim2.LOGIC_1)
+                    if "_sol" in dev.get_name():
+                        print("Energized solenoid", dev.get_name())
+                else:
+                    lb.set_value("tw." + dev.get_name(), sim2.LOGIC_0)
             else:
-                coil_values["tw." + dev.get_name()] = False
+                print("Device is not found in logic", "tw." + dev.get_name())
 
     # Advance the logic by one step
-    lb.tick(coil_values)
+    lb.tick()
 
-    # Transfer all of the switch values
-    for logic_name in lb.get_names():
+    # Transfer all of the switch values from the digital domain back 
+    # into the analog model
+    for logic_name in lb.get_signal_names():
         if logic_name.startswith("tw.") and logic_name.endswith("_sw"):
             # Strip off the leading "tw."
             device_name = logic_name[3:]
@@ -437,7 +459,8 @@ for i in range(0, 30 * 5):
                 #print("Can't find switch", device_name)
                 pass
             else:
-                changed = name_to_device[device_name].set_state(lb.get_bool(logic_name))
+                v = lb.get_bool(logic_name)
+                changed = name_to_device[device_name].set_state(v)
                 if changed:
                     print("CHANGED", device_name, "to", lb.get_bool(logic_name))
 

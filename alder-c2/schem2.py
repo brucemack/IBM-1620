@@ -1,3 +1,4 @@
+from __future__ import annotations 
 """
 IBM-1620 Logic Reproduction 
 Copyright (C) 2024 - Bruce MacKinnon
@@ -9,7 +10,6 @@ This work is being made available for non-commercial use. Redistribution, commer
 use or sale of any part is prohibited.
 """
 import yaml
-
 
 class PinMeta:
 
@@ -51,8 +51,10 @@ class DeviceType:
         
         self.type_name = type_name
         self.pin_metas = {}
+        self.has_meta = False
 
         if meta_yaml:
+            self.has_meta = True
             for pin_name, pin_yaml in meta_yaml["pins"].items():
                 type = None
                 if "type" in pin_yaml:
@@ -68,12 +70,17 @@ class DeviceType:
                 self.pin_metas[pin_name] = PinMeta(pin_name, type, drivetype, tie)
 
 
-    def get_name(self) -> str: return self.type_name
+    def get_name(self) -> str: 
+        return self.type_name
 
     def get_pin_meta(self, local_id) -> PinMeta:
-        if not local_id in self.pin_metas:
-            raise Exception("Device type " + self.type_name + " does not have pin " + local_id)
-        return self.pin_metas[local_id]
+        if self.has_meta:
+            if not local_id in self.pin_metas:
+                raise Exception("Device type " + self.type_name + " does not have pin " + local_id)
+            else:
+                return self.pin_metas[local_id]
+        else:
+            return None
 
 class AliasDeviceType():
 
@@ -117,7 +124,12 @@ class Device:
         return pin.get_node().get_name()
 
     def get_pin_meta(self, local_pin_id) -> PinMeta:
-        return self.type.get_pin_meta(local_pin_id)
+        # If there is no type defined for this device yet then the pin
+        # meta is not available.
+        if self.type == None:
+            return None
+        else:
+            return self.type.get_pin_meta(local_pin_id)
 
     def generate_verilog(self, ostr):
         s = "  SMS_CARD_" + self.get_type_name() + " D_" + make_verilog_id(self.get_name()) + "("
@@ -358,17 +370,20 @@ class Machine:
                 self.device_types["ONE"] = DeviceType("ONE", p)
 
     def get_device_type(self, type_name: str) -> DeviceType:
+        # If there is no device metadata available then we return a shell type
         if not self.device_meta_dir:
-            return DeviceType(type_name, None)   
-        if not type_name in self.device_types:
-            # Load device meta from a file
-            with open(self.device_meta_dir + "/" + type_name + "/" + 
-                    type_name + ".yaml") as file:
-                p = yaml.safe_load(file)
-                self.device_types[type_name] = DeviceType(type_name, p)
-        return self.device_types[type_name]
+            return DeviceType(type_name, None)
+        else:
+            if not type_name in self.device_types:
+                # Load device meta from a file
+                with open(self.device_meta_dir + "/" + type_name + "/" + 
+                        type_name + ".yaml") as file:
+                    p = yaml.safe_load(file)
+                    self.device_types[type_name] = DeviceType(type_name, p)
+            return self.device_types[type_name]
     
-    def get_device_names(self): return list(self.devices.keys())
+    def get_device_names(self): 
+        return list(self.devices.keys())
 
     def visit_devices(self, visitor):
         for device in self.devices.values(): visitor(device)
@@ -377,11 +392,6 @@ class Machine:
         for node in self.nodes: visitor(node)
 
     def get_nodes(self): return self.nodes
-
-    def get_or_create_device(self, device_id) -> Device:
-        if not device_id in self.devices:
-            self.devices[device_id] = Device(None, device_id)
-        return self.devices[device_id]
 
     def load_from_ald1(self, ald_fn):
 
@@ -431,7 +441,8 @@ class Machine:
                     gate_id = yaml_device["gate"].upper()
                     loc_id = str(yaml_device["loc"]).upper()
                     device_name = gate_id + "_" + loc_id
-                    # Device exists already
+
+                    # The device exists already (from first pass)
                     device = self.devices[device_name]
 
                     pin_list = []
@@ -465,6 +476,8 @@ class Machine:
                                         if not target_coordinate in coordinates:
                                             raise Exception("Pin on device " + device_name + " references " + \
                                                             "unrecognized coordinate " + target_coordinate)
+                                        # In ALD1 mode we can only reference devices that are on the same
+                                        # page, so therefore the device will already exist.
                                         target_device = coordinates[target_coordinate]
                                         # Multiple pins can be encoded:
                                         for target_pin_name in list(tokens[1].upper()):
@@ -552,6 +565,8 @@ class Machine:
                             if device.get_type().get_name() != type_name:
                                 raise Exception("Device type consistency error " + \
                                                 device_name + " " + type_name)
+                        # If there is no type yet (i.e. have never seen this device) then 
+                        # establish the type
                         else:
                             device.set_type(self.get_device_type(type_name))
 
@@ -582,7 +597,13 @@ class Machine:
                                     tokens = connection.upper().split(".")
                                     if len(tokens) != 2:
                                         raise Exception("Connection syntax error " + connection)
-                                    target_device = self.get_or_create_device(tokens[0])
+                                    # In ALD2 mode it is possible to reference a device on 
+                                    # a different sheet (i.e. one that has never been seen before).
+                                    # In that case we create a preliminary version of the device
+                                    # and will fill it in later.
+                                    if not tokens[0] in self.devices:
+                                        self.devices[tokens[0]] = Device(None, tokens[0])
+                                    target_device: Device = self.devices[tokens[0]]
                                     target_pin = target_device.get_or_create_pin(tokens[1])
                                 # Otherwise, assume a net alias
                                 else:

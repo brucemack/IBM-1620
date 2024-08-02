@@ -7,6 +7,30 @@ module typewriter();
 
     // ===== Duo Relays =======================================================
 
+    wire r4_pick_coil, r4_hold_coil;
+    reg r4_state;
+    wire r4_1no_sw = r4_state;
+    wire r4_1nc_sw = !r4_1no_sw;
+    wire r4_3no_sw = r4_state;
+    wire r4_3nc_sw = !r4_3no_sw;
+    wire r4_4no_sw = r4_state;
+    wire r4_4nc_sw = !r4_4no_sw;
+    always @ (r4_pick_coil, r4_hold_coil) begin
+        r4_state <= (r4_pick_coil | r4_hold_coil);
+    end
+
+    wire r5_pick_coil, r5_hold_coil;
+    reg r5_state;
+    wire r5_1no_sw = r5_state;
+    wire r5_1nc_sw = !r5_1no_sw;
+    wire r5_3no_sw = r5_state;
+    wire r5_3nc_sw = !r5_3no_sw;
+    wire r5_4no_sw = r5_state;
+    wire r5_4nc_sw = !r5_4no_sw;
+    always @ (r5_pick_coil, r5_hold_coil) begin
+        r5_state <= (r5_pick_coil | r5_hold_coil);
+    end
+
     wire r6_pick_coil, r6_hold_coil;
     reg r6_state;
     wire r6_1no_sw = r6_state;
@@ -189,6 +213,20 @@ module typewriter();
         r28_state <= (r28_pick_coil | r28_hold_coil);
     end 
 
+    wire r31_pick_coil, r31_hold_coil;
+    reg r31_state;
+    wire r31_1no_sw = r31_state;
+    wire r31_1nc_sw = !r31_1no_sw;
+    wire r31_2no_sw = r31_state;
+    wire r31_2nc_sw = !r31_2no_sw;
+    wire r31_3no_sw = r31_state;
+    wire r31_3nc_sw = !r31_3no_sw;
+    wire r31_4no_sw = r31_state;
+    wire r31_4nc_sw = !r31_4no_sw;
+    always @ (r31_pick_coil, r31_hold_coil) begin
+        r31_state <= (r31_pick_coil | r31_hold_coil);
+    end 
+
     wire r38_pick_coil, r38_hold_coil;
     reg r38_state;
     wire r38_1no_sw = r38_state;
@@ -217,6 +255,20 @@ module typewriter();
         r41_state <= (r41_pick_coil | r41_hold_coil);
     end 
 
+    wire r42_pick_coil, r42_hold_coil;
+    reg r42_state;
+    wire r42_1no_sw = r42_state;
+    wire r42_1nc_sw = !r42_1no_sw;
+    wire r42_2no_sw = r42_state;
+    wire r42_2nc_sw = !r42_2no_sw;
+    wire r42_3no_sw = r42_state;
+    wire r42_3nc_sw = !r42_3no_sw;
+    wire r42_4no_sw = r42_state;
+    wire r42_4nc_sw = !r42_4no_sw;
+    always @ (r42_pick_coil, r42_hold_coil) begin
+        r42_state <= (r42_pick_coil | r42_hold_coil);
+    end 
+
     wire r45_pick_coil, r45_hold_coil;
     reg r45_state;
     wire r45_1no_sw = r45_state;
@@ -229,6 +281,20 @@ module typewriter();
     wire r45_4nc_sw = !r45_4no_sw;
     always @ (r45_pick_coil, r45_hold_coil) begin
         r45_state <= (r45_pick_coil | r45_hold_coil);
+    end
+
+    wire r46_pick_coil, r46_hold_coil;
+    reg r46_state;
+    wire r46_1no_sw = r46_state;
+    wire r46_1nc_sw = !r46_1no_sw;
+    wire r46_2no_sw = r46_state;
+    wire r46_2nc_sw = !r46_2no_sw;
+    wire r46_3no_sw = r46_state;
+    wire r46_3nc_sw = !r46_3no_sw;
+    wire r46_4no_sw = r46_state;
+    wire r46_4nc_sw = !r46_4no_sw;
+    always @ (r46_pick_coil, r46_hold_coil) begin
+        r46_state <= (r46_pick_coil | r46_hold_coil);
     end
 
     wire r49_pick_coil, r49_hold_coil;
@@ -278,7 +344,7 @@ module typewriter();
     // ===== Latching Relays ===================================================
 
     wire r1_pick_coil, r1_trip_coil;
-    reg r1_state;
+    reg r1_state = 1'b0;
     wire r1_1no_sw = r1_state;
     wire r1_1nc_sw = !r1_1no_sw;
     wire r1_2no_sw = r1_state;
@@ -290,7 +356,7 @@ module typewriter();
     end 
 
     wire r3_pick_coil, r3_trip_coil;
-    reg r3_state;
+    reg r3_state = 1'b0;
     wire r3_1no_sw = r3_state;
     wire r3_1nc_sw = !r3_1no_sw;
     wire r3_2no_sw = r3_state;
@@ -305,7 +371,7 @@ module typewriter();
 
     // FLAG INTLK
     wire r7_pick_coil, r7_trip_coil;
-    reg r7_state;
+    reg r7_state = 1'b0;
     wire r7_1no_sw = r7_state;
     wire r7_1nc_sw = !r7_1no_sw;
     wire r7_2no_sw = r7_state;
@@ -320,7 +386,7 @@ module typewriter();
 
     // SHIFT
     wire r10_pick_coil, r10_trip_coil;
-    reg r10_state;
+    reg r10_state = 1'b0;
     wire r10_1no_sw = r10_state;
     wire r10_1nc_sw = !r10_1no_sw;
     always @ (r10_pick_coil, r10_trip_coil) begin
@@ -329,7 +395,7 @@ module typewriter();
 
     // TEST
     wire r20_pick_coil, r20_trip_coil;
-    reg r20_state;
+    reg r20_state = 1'b0;
     wire r20_1no_sw = r20_state;
     wire r20_1nc_sw = !r20_1no_sw;
     wire r20_2no_sw = r20_state;
@@ -343,7 +409,7 @@ module typewriter();
     end 
 
     wire r39_pick_coil, r39_trip_coil;
-    reg r39_state;
+    reg r39_state = 1'b0;
     wire r39_1no_sw = r39_state;
     wire r39_1nc_sw = !r39_1no_sw;
     wire r39_2no_sw = r39_state;
@@ -355,7 +421,7 @@ module typewriter();
     end 
 
     wire r40_pick_coil, r40_trip_coil;
-    reg r40_state;
+    reg r40_state = 1'b0;
     wire r40_1no_sw = r40_state;
     wire r40_1nc_sw = !r40_1no_sw;
     wire r40_2no_sw = r40_state;
@@ -365,7 +431,7 @@ module typewriter();
     end 
 
     wire r54_pick_coil, r54_trip_coil;
-    reg r54_state;
+    reg r54_state = 1'b0;
     wire r54_1no_sw = r54_state;
     wire r54_1nc_sw = !r54_1no_sw;
     wire r54_2no_sw = r54_state;
@@ -397,6 +463,53 @@ module typewriter();
 
     wire ps_shift_sol;
     wire sw_shiftcontact_no_sw = ps_shift_sol;
+
+    // Solenoids
+    wire ps_a_sol;
+    wire ps_b_sol;
+    wire ps_c_sol;
+    wire ps_d_sol;
+    wire ps_e_sol;
+    wire ps_f_sol;
+    wire ps_g_sol;
+    wire ps_h_sol;
+    wire ps_n_sol;
+    wire ps_p_sol;
+    wire ps_q_sol;
+    wire ps_r_sol;
+    wire ps_s_sol;
+    wire ps_t_sol;
+    wire ps_v_sol;
+    wire ps_w_sol;
+    wire ps_x_sol;
+    wire ps_y_sol;
+    wire ps_z_sol;
+    wire ps_0_sol;
+    wire ps_1u_sol;
+    wire ps_2i_sol;
+    wire ps_3o_sol;
+    wire ps_4j_sol;
+    wire ps_5k_sol;
+    wire ps_6l_sol;
+    wire ps_7m_sol;
+    wire ps_8comma_sol;
+    wire ps_9period_sol;
+    wire ps_space_sol;
+    wire ps_at_sol;
+    wire ps_dash_sol;
+    wire ps_slash_sol;
+    wire ps_plus_sol;
+    wire ps_star_sol;
+    wire ps_lparen_sol;
+    wire ps_rparen_sol;
+    wire ps_dollar_sol;
+    wire ps_ne_sol;
+    wire ps_overscore_sol;
+    wire ps_centerscore_sol;
+    wire ps_invalidchar_sol;
+    wire ps_tab_sol;
+    wire ps_carr_rtn_sol;
+    wire ps_keylock_sol;
 
     // ===== Temporary Logic =======================================================
 

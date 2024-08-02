@@ -35,6 +35,8 @@ devices:
   - name: r40
     type: relaylatching
     desc: "Error 2"
+  - name: r41
+    type: relay
   - name: r54
     type: relaylatching
     desc: "Store"
