@@ -212,7 +212,24 @@ class Node:
         return driver_count > 1
 
     def generate_verilog(self, ostr):
+        """
+        The generation of Verilog for a node needs to take into 
+        account the possibility of multi-driver "wired logic".
 
+        If a node is only driven by a single pin then nothing 
+        special happens - the node is realized using a normal
+        Verilog wire.
+
+        If a node has both active pull-up an active pull-down
+        drivers then we have may have a conflict and an error is 
+        generated.
+
+        If a node is driven by more than one active pull up
+        then we consider this to be a wire-or situation. If
+        there is a passive pull-down on the node then the 
+        default value is 0. If there is no pull-down on the
+        node then the default value is undefined/floating.
+        """
         # Organize the pins into drivers, driven, and passive
         driver_pins = []
         driven_pins = []
@@ -225,16 +242,14 @@ class Node:
             elif pin.is_passive():
                 passive_pins.append(pin)
 
-        # Setup a final wire for this node
-        s = "  wire _W" + make_verilog_id(self.get_name()) + ";\n"
-        ostr.write(s)
+        net_name = "_W" + make_verilog_id(self.get_name())
 
-        if self.is_multidriver():
-
-            # Setup a final wire for this node
-            s = "  // START: Multi-driver node\n"
+        if len(driver_pins) == 1:
+            # This is the single-driver case
+            # Setup a regular wire for this node
+            s = "  wire " + net_name + ";\n"
             ostr.write(s)
-
+        else:
             # Figure out what we've got on the line
             active_pull_up = False
             active_pull_down = False
@@ -243,10 +258,6 @@ class Node:
 
             # Look at the driver/active pins
             for driver_pin in driver_pins:
-                # Create a wire for each of the drivers
-                s = "  wire _W" + make_verilog_id(driver_pin.get_global_id()) + ";\n"
-                ostr.write(s)
-
                 dt = driver_pin.get_meta().drivetype 
                 if dt == "AH" or dt == "AH_PD":
                     active_pull_up = True
@@ -274,6 +285,8 @@ class Node:
                     raise Exception("Invalid tie type: " + tt)
 
             # Look for problem combinations
+            if not active_pull_up and not active_pull_down:
+                raise Exception("No driver for node: " + self.get_name())                
             if active_pull_down and active_pull_up:
                 raise Exception("Conflicting drive types on wire: " + self.get_name())
             if active_pull_up and passive_pull_up:
@@ -285,55 +298,17 @@ class Node:
             if active_pull_up and not passive_pull_down:
                 raise Exception("Active pull up with no pull down on wire: " + self.get_name())
 
-            # The pull up case looks for any 1's driving the wire
             if active_pull_up:
                 # Generate a suitable net. Any of the drivers can pull the net high with a 1.
-                # The default value depends on whether there is a pull down amongst the
-                # driving nets.
-                if not passive_pull_down:
-                    default_value = 1
-                    desc = "active high, no pull down"
-                else:
-                    default_value = 0
-                    desc = "active high with pull down"
-                s = "  // Automatically generated DOT-OR (" + desc + ")\n"
+                s = "  wor " + net_name + ";\n"
                 ostr.write(s)
-                s = "  _W" + make_verilog_id(self.get_name()) + " = "
-                first = True
-                s = s + "("
-                for driver_pin in driver_pins:
-                    if not first:
-                        s = s + " | "
-                    s = s + "_W" + make_verilog_id(driver_pin.get_global_id()) + " === 1"
-                    first = False
-                s = s + ") ? 1 : " + str(default_value) + ";\n"
-                ostr.write(s)
+                if passive_pull_down:
+                    s = "  assign " + net_name + " = 0;\n"
+                    ostr.write(s)
             else:                
                 # Generate a suitable net. Any of the drivers can pull the net low with a 0.
-                # The default value depends on whether there is a pull up amongst the
-                # driving nets.
-                if not passive_pull_up:
-                    default_value = 1
-                    desc = "active low, no pull up"
-                else:
-                    default_value = 1
-                    desc = "active low with pull up"
-                driven_name = "W_DOT_" + make_verilog_id(driver_pin.get_global_id()) 
-                s = "  // Automatically generated DOT-OR (" + desc + ")\n"
+                s = "  wand _W" + make_verilog_id(self.get_name()) + ";\n"
                 ostr.write(s)
-                s = "  _W" + make_verilog_id(self.get_name()) + " = "
-                first = True
-                s = s + "("
-                for driver_pin in driver_pin:
-                    if not first:
-                        s = s + " | "
-                    s = s + "W_" + make_verilog_id(driver_pin.get_global_id()) + " === 0"
-                    first = False
-                s = s + ") ? 0 : " + str(default_value) + ";\n"
-                ostr.write(s)
-
-            s = "  // END: Multi-driver node\n"
-            ostr.write(s)
 
 def recursive_traverse(visited_pins: set[str], start_pin: Pin, visitor = None):
     if not start_pin.get_global_id() in visited_pins:
