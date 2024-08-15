@@ -343,6 +343,12 @@ class Machine:
             with open(util_dir + "/ONE/ONE.yaml") as file:
                 p = yaml.safe_load(file)
                 self.device_types["ONE"] = DeviceType("ONE", p)
+            with open(util_dir + "/RST/RST.yaml") as file:
+                p = yaml.safe_load(file)
+                self.device_types["RST"] = DeviceType("RST", p)
+            with open(util_dir + "/IND/IND.yaml") as file:
+                p = yaml.safe_load(file)
+                self.device_types["IND"] = DeviceType("IND", p)
 
     def get_device_type(self, type_name: str) -> DeviceType:
         # If there is no device metadata available then we return a shell type

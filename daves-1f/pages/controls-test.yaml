@@ -3,7 +3,7 @@ title: "Test Controls"
 num: 00.00.00.0 
 pdf: None
 
-blocks:
+devices:
   - gate: ZZZZ
     loc: 9991
     typ: ONE
