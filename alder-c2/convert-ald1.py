@@ -9,6 +9,7 @@ util_dir = "../../IBM1620/hardware/sms-cards/util"
 
 pages_file = "core-pages.yaml"
 #pages_file = "typewriter-pages.yaml"
+out_file = "./core.v"
 
 machine = schem2.Machine(sms_meta_dir, util_dir)
 
@@ -46,7 +47,7 @@ for node in machine.get_nodes():
                 print("  ", pin.get_global_id(), pin.device.get_type_name())
         
 # Dump verilog
-with open("./typewriter-control.v", "w+") as ostr:
+with open(out_file, "w+") as ostr:
 
     #ostr = sys.stdout
     s = "module machine();\n"
@@ -59,6 +60,12 @@ with open("./typewriter-control.v", "w+") as ostr:
             device.generate_verilog(ostr)
 
     machine.visit_devices(device_visitor)
+
+    # Setup the initial block
+    ostr.write("initial begin" + "\n")
+    ostr.write("  #64;" + "\n")
+    ostr.write("  $finish;" + "\n")
+    ostr.write("end" + "\n")
 
     s = "endmodule;\n"
     ostr.write(s)

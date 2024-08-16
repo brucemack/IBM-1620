@@ -137,7 +137,7 @@ class Device:
         for _, pin in self.pins.items():
             if not first:
                 s = s + ", "
-            s = s + "." + pin.get_id() + "("
+            s = s + "." + pin.get_id().lower() + "("
             # For multi-driver nets, the driver nets use their own wires 
             if pin.get_node().is_multidriver() and pin.is_driver():
                 s = s + "_W" + make_verilog_id(pin.get_global_id())
