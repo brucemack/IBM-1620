@@ -7,9 +7,10 @@ ald_dir = "../daves-1f/pages"
 sms_meta_dir = "../../IBM1620/hardware/sms-cards"
 util_dir = "../../IBM1620/hardware/sms-cards/util"
 
-pages_file = "core-pages.yaml"
-#pages_file = "typewriter-pages.yaml"
-out_file = "./core.v"
+#pages_file = "core-pages.yaml"
+pages_file = "typewriter-pages.yaml"
+#out_file = "./core.v"
+out_file = "./typewriter-control.v"
 
 machine = schem2.Machine(sms_meta_dir, util_dir)
 
