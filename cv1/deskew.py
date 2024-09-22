@@ -7,38 +7,36 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.ndimage import median_filter
 
-# Load image and drop the alpha
-i = ski.io.imread("pages/ald_126.png")
-print(i.shape)
+image_dir = "pages"
 
-i2 = rgba2rgb(i)
-print(i2.shape)
+def convert(fn):
 
-i3 = rgb2gray(i2)
-print(i3.shape)
-# Filter out some noise 
-i3 = median_filter(i3, size=3)
+    print("Working on", fn)
 
-# Optimal threshold
-thresh = threshold_otsu(i3)
-# Binarize the data
-i3 = i3 > thresh
-# Compute true count for each row
-row_count = np.sum(i3, axis=1)
-h = np.histogram(row_count, 100)
+    # Load image and drop the alpha
+    i = ski.io.imread(image_dir + "/" + fn + ".png")
+    i2 = rgba2rgb(i)
+    i3 = rgb2gray(i2)
+    # Filter out some noise 
+    i3 = median_filter(i3, size=3)
 
-plt.hist(h, bins=100)  # arguments are passed to np.histogram
+    # Optimal threshold
+    thresh = threshold_otsu(i3)
+    # Binarize the data
+    i3 = i3 > thresh
 
-# Convert to greyscale RGB
-i3 = 1 * i3
-i4 = gray2rgb(i3)
-i4 *= 255
-i4 = i4.astype(np.uint8)
+    # Convert to greyscale RGB
+    i3 = 1 * i3
+    i4 = gray2rgb(i3)
+    i4 *= 255
+    i4 = i4.astype(np.uint8)
+    # Despeckel
+    i4 = median_filter(i4, size=3)
 
-#i4 = median_filter(i4, size=3)
+    # Dump
+    ski.io.imsave(image_dir + "/" + fn + "_bw.png", i4)
 
-# Dump
-ski.io.imsave("pages/ald_126_bw.png", i4)
-#ski.io.imshow(i4)
+for k in range(1, 455):
+    f = f"ald_{k:03d}"
+    convert(f)
 
-plt.show()
