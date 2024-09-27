@@ -1,4 +1,6 @@
-# Editor
+# Editor used for capturing character rectangles
+# Bruce MacKinnon 27-Sep-2024
+
 import os
 import json 
 import math
@@ -6,11 +8,12 @@ import tkinter as tk
 import tkinter.font as TkFont
 import tkinter.simpledialog as TkDialog
 from PIL import Image, ImageTk, ImageFilter
+import numpy as np
 
 image_dir = "pages"
 meta_dir = "meta"
 helv16 = None
-vp_size = (1800, 1200)
+vp_size = (1500, 800)
 
 img_number = 0
 imgfn = None
@@ -19,7 +22,7 @@ page_number = "??.??.??.??"
 
 # View-port adjustments
 vp_translation = (0, 0)
-vp_scale = 0.5
+vp_scale = 1
 vp_scale_step = 0.1
 vp_rotation = 0
 
@@ -271,19 +274,72 @@ def on_f3(event):
     redraw_ol()
 
 def on_f4(event):
+    """
+    This is the event that causes a rectangle to be written
+    """
     global selected_cell_x, selected_cell_y, original_image
-    # Dump the selected cell
+
+    # Ask the user for the symbol name
+    glyph_name = TkDialog.askstring("Glyph Name", "Enter glyph name")
+
+    # Dump the selected cell to a file
     base_0 = ol_to_base((selected_cell_x * ol_x_pitch, selected_cell_y * ol_y_pitch))
     base_1 = ol_to_base(((selected_cell_x + 1) * ol_x_pitch, (selected_cell_y + 1) * ol_y_pitch))
-    print(base_0, base_1)
-    for y in range(base_0[1], base_1[1]):
-        line = ""
-        for x in range(base_0[0], base_1[0]):
-            line = line + str(original_image.getpixel((x, y))) + " "
-        print(line)
-
     part = original_image.crop((base_0[0], base_0[1], base_1[0], base_1[1]))
-    part.save("./character.png")
+    part.save("../glyphs/" + glyph_name + ".png")
+
+def on_f5(event):
+    """
+    This is the event that performs a Fourier analysis on a row of pixels
+    """
+    # Figure out which cell was selected
+    base_point = vp_to_base(hair_point)
+
+    # Horizontal calculation
+    h_pvalues = []
+    for x in range(0, original_image.size[0]):
+        # (x,y)
+        pix = original_image.getpixel((x, base_point[1]))
+        gr = pix[0] * 0.299 + pix[1] * 0.587 + pix[2] * 0.114
+        h_pvalues.append(255 - gr)
+    # Do a DFT on the pixel values
+    f = np.fft.fft(h_pvalues)
+    h_max_mag = 0
+    h_max_i = 0
+    # Calculate the approximate frequency
+    h_approx = round(original_image.size[0] / ol_x_pitch)
+
+    # Find the maximum energy, only looking at the range around the 
+    # row frequency.
+    for i in range(h_approx - 20, h_approx + 20):
+        mag = 2 * abs(f[i]) / original_image.size[0]
+        if mag > h_max_mag:
+            h_max_mag = mag
+            h_max_i = i
+
+    print("Horizontal max", h_max_mag, h_max_i)
+
+    # Vertical calculation
+    v_pvalues = []
+    for y in range(0, original_image.size[1]):
+        # (x,y)
+        pix = original_image.getpixel((base_point[0], y))
+        gr = pix[0] * 0.299 + pix[1] * 0.587 + pix[2] * 0.114
+        v_pvalues.append(255 - gr)
+    # Do a DFT on the pixel values
+    f = np.fft.fft(v_pvalues)
+    v_max_mag = 0
+    v_max_i = 0
+    # Calculate the approximate frequency
+    v_approx = round(original_image.size[1] / ol_y_pitch)
+    # We only look at the range around the row frequency
+    for i in range(v_approx - 20, v_approx + 20):
+        mag = 2 * abs(f[i]) / original_image.size[1]
+        #print(i, mag)
+        if mag > v_max_mag:
+            v_max_mag = mag
+            v_max_i = i
+    print("Vertical max", v_max_mag, v_max_i)
 
 def on_shift_up(event):
     global ol_translation
@@ -346,11 +402,46 @@ def on_right(event):
     redraw_hair()
 
 def load_image(fn):
+
     global original_image, image_needs_resize
-    #complete_fn = image_dir + "/" + fn + ".png"
     complete_fn = "../cv2/" + fn + ".png"
     original_image = Image.open(complete_fn)
     image_needs_resize = True
+
+    # Scan the entire image and build a histogram of the horizontal pitch
+    # frequency.
+
+    # This is the dominant frequency for each row:
+    h_freqs = []
+    for y in range(0, original_image.size[1]):
+        # Scan across the row
+        h_pvalues = []
+        for x in range(0, original_image.size[0]):
+            # (x,y)
+            pix = original_image.getpixel((x, y))
+            gr = pix[0] * 0.299 + pix[1] * 0.587 + pix[2] * 0.114
+            h_pvalues.append(255 - gr)
+        # Do a DFT on the pixel values
+        f = np.fft.fft(h_pvalues)
+        # Identify the dominant frequency 
+        h_max_mag = 0
+        h_max_i = 0
+        # Calculate the approximate frequency
+        h_approx = round(original_image.size[0] / ol_x_pitch)
+        # We only look at the range around the row frequency
+        for i in range(h_approx - 20, h_approx + 20):
+            mag = 2 * abs(f[i]) / original_image.size[0]
+            if mag > h_max_mag:
+                h_max_mag = mag
+                h_max_i = i
+        h_freqs.append(h_max_i)
+
+    # Compute the histogram
+    bin_counts, bin_edges = np.histogram(h_freqs, bins="auto")
+    max_bin = np.argmax(bin_counts)
+    print("Hist counts", bin_counts)
+    print("Hist edges", bin_edges)
+    print("Max bin value", (bin_edges[max_bin] + bin_edges[max_bin + 1]) / 2)
 
 root = tk.Tk()
 root.title("ALD Prod")
@@ -368,6 +459,7 @@ root.bind("<F1>", on_f1)
 root.bind("<F2>", on_f2)
 root.bind("<F3>", on_f3)
 root.bind("<F4>", on_f4)
+root.bind("<F5>", on_f5)
 root.bind("<Up>", on_up)
 root.bind("<Down>", on_down)
 root.bind("<Left>", on_left)
@@ -383,7 +475,7 @@ root.bind("<Alt-Left>", on_alt_left)
 root.bind("<Alt-Right>", on_alt_right)
 
 # Load
-load_image("rotated")
+load_image("rotated_055")
 redraw_image()
 redraw_hair()
 redraw_ol()
