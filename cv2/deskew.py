@@ -2,13 +2,23 @@ import math
 import numpy as np
 import cv2 as cv2
 
-img = cv2.imread("../pages/ald_055.png")
+img = cv2.imread("../pages/ald_045.png")
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 kernel_size = 5
 #blur_gray = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
 blur_gray = cv2.medianBlur(gray, 5)
 # Invert
 blur_gray = (255 - blur_gray)
+
+# Clear out some areas that we don't want considered for the line detection
+# Clear left
+blur_gray[0:blur_gray.shape[1], 0:800] = 0
+# Clear right
+blur_gray[0:blur_gray.shape[1], 2600:blur_gray.shape[0]] = 0
+# Clear top
+blur_gray[0:500, 0:blur_gray.shape[0]] = 0
+# Clear bottom
+blur_gray[4300:blur_gray.shape[1], 0:blur_gray.shape[0]] = 0
 
 #low_threshold = 50 
 #high_threshold = 150
@@ -19,8 +29,10 @@ ret, edges = cv2.threshold(blur_gray, 128, 255, cv2.THRESH_BINARY)
 # Line detection
 rho = 2 # distance resolution in pixels of the Hough grid
 theta = (np.pi / 180) / 8 # angular resolution in radians of the Hough grid
-threshold = 1200  # minimum number of votes (intersections in Hough grid cell)
-min_line_length = 400  # minimum number of pixels making up a line
+#threshold = 1200  # minimum number of votes (intersections in Hough grid cell)
+threshold = 1000  # minimum number of votes (intersections in Hough grid cell)
+#min_line_length = 400  # minimum number of pixels making up a line
+min_line_length = 1000  # minimum number of pixels making up a line
 max_line_gap = 8  # maximum gap in pixels between connectable line segments
 
 # Create a blank to draw lines on
@@ -75,8 +87,7 @@ print("Rotation Angle", horz_max)
 rot_degrees = horz_max
 
 # Draw the lines on the image
-#lines_edges = cv2.addWeighted(img, 0.8, line_image, 1, 0)
-lines_edges = cv2.addWeighted(img, 1.0, line_image, 0, 0)
+lines_edges = cv2.addWeighted(img, 0.8, line_image, 1, 0)
 
 # Rotate
 image_center = tuple(np.array(lines_edges.shape[1::-1]) / 2)
@@ -88,7 +99,7 @@ lines_edges = cv2.warpAffine(lines_edges, rot_mat, lines_edges.shape[1::-1], fla
 img_final = lines_edges
 
 # Write the image
-cv2.imwrite("./rotated_055.png", img_final)
+cv2.imwrite("../pages/ald_045_rotated.png", img_final)
 
 # Show the image
 (h, w) = img_final.shape[:2]

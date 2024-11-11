@@ -1,4 +1,4 @@
-# Editor used for capturing character rectangles
+# Editor used for extracting character rectangles
 # Bruce MacKinnon 27-Sep-2024
 
 import os
@@ -288,6 +288,21 @@ def on_f4(event):
     part = original_image.crop((base_0[0], base_0[1], base_1[0], base_1[1]))
     part.save("../glyphs/" + glyph_name + ".png")
 
+def on_f6(event):
+    """
+    This is the event that causes a larger rectangle to be written
+    """
+    global selected_cell_x, selected_cell_y, original_image
+
+    # Ask the user for the symbol name
+    glyph_name = "1620"
+
+    # Dump the selected cell to a file
+    base_0 = ol_to_base((selected_cell_x * ol_x_pitch, selected_cell_y * ol_y_pitch))
+    base_1 = ol_to_base(((selected_cell_x + 4) * ol_x_pitch, (selected_cell_y + 1) * ol_y_pitch))
+    part = original_image.crop((base_0[0], base_0[1], base_1[0], base_1[1]))
+    part.save("../glyphs/" + glyph_name + ".png")
+
 def on_f5(event):
     """
     This is the event that performs a Fourier analysis on a row of pixels
@@ -404,7 +419,7 @@ def on_right(event):
 def load_image(fn):
 
     global original_image, image_needs_resize
-    complete_fn = "../cv2/" + fn + ".png"
+    complete_fn = "../pages/" + fn + ".png"
     original_image = Image.open(complete_fn)
     image_needs_resize = True
 
@@ -460,6 +475,7 @@ root.bind("<F2>", on_f2)
 root.bind("<F3>", on_f3)
 root.bind("<F4>", on_f4)
 root.bind("<F5>", on_f5)
+root.bind("<F6>", on_f6)
 root.bind("<Up>", on_up)
 root.bind("<Down>", on_down)
 root.bind("<Left>", on_left)
@@ -475,7 +491,7 @@ root.bind("<Alt-Left>", on_alt_left)
 root.bind("<Alt-Right>", on_alt_right)
 
 # Load
-load_image("rotated_055")
+load_image("ald_045")
 redraw_image()
 redraw_hair()
 redraw_ol()
