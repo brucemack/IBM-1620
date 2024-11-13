@@ -491,7 +491,7 @@ root.bind("<Alt-Left>", on_alt_left)
 root.bind("<Alt-Right>", on_alt_right)
 
 # Load
-load_image("ald_045")
+load_image("ald_142")
 redraw_image()
 redraw_hair()
 redraw_ol()
